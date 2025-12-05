@@ -39,6 +39,7 @@ export interface Campaign {
   platform: string;
   budget: number;       // The "Target" budget (Promise)
   funds_allocated: number;
+  funds_distributed: number;  // NEW: Amount paid to creators
   cpv: number;
   hashtag: string | null;
   audio: string | null;
@@ -503,6 +504,54 @@ export async function updateCreatorProfile(profileData: { nickname?: string; bio
   }
 }
 
+// --- NEW BRAND PROFILE ENDPOINTS ---
+
+export interface BrandProfile {
+  id: number;
+  username: string;
+  email: string;
+  phone?: string;
+  msg?: string;
+}
+
+export async function getBrandProfile(): Promise<BrandProfile> {
+  try {
+    const res = await fetch(`${API_BASE}/api/brand/profile`, {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const errorData: ErrorResponse = data;
+      throw new Error(errorData.msg || 'Failed to fetch brand profile');
+    }
+    return data as BrandProfile;
+  } catch (error: unknown) {
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to the server. Please check if the backend is running.');
+    }
+    throw error;
+  }
+}
+
+export async function updateBrandProfile(profileData: { username?: string; phone?: string }): Promise<UpdateClipResponse> {
+  try {
+    const res = await fetch(`${API_BASE}/api/brand/profile`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(profileData)
+    });
+    const data: UpdateClipResponse = await res.json();
+    if (!res.ok) throw new Error(data.msg || 'Failed to update brand profile');
+    return data;
+  } catch (error: unknown) {
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to the server. Please check if the backend is running.');
+    }
+    throw error;
+  }
+}
+
+
 // --- PAYMENT ENDPOINTS ---
 
 export interface CashfreeOrderResponse {
@@ -558,7 +607,12 @@ export async function getWalletBalance(): Promise<WalletBalanceResponse> {
   return res.json();
 }
 
-export async function allocateBudget(campaignId: number, amount: number): Promise<{ msg: string }> {
+export async function allocateBudget(campaignId: number, amount: number): Promise<{
+  msg: string;  
+  allocated_amount: number; 
+  new_wallet_balance: number; 
+  new_funds_allocated: number;
+  campaign_id: number; }> {
   const res = await fetch(`${API_BASE}/api/payments/allocate-budget`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -569,7 +623,13 @@ export async function allocateBudget(campaignId: number, amount: number): Promis
   return data;
 }
 
-export async function reclaimBudget(campaignId: number, amount: number): Promise<{ msg: string }> {
+export async function reclaimBudget(campaignId: number, amount: number): Promise<{ 
+  msg: string;
+  reclaimed_amount: number;
+  new_wallet_balance: number;
+  new_funds_allocated: number;
+  campaign_id: number;
+ }> {
   const res = await fetch(`${API_BASE}/api/payments/reclaim-budget`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -577,5 +637,701 @@ export async function reclaimBudget(campaignId: number, amount: number): Promise
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Reclaim failed');
+  return data;
+}
+
+// --- NEW: CREATOR DISTRIBUTION & WITHDRAWAL ENDPOINTS ---
+
+export interface DistributeFundsResponse {
+  msg: string;
+  campaign_id: number;
+  creator_id: number;
+  total_earnings: number;
+  creator_share: number;
+  platform_commission: number;
+  view_count: number;
+  new_creator_wallet: number;
+  new_funds_distributed: number;
+}
+
+export async function distributeFundsToCreator(
+  campaignId: number,
+  creatorId: number,
+  viewCount: number,
+  cpv: number,
+  viewThreshold: number
+): Promise<DistributeFundsResponse> {
+  const res = await fetch(`${API_BASE}/api/payments/distribute-to-creator`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      campaign_id: campaignId,
+      creator_id: creatorId,
+      view_count: viewCount,
+      cpv: cpv,
+      view_threshold: viewThreshold
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Distribution failed');
+  return data;
+}
+
+export interface CreatorWithdrawResponse {
+  msg: string;
+  amount: number;
+  new_balance: number;
+  payout_method: string;
+  reference_id: string;
+  utr: string;
+  status: string;
+}
+
+export async function creatorWithdraw(
+  amount: number,
+  payoutMethod: 'upi' | 'bank',
+  upiId?: string,
+  bankAccount?: string,
+  ifsc?: string
+): Promise<CreatorWithdrawResponse> {
+  const payload: any = {
+    amount,
+    payout_method: payoutMethod
+  };
+
+  if (payoutMethod === 'upi') {
+    payload.upi_id = upiId;
+  } else if (payoutMethod === 'bank') {
+    payload.bank_account = bankAccount;
+    payload.ifsc = ifsc;
+  }
+
+  const res = await fetch(`${API_BASE}/api/payments/creator-withdraw`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Withdrawal failed');
+  return data;
+}
+
+export interface Transaction {
+  id: number;
+  user_type: string;
+  user_id: number;
+  campaign_id?: number;
+  amount: number;
+  type: string;  // 'deposit', 'allocation', 'reclaim', 'earning', 'payout', 'commission'
+  status: string;  // 'pending', 'success', 'failed'
+  external_txn_id?: string;
+  description: string;
+  created_at: string;
+  campaign?: {
+    name: string;
+  };
+}
+
+export interface TransactionsResponse {
+  msg: string;
+  user_type: string;
+  user_id: number;
+  count: number;
+  transactions: Transaction[];
+  limit: number;
+  offset: number;
+}
+
+export async function getTransactions(
+  userType: 'brand' | 'creator',
+  userId: number,
+  campaignId?: number,
+  txnType?: string,
+  status?: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<TransactionsResponse> {
+  const params = new URLSearchParams();
+  if (campaignId) params.append('campaign_id', campaignId.toString());
+  if (txnType) params.append('txn_type', txnType);
+  if (status) params.append('status', status);
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+
+  const res = await fetch(
+    `${API_BASE}/api/payments/transactions/${userType}/${userId}?${params.toString()}`,
+    {
+      headers: getAuthHeaders()
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch transactions');
+  return data;
+}
+
+// --- NEW: PHASE 3 ENDPOINTS (Fund Locking with Inclusive Fees) ---
+
+export interface RefundResponse {
+  msg: string;
+  campaign_id: number;
+  refundable_amount: number;
+  funds_allocated: number;
+  funds_distributed: number;
+  new_wallet_balance: number;
+}
+
+export async function refundCampaign(campaignId: number): Promise<RefundResponse> {
+  const res = await fetch(`${API_BASE}/api/payments/refund-campaign`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ campaign_id: campaignId })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Refund failed');
+  return data;
+}
+
+export interface CampaignFinancialSummary {
+  funds_allocated: number;
+  funds_distributed: number;
+  refundable: number;
+  platform_earnings: number;
+  utilization_percentage: number;
+}
+
+export interface CampaignSummaryResponse {
+  msg: string;
+  campaign_id: number;
+  budget: number;
+  cpv: number;
+  view_threshold: number;
+  total_view_count: number;
+  deadline: string;
+  financial_summary: CampaignFinancialSummary;
+  participation: {
+    creator_count: number;
+    total_clips: number;
+  };
+}
+
+export async function getCampaignSummary(campaignId: number): Promise<CampaignSummaryResponse> {
+  const res = await fetch(`${API_BASE}/api/payments/campaign-summary/${campaignId}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch campaign summary');
+  return data;
+}
+
+export interface PendingPayout {
+  creator_id: number;
+  creator_name: string;
+  total_views: number;
+  total_earnings: number;
+  already_paid: number;
+  pending_amount: number;
+  creator_share: number;
+  platform_commission: number;
+}
+
+export interface PendingPayoutsResponse {
+  msg: string;
+  campaign_id: number;
+  campaign_metrics: {
+    cpv: number;
+    view_threshold: number;
+    total_campaign_views: number;
+  };
+  pending_count: number;
+  total_pending_amount: number;
+  pending_payouts: PendingPayout[];
+}
+
+export async function getPendingPayouts(campaignId: number): Promise<PendingPayoutsResponse> {
+  const res = await fetch(`${API_BASE}/api/brand/campaigns/${campaignId}/pending-payouts`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch pending payouts');
+  return data;
+}
+
+// --- PHASE 4: PERFORMANCE LOOP ---
+
+export interface CreatorEarnings {
+  total_earned: number;
+  creator_share: number;
+  platform_commission: number;
+  total_already_paid: number;
+  pending_amount: number;
+  pending_creator_share: number;
+}
+
+export interface EarningsCalculationResponse {
+  msg: string;
+  campaign_id: number;
+  creator_id: number;
+  campaign_metrics: {
+    cpv: number;
+    view_threshold: number;
+    brand_id: number;
+  };
+  performance: {
+    total_clips: number;
+    total_views: number;
+    milestones_reached: number;
+  };
+  earnings: CreatorEarnings;
+  clips?: any[];
+}
+
+export async function calculateEarnings(
+  campaignId: number,
+  creatorId: number,
+  includeClips: boolean = false
+): Promise<EarningsCalculationResponse> {
+  const params = new URLSearchParams();
+  if (includeClips) params.append('include_clips', 'true');
+
+  const res = await fetch(
+    `${API_BASE}/api/payments/calculate-earnings/${campaignId}/${creatorId}?${params.toString()}`,
+    {
+      headers: getAuthHeaders()
+    }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to calculate earnings');
+  return data;
+}
+
+export interface BulkDistributionResult {
+  campaign_id: number;
+  creator_id: number;
+  status: 'success' | 'failed';
+  reason?: string;
+  total_earnings?: number;
+  creator_share?: number;
+  platform_commission?: number;
+  new_creator_wallet?: number;
+}
+
+export interface BulkDistributeResponse {
+  msg: string;
+  summary: {
+    total_requested: number;
+    successful: number;
+    failed: number;
+    total_distributed: number;
+  };
+  results: BulkDistributionResult[];
+}
+
+export async function bulkDistribute(distributions: Array<{
+  campaign_id: number;
+  creator_id: number;
+  view_count: number;
+  cpv: number;
+  view_threshold: number;
+}>): Promise<BulkDistributeResponse> {
+  const res = await fetch(`${API_BASE}/api/payments/bulk-distribute`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ distributions })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Bulk distribution failed');
+  return data;
+}
+
+// --- PHASE 4: VIEW COUNT TRACKING & PERFORMANCE LOOP ---
+
+export interface UpdateViewCountResponse {
+  msg: string;
+  clip_id: number;
+  campaign_id: number;
+  old_view_count: number;
+  new_view_count: number;
+  view_count_diff: number;
+}
+
+export async function updateClipViewCount(clipId: number, viewCount: number): Promise<UpdateViewCountResponse> {
+  const res = await fetch(`${API_BASE}/api/admin/clip/${clipId}/view-count`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ view_count: viewCount })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to update view count');
+  return data;
+}
+
+export interface UpdateCampaignViewsResponse {
+  msg: string;
+  campaign_id: number;
+  old_total_views: number;
+  new_total_views: number;
+  view_diff: number;
+  clip_count: number;
+}
+
+export async function updateCampaignViewCount(campaignId: number, totalViewCount?: number): Promise<UpdateCampaignViewsResponse> {
+  const body: any = {};
+  if (totalViewCount !== undefined) {
+    body.total_view_count = totalViewCount;
+  }
+
+  const res = await fetch(`${API_BASE}/api/admin/campaign/${campaignId}/update-views`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to update campaign views');
+  return data;
+}
+
+export interface CreatorPerformanceMetric {
+  creator_id: number;
+  creator_name: string;
+  total_views: number;
+  clips: number;
+  total_earned: number;
+  total_paid: number;
+  pending: number;
+}
+
+export interface CampaignPerformanceAnalytics {
+  msg: string;
+  campaign_id: number;
+  overview: {
+    total_clips: number;
+    total_creators: number;
+    total_views: number;
+    milestones_reached: number;
+    cpv: number;
+    view_threshold: number;
+  };
+  financial: {
+    funds_allocated: number;
+    funds_distributed: number;
+    total_earned: number;
+    total_pending: number;
+    utilization_percentage: number;
+    remaining_budget: number;
+  };
+  creator_performance: CreatorPerformanceMetric[];
+}
+
+export async function getCampaignPerformanceAnalytics(campaignId: number): Promise<CampaignPerformanceAnalytics> {
+  const res = await fetch(`${API_BASE}/api/admin/analytics/campaign-performance/${campaignId}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch analytics');
+  return data;
+}
+
+// --- PHASE 5: PAYOUT DETAILS MANAGEMENT ---
+
+export interface PayoutDetailsUPI {
+  msg: string;
+  payout_method: 'upi';
+  upi_id: string;
+}
+
+export interface PayoutDetailsBank {
+  msg: string;
+  payout_method: 'bank';
+  bank_account: string;
+  ifsc: string;
+  account_holder_name: string;
+}
+
+export type SavePayoutDetailsResponse = PayoutDetailsUPI | PayoutDetailsBank;
+
+export async function savePayoutDetails(
+  payoutMethod: 'upi' | 'bank',
+  details: {
+    upi_id?: string;
+    bank_account?: string;
+    ifsc?: string;
+    account_holder_name?: string;
+  }
+): Promise<SavePayoutDetailsResponse> {
+  const res = await fetch(`${API_BASE}/api/payments/creator/payout-details`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      payout_method: payoutMethod,
+      ...details
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to save payout details');
+  return data;
+}
+
+export async function getPayoutDetails(): Promise<SavePayoutDetailsResponse | { msg: string; payout_method: null }> {
+  const res = await fetch(`${API_BASE}/api/payments/creator/payout-details`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch payout details');
+  return data;
+}
+
+export interface VerifyPayoutDetailsResponse {
+  msg: string;
+  verified: boolean;
+  payout_method?: 'upi' | 'bank';
+  missing?: string[];
+}
+
+export async function verifyPayoutDetails(): Promise<VerifyPayoutDetailsResponse> {
+  const res = await fetch(`${API_BASE}/api/payments/creator/verify-payout-details`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({})
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Payout details verification failed');
+  return data;
+}
+
+export interface WithdrawalRecord {
+  id: number;
+  amount: number;
+  status: 'pending' | 'success' | 'failed';
+  payout_method: 'upi' | 'bank';
+  reference_id?: string;
+  utr?: string;
+  created_at: string;
+}
+
+export interface WithdrawalHistoryResponse {
+  msg: string;
+  withdrawals: WithdrawalRecord[];
+  count: number;
+  limit: number;
+  offset: number;
+}
+
+export async function getWithdrawalHistory(
+  status?: 'pending' | 'success' | 'failed',
+  limit = 20,
+  offset = 0
+): Promise<WithdrawalHistoryResponse> {
+  const params = new URLSearchParams();
+  if (status) params.append('status', status);
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+
+  const res = await fetch(`${API_BASE}/api/payments/creator/withdrawals?${params}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch withdrawal history');
+  return data;
+}
+
+// --- PHASE 6: COMPREHENSIVE REFUND FLOW ---
+
+export interface RefundRequest {
+  refund_id: number;
+  campaign_id: number;
+  type: 'mid_campaign' | 'partial_return' | 'campaign_deletion' | 'dispute_resolution';
+  requested_amount: number;
+  approved_amount: number | null;
+  refundable_amount: number;
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'failed';
+  reason: string;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export interface RefundRequestsResponse {
+  msg: string;
+  refund_requests: RefundRequest[];
+  count: number;
+  limit: number;
+  offset: number;
+}
+
+export async function requestRefund(
+  campaignId: number,
+  requestedAmount: number,
+  reason: string
+): Promise<{
+  msg: string;
+  refund_id: number;
+  campaign_id: number;
+  requested_amount: number;
+  refundable_amount: number;
+  status: string;
+  created_at: string;
+}> {
+  const res = await fetch(`${API_BASE}/api/payments/request-refund`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      campaign_id: campaignId,
+      requested_amount: requestedAmount,
+      reason
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to request refund');
+  return data;
+}
+
+export async function getRefundRequests(
+  status?: 'pending' | 'approved' | 'rejected' | 'completed',
+  campaignId?: number,
+  limit = 20,
+  offset = 0
+): Promise<RefundRequestsResponse> {
+  const params = new URLSearchParams();
+  if (status) params.append('status', status);
+  if (campaignId) params.append('campaign_id', campaignId.toString());
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+
+  const res = await fetch(`${API_BASE}/api/payments/refund-requests?${params}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch refund requests');
+  return data;
+}
+
+export interface RefundStatusResponse {
+  msg: string;
+  refund_id: number;
+  campaign_id: number;
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'failed';
+  type: string;
+  requested_amount: number;
+  refundable_amount: number;
+  approved_amount: number | null;
+  reason: string;
+  rejection_reason: string | null;
+  timeline: {
+    created_at: string;
+    updated_at: string;
+    completed_at: string | null;
+  };
+  transaction?: {
+    id: number;
+    amount: number;
+    status: string;
+    created_at: string;
+  };
+}
+
+export async function getRefundStatus(refundId: number): Promise<RefundStatusResponse> {
+  const res = await fetch(`${API_BASE}/api/payments/refund-status/${refundId}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch refund status');
+  return data;
+}
+
+export interface ApproveRefundResponse {
+  msg: string;
+  refund_id: number;
+  campaign_id: number;
+  approved_amount: number;
+  brand_wallet_updated: number;
+  status: string;
+  processed_at: string;
+}
+
+export async function approveRefund(
+  refundId: number,
+  approvedAmount?: number,
+  approvalReason?: string
+): Promise<ApproveRefundResponse> {
+  const res = await fetch(`${API_BASE}/api/payments/admin/approve-refund`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      refund_id: refundId,
+      approved_amount: approvedAmount,
+      approval_reason: approvalReason
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to approve refund');
+  return data;
+}
+
+export async function rejectRefund(
+  refundId: number,
+  rejectionReason: string
+): Promise<{
+  msg: string;
+  refund_id: number;
+  status: string;
+  rejection_reason: string;
+}> {
+  const res = await fetch(`${API_BASE}/api/payments/admin/reject-refund`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      refund_id: refundId,
+      rejection_reason: rejectionReason
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to reject refund');
+  return data;
+}
+
+export interface AuditTrailRecord {
+  refund_id: number;
+  brand_id: number;
+  campaign_id: number;
+  type: string;
+  requested_amount: number;
+  approved_amount: number | null;
+  status: string;
+  reason: string;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface RefundAuditTrailResponse {
+  msg: string;
+  audit_trail: AuditTrailRecord[];
+  count: number;
+  summary: {
+    total_refunded: number;
+    pending_approval: number;
+    limit: number;
+    offset: number;
+  };
+}
+
+export async function getRefundAuditTrail(
+  brandId?: number,
+  campaignId?: number,
+  status?: string,
+  limit = 50,
+  offset = 0
+): Promise<RefundAuditTrailResponse> {
+  const params = new URLSearchParams();
+  if (brandId) params.append('brand_id', brandId.toString());
+  if (campaignId) params.append('campaign_id', campaignId.toString());
+  if (status) params.append('status', status);
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+
+  const res = await fetch(`${API_BASE}/api/payments/admin/refund-audit-trail?${params}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch refund audit trail');
   return data;
 }

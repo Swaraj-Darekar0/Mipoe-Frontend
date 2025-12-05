@@ -60,12 +60,17 @@ const CampaignAnalytics = () => {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const fetchCampaignData = useCallback(async () => {
+    console.log('=== FETCH CAMPAIGN DATA START ===');
     if (!campaignId) return;
     setLoading(true);
     setError(null);
     try {
       const id = parseInt(campaignId);
+      console.log('Fetching campaign with ID:', id);
       const data = await fetchCampaignById(id);
+      console.log('Campaign data fetched:', data);
+      console.log('Funds allocated from campaign:', data.funds_allocated);
+      
       setCampaign(data);
       setIsActive(data.is_active);
       setBudget(data.budget);
@@ -76,16 +81,20 @@ const CampaignAnalytics = () => {
       // ADD THIS LINE to load existing image
       setImagePreview(data.image_url || null);
       const walletData = await getWalletBalance();
+      console.log('Wallet data fetched:', walletData);
       setWalletBalance(walletData.balance);
 
     } catch (err: unknown) {
       if (err instanceof Error) {
+        console.error('fetchCampaignData error:', err);
         setError(err.message);
       } else {
+        console.error('Unknown error in fetchCampaignData:', err);
         setError("An unknown error occurred");
       }
     } finally {
       setLoading(false);
+      console.log('=== FETCH CAMPAIGN DATA END ===');
     }
   }, [campaignId]);
 
@@ -93,43 +102,83 @@ const CampaignAnalytics = () => {
     fetchCampaignData();
   }, [fetchCampaignData]);
 
-  const handleAllocate = async () => {
-    if (!campaign || allocationAmount <= 0) return;
-    setIsProcessingFund(true);
-    try {
-      await allocateBudget(campaign.id, allocationAmount);
+const handleAllocate = async () => {
+  console.log('=== ALLOCATE DEBUG START ===');
+  console.log('Campaign ID:', campaign?.id);
+  console.log('Allocation Amount:', allocationAmount);
+  console.log('Current Wallet Balance:', walletBalance);
+  console.log('Current Campaign Funds Allocated:', campaign?.funds_allocated);
+  
+  if (!campaign || allocationAmount <= 0) {
+    console.log('Allocation cancelled: campaign or amount invalid');
+    return;
+  }
+  
+  setIsProcessingFund(true);
+  try {
+    console.log('Calling allocateBudget API with:', { campaignId: campaign.id, amount: allocationAmount });
+    const response = await allocateBudget(campaign.id, allocationAmount);
+    
+    console.log('API Response:', response);
+    console.log('New Wallet Balance from API:', response.new_wallet_balance);
+    console.log('New Funds Allocated from API:', response.new_funds_allocated);
 
-      // Update local state to reflect changes instantly (Optimistic UI)
-      setWalletBalance(prev => prev - allocationAmount);
-      setCampaign(prev => prev ? ({ ...prev, funds_allocated: (prev.funds_allocated || 0) + allocationAmount }) : null);
+    // Use actual returned values from backend
+    setWalletBalance(response.new_wallet_balance);
+    setCampaign(prev => prev ? ({ ...prev, funds_allocated: response.new_funds_allocated }) : null);
+    
+    console.log('State updated - Wallet:', response.new_wallet_balance, 'Allocated:', response.new_funds_allocated);
 
-      alert(`Successfully allocated ₹${allocationAmount}`);
-      setAllocationAmount(0);
-    } catch (err: any) {
-      alert(`Allocation Failed: ${err.message}`);
-    } finally {
-      setIsProcessingFund(false);
-    }
-  };
+    alert(`Successfully allocated ₹${response.allocated_amount}`);
+    setAllocationAmount(0);
+  } catch (err: any) {
+    console.error('Allocation Error:', err);
+    console.error('Error Message:', err.message);
+    alert(`Allocation Failed: ${err.message}`);
+  } finally {
+    setIsProcessingFund(false);
+    console.log('=== ALLOCATE DEBUG END ===');
+  }
+};
 
-  const handleReclaim = async () => {
-    if (!campaign || allocationAmount <= 0) return;
-    setIsProcessingFund(true);
-    try {
-      await reclaimBudget(campaign.id, allocationAmount);
+const handleReclaim = async () => {
+  console.log('=== RECLAIM DEBUG START ===');
+  console.log('Campaign ID:', campaign?.id);
+  console.log('Reclaim Amount:', allocationAmount);
+  console.log('Current Wallet Balance:', walletBalance);
+  console.log('Current Campaign Funds Allocated:', campaign?.funds_allocated);
+  
+  if (!campaign || allocationAmount <= 0) {
+    console.log('Reclaim cancelled: campaign or amount invalid');
+    return;
+  }
+  
+  setIsProcessingFund(true);
+  try {
+    console.log('Calling reclaimBudget API with:', { campaignId: campaign.id, amount: allocationAmount });
+    const response = await reclaimBudget(campaign.id, allocationAmount);
+    
+    console.log('API Response:', response);
+    console.log('New Wallet Balance from API:', response.new_wallet_balance);
+    console.log('New Funds Allocated from API:', response.new_funds_allocated);
 
-      // Update local state
-      setWalletBalance(prev => prev + allocationAmount);
-      setCampaign(prev => prev ? ({ ...prev, funds_allocated: (prev.funds_allocated || 0) - allocationAmount }) : null);
+    // Use actual returned values from backend
+    setWalletBalance(response.new_wallet_balance);
+    setCampaign(prev => prev ? ({ ...prev, funds_allocated: response.new_funds_allocated }) : null);
+    
+    console.log('State updated - Wallet:', response.new_wallet_balance, 'Allocated:', response.new_funds_allocated);
 
-      alert(`Successfully reclaimed ₹${allocationAmount}`);
-      setAllocationAmount(0);
-    } catch (err: any) {
-      alert(`Reclaim Failed: ${err.message}`);
-    } finally {
-      setIsProcessingFund(false);
-    }
-  };
+    alert(`Successfully reclaimed ₹${response.reclaimed_amount}`);
+    setAllocationAmount(0);
+  } catch (err: any) {
+    console.error('Reclaim Error:', err);
+    console.error('Error Message:', err.message);
+    alert(`Reclaim Failed: ${err.message}`);
+  } finally {
+    setIsProcessingFund(false);
+    console.log('=== RECLAIM DEBUG END ===');
+  }
+};
 
   const formatViews = (views: number): string => {
     if (views < 1000) {
@@ -242,20 +291,20 @@ const CampaignAnalytics = () => {
     }
   };
 
-  const handleUpdateBudget = async () => {
-    if (!campaign) return;
-    try {
-      await updateCampaignBudget(campaign.id, { budget });
-      alert("Budget updated successfully!");
-      // fetchCampaignData();
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Failed to update budget: ${err.message}`);
-      } else {
-        alert("Failed to update budget: An unknown error occurred");
-      }
-    }
-  };
+  // const handleUpdateBudget = async () => {
+  //   if (!campaign) return;
+  //   try {
+  //     await updateCampaignBudget(campaign.id, { budget });
+  //     alert("Budget updated successfully!");
+  //     // fetchCampaignData();
+  //   } catch (err: unknown) {
+  //     if (err instanceof Error) {
+  //       alert(`Failed to update budget: ${err.message}`);
+  //     } else {
+  //       alert("Failed to update budget: An unknown error occurred");
+  //     }
+  //   }
+  // };
 
   const handleUpdateRequirements = async () => {
     if (!campaign) return;

@@ -16,6 +16,7 @@ interface CampaignCardProps {
   submitted?: boolean;
   hideStatusActions?: boolean;
   image_url?: string; // Added image support
+  funds_distributed?: number; // New prop for distributed funds
 }
 
 const CampaignCard: React.FC<CampaignCardProps> = ({
@@ -29,14 +30,17 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   submitted = false,
   hideStatusActions = false,
   image_url,
+  funds_distributed = 0, // Default to 0 if not provided
 }) => {
   const [imgError, setImgError] = useState(false);
 
-  // Math Logic
+  // Math Logic for utilization bar
   const views = total_view_count;
-  const paid = 0; // Placeholder for now
-  const target = budget - budget * 0.05; // 95% utilization target
-  const payoutPercent = target > 0 ? Math.min(Math.round((paid / target) * 100), 100) : 0;
+  const totalBudget = budget;
+  const amountDistributed = funds_distributed;
+  
+  // Calculate percentage: (distributed / budget) * 100
+  const payoutPercent = totalBudget > 0 ? Math.min(Math.round((amountDistributed / totalBudget) * 100), 100) : 0;
 
   // Helper for large numbers (e.g. 1.5k, 1.2M)
   const formatNumber = (num: number) => {

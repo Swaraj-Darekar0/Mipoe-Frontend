@@ -4,48 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Wallet, CreditCard, Building2, Copy, CheckCircle2, QrCode } from "lucide-react";
 import { loadCashfreeScript } from "@/utils/cashfree";
-import { createDepositOrder, verifyDeposit, getVirtualAccount, VirtualAccountResponse } from "@/lib/api";
+import { createDepositOrder, getVirtualAccount, VirtualAccountResponse } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { useSearchParams, useNavigate } from "react-router-dom";
 
-interface AddFundsProps {
-  onSuccess?: (newBalance: number) => void;
-}
-
-const AddFunds: React.FC<AddFundsProps> = ({ onSuccess }) => {
+const AddFunds: React.FC = () => {
   const [amount, setAmount] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [vaDetails, setVaDetails] = useState<VirtualAccountResponse | null>(null);
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
 
-  // 1. Auto-Verify on Redirect (Check URL for ?order_id=order_xxx)
   useEffect(() => {
-    const orderId = searchParams.get("order_id");
-    if (orderId) {
-      verifyTransaction(orderId);
-    }
     // Fetch VA details on load
     fetchVirtualAccount();
   }, []);
-
-  const verifyTransaction = async (orderId: string) => {
-    try {
-      toast({ title: "Verifying Payment", description: "Please wait..." });
-      const data = await verifyDeposit(orderId);
-      toast({ 
-        title: "Success!", 
-        description: `Deposit verified. New Balance: ₹${data.new_balance}`, 
-        className: "bg-green-50 border-green-200" 
-      });
-      if (onSuccess) onSuccess(data.new_balance);
-      // Clean URL
-      navigate("/brand/dashboard", { replace: true });
-    } catch (error: any) {
-      toast({ title: "Verification Failed", description: error.message, variant: "destructive" });
-    }
-  };
 
   const fetchVirtualAccount = async () => {
     try {
@@ -77,7 +48,7 @@ const AddFunds: React.FC<AddFundsProps> = ({ onSuccess }) => {
       // C. Redirect to Checkout
       cashfree.checkout({
         paymentSessionId: orderData.payment_session_id,
-        returnUrl: `http://localhost:5173/brand/dashboard?order_id={order_id}`, // Ensure this matches your route
+        returnUrl: `http://localhost:8080/brand/dashboard?order_id={order_id}`, // Ensure this matches your route
         redirectTarget: "_self" // Redirects current tab
       });
 

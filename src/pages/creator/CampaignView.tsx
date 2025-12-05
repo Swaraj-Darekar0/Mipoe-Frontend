@@ -175,10 +175,10 @@ const CampaignView = () => {
     );
   }
 
-  // Placeholder for payout percent
-  const paid = 0;
-  const target = campaign.budget - campaign.budget * 0.05;
-  const payoutPercent = target > 0 ? Math.min(Math.round((paid / target) * 100), 100) : 0;
+  // Campaign Progress Bar logic
+  const totalBudget = campaign.budget || 0;
+  const fundsDistributed = campaign.funds_distributed || 0;
+  const payoutPercent = totalBudget > 0 ? Math.min(Math.round((fundsDistributed / totalBudget) * 100), 100) : 0;
 
   const defaultRequirements = [
     "1. Don't use bots",
@@ -262,7 +262,7 @@ const CampaignView = () => {
           <div className="flex justify-between items-end mb-1">
             <span className="text-xs text-gray-700 font-semibold">Paid Out</span>
             <span className="text-xs bg-gray-100 px-2 rounded text-gray-700 font-semibold">
-              ₹{paid.toLocaleString()} / ₹{campaign.budget.toLocaleString()}
+              ₹{fundsDistributed.toLocaleString()} / ₹{totalBudget.toLocaleString()}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -343,6 +343,7 @@ const CampaignView = () => {
                     <span className="ml-2 text-xs font-semibold text-yellow-700">In Review</span>
                   </div>
                   <button
+                  title="Delete Clip"
                     className="text-red-600 hover:text-red-800 disabled:opacity-50"
                     onClick={() => handleDeleteClip(clip.id)}
                     disabled={deletingClipId === clip.id}
@@ -441,6 +442,7 @@ const CampaignView = () => {
                     </div>
                   </div>
                   <button
+                  title="hush"
                     className="text-red-600 hover:text-red-800 disabled:opacity-50"
                     onClick={() => handleDeleteClip(clip.id, true)}
                     disabled={deletingClipId === clip.id}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "@/layouts/AuthLayout";
 import { login as loginApi } from "@/lib/api";
+import { preloadPostLoginRoutes } from "@/utils/route-preloader";
 
 const Login = () => {
   const [role, setRole] = useState<"brand" | "creator">("brand");
@@ -48,6 +49,10 @@ const Login = () => {
               localStorage.setItem("token", data.access_token);
               localStorage.setItem("role", data.role);
               localStorage.setItem("user_id", String(data.user_id));
+              
+              // Preload post-login routes for a smoother navigation experience
+              preloadPostLoginRoutes();
+
               if (data.role === "brand") {
                 navigate("/brand/dashboard");
               } else if (data.role === "creator") {
