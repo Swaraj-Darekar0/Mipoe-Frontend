@@ -93,7 +93,7 @@ const SubmitClip = () => {
 
   return (
     <CreatorLayout>
-      <div className="max-w-md bg-white p-8 rounded-lg shadow mx-auto">
+      <div className="max-w-md text-gray-600 bg-white p-8 rounded-lg shadow mx-auto">
         <h2 className="text-xl font-bold mb-4">Submit Clip</h2>
         <div className="mb-3">
           <span className="text-gray-600">Campaign:</span>{" "}
@@ -112,7 +112,7 @@ const SubmitClip = () => {
             </label>
             <input
               type="url"
-              className="w-full border rounded px-3 py-2"
+              className="w-full text-gray-600 border rounded px-3 py-2"
               value={link}
               onChange={e => setLink(e.target.value)}
               placeholder="https://youtube.com/..."

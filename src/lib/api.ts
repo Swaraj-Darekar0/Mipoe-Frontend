@@ -2,8 +2,39 @@ import { supabase } from './supabaseClient';
 
 const API_BASE = 'http://localhost:5000';
 
+// --- NEW: Token Management ---
+const setAuthTokens = (accessToken: string, refreshToken: string, userId: string) => {
+  sessionStorage.setItem('accessToken', accessToken);
+  localStorage.setItem('refreshToken', refreshToken);
+  sessionStorage.setItem('user_id', userId); // Store user_id
+};
+
+const getAccessToken = () => sessionStorage.getItem('accessToken');
+const getRefreshToken = () => localStorage.getItem('refreshToken');
+export const getUserId = () => sessionStorage.getItem('user_id'); // Export for use in components
+
+const clearAuthTokens = () => {
+  sessionStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  sessionStorage.removeItem('user_id'); // Clear user_id
+};
+
+export async function logout(): Promise<void> {
+    const refreshToken = getRefreshToken();
+    try {
+        await fetch(`${API_BASE}/logout`, { // Using fetch directly for logout
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${refreshToken}` }
+        });
+    } catch (error) {
+        console.error("Logout failed on backend, clearing tokens from frontend anyway.", error);
+    } finally {
+        clearAuthTokens();
+    }
+}
+
 function getAuthHeaders() {
-  const token = localStorage.getItem('token');
+  const token = getAccessToken();
   return token
     ? {
         'Authorization': `Bearer ${token}`,
@@ -16,15 +47,109 @@ function getAuthHeaders() {
       };
 }
 
+// --- NEW: apiFetch with Interceptor Logic ---
+
+let isRefreshing = false;
+let failedQueue: { resolve: (value?: any) => void; reject: (reason?: any) => void; }[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  // Set auth headers for the initial request
+  options.headers = { ...getAuthHeaders(), ...options.headers };
+
+  console.log('API Request:', { url, options }); // For debugging headers
+
+  let response = await fetch(url, options);
+
+  if (response.status === 401) {
+    if (isRefreshing) {
+      // If a refresh is already in progress, queue the request
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      })
+        .then(() => {
+          options.headers = { ...getAuthHeaders(), ...options.headers };
+          return fetch(url, options); // Retry with the new token
+        })
+        .catch(err => Promise.reject(err));
+    }
+
+    isRefreshing = true;
+    const refreshToken = getRefreshToken();
+
+    if (!refreshToken) {
+      isRefreshing = false;
+      clearAuthTokens();
+      window.location.href = '/login'; // Or your app's designated logout route
+      return Promise.reject(new Error('Session expired. No refresh token.'));
+    }
+
+    try {
+      const refreshResponse = await fetch(`${API_BASE}/refresh`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${refreshToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!refreshResponse.ok) {
+        throw new Error('Failed to refresh token.');
+      }
+
+      const { access_token } = await refreshResponse.json();
+      sessionStorage.setItem('accessToken', access_token); // Only update access token
+
+      processQueue(null, access_token);
+
+      // Retry the original request with the new token
+      options.headers = { ...getAuthHeaders(), ...options.headers };
+      return fetch(url, options);
+    } catch (error) {
+      processQueue(error, null);
+      clearAuthTokens();
+      window.location.href = '/login';
+      return Promise.reject(error);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+
+  return response;
+}
+
+export async function syncGoogleUser(): Promise<{ msg: string; username?: string }> {
+  const res = await apiFetch(`${API_BASE}/api/auth/google-sync`, {
+    method: 'POST',
+    body: JSON.stringify({}) // Empty body, data comes from Token
+  });
+  
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to sync Google user');
+  return data;
+}
+
+
 interface RegisterResponse {
   msg: string;
 }
 
 interface LoginResponse {
   access_token: string;
+  refresh_token: string;
   role: string;
   username: string;
-  user_id: number;
+  user_id: string;
   profile_completed?: boolean;
   msg?: string;
 }
@@ -45,7 +170,7 @@ export interface Campaign {
   audio: string | null;
   deadline: string;
   requirements: string | null;
-  brand_id: number;
+  brand_id: string;
   is_active: boolean;
   total_view_count: number;
   view_threshold: number;
@@ -56,7 +181,7 @@ export interface Campaign {
   accepted_clips?: Array<{
     id: number;
     campaign_id: number;
-    creator_id: number;
+    creator_id: string;
     creator_name: string;
     clip_url: string;
     media_id?: string;
@@ -66,7 +191,7 @@ export interface Campaign {
     submitted_at: string;
   }>;
   creator_rankings?: Array<{
-    creator_id: number;
+    creator_id: string;
     creator_name: string;
     total_views: number;
     clip_count: number;
@@ -138,9 +263,8 @@ export async function deleteCampaignImage(fullUrl: string): Promise<void> {
 }
 
 export async function updateCampaignImage(id: number, payload: { image_url: string }): Promise<UpdateClipResponse> {
-  const res = await fetch(`${API_BASE}/api/brand/campaigns/${id}/image`, {
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${id}/image`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
   const data: UpdateClipResponse = await res.json();
@@ -151,7 +275,7 @@ export async function updateCampaignImage(id: number, payload: { image_url: stri
 export interface ClipData { // New interface to combine submitted and accepted clip data
   id: number;
   campaign_id: number;
-  creator_id: number;
+  creator_id: string;
   clip_url: string;
   submitted_at: string;
   status: 'in_review' | 'accepted' | 'rejected'; // Inferred status
@@ -167,7 +291,7 @@ export interface ClipData { // New interface to combine submitted and accepted c
 export interface SubmittedClipData {
   id: number;
   campaign_id: number;
-  creator_id: number;
+  creator_id: string;
   clip_url: string;
   submitted_at: string; // Corresponds to submission_date in SQL
   status: string;
@@ -179,7 +303,7 @@ export interface SubmittedClipData {
 export interface AcceptedClipData {
   id: number;
   campaign_id: number;
-  creator_id: number;
+  creator_id: string;
   clip_url: string;
   submitted_at: string; // Corresponds to submitted_at in SQL
   media_id?: string;
@@ -194,9 +318,11 @@ export interface CreatorProfile {
   email: string;
   nickname?: string;
   bio?: string;
-  phone?: string; // Changed from phone_number to phone
-  join_date?: string; // Added join_date
+  phone?: string;
+  join_date?: string;
   profile_completed: boolean;
+  instagram_username?: string;
+  instagram_verified?: boolean;
   msg?: string;
 }
 
@@ -220,9 +346,8 @@ interface UpdateClipResponse {
 
 export async function register({ email, password, role, username }: { email: string, password: string, role: string, username: string }): Promise<RegisterResponse> {
   try {
-    const res = await fetch(`${API_BASE}/register`, {
+    const res = await apiFetch(`${API_BASE}/register`, {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify({ email, password, role, username })
     });
     const data: RegisterResponse = await res.json();
@@ -238,17 +363,22 @@ export async function register({ email, password, role, username }: { email: str
 
 export async function login({ email, password, role }: { email: string, password: string, role: string }): Promise<LoginResponse> {
   try {
-    const res = await fetch(`${API_BASE}/login`, {
+    const res = await apiFetch(`${API_BASE}/login`, {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify({ email, password, role })
     });
-    const data = await res.json();
+    const data: LoginResponse = await res.json();
     if (!res.ok) {
       const errorData: ErrorResponse = data;
       throw new Error(errorData.msg || 'Login failed');
     }
-    return data as LoginResponse;
+    
+    // Set tokens and user_id upon successful login
+    if (data.access_token && data.refresh_token && data.user_id) {
+        setAuthTokens(data.access_token, data.refresh_token, data.user_id);
+    }
+
+    return data;
   } catch (error: unknown) {
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
       throw new Error('Unable to connect to the server. Please check if the backend is running.');
@@ -257,10 +387,10 @@ export async function login({ email, password, role }: { email: string, password
   }
 }
 
+
 export async function createCampaign(campaign: Omit<Campaign, 'id' | 'is_active' | 'total_view_count' | 'submitted_clips' | 'accepted_clips'> & { asset_link?: string }): Promise<CreateCampaignResponse> {
-  const res = await fetch(`${API_BASE}/api/brand/campaigns`, {
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns`, {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify(campaign)
   });
   const data: CreateCampaignResponse = await res.json();
@@ -269,30 +399,26 @@ export async function createCampaign(campaign: Omit<Campaign, 'id' | 'is_active'
 }
 
 export async function fetchBrandCampaigns(): Promise<Campaign[]> {
-  const res = await fetch(`${API_BASE}/api/brand/campaigns`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns`);
   if (!res.ok) throw new Error('Failed to fetch campaigns');
   return res.json();
 }
 
 export async function fetchAllCampaigns(): Promise<Campaign[]> {
-  const res = await fetch(`${API_BASE}/api/campaigns`);
+  const res = await apiFetch(`${API_BASE}/api/campaigns`);
   if (!res.ok) throw new Error('Failed to fetch campaigns');
   return res.json();
 }
 
 export async function fetchCampaignById(id: number): Promise<Campaign> {
-  const res = await fetch(`${API_BASE}/api/campaigns/${id}`);
+  const res = await apiFetch(`${API_BASE}/api/campaigns/${id}`);
   if (!res.ok) throw new Error('Failed to fetch campaign');
   return res.json();
 }
 
 export async function fetchCreatorCampaigns(): Promise<Campaign[]> {
   try {
-    const res = await fetch(`${API_BASE}/api/creator/your-campaigns`, {
-      headers: getAuthHeaders()
-    });
+    const res = await apiFetch(`${API_BASE}/api/creator/your-campaigns`);
 
     if (!res.ok) {
       const errorData: ErrorResponse = await res.json().catch(() => ({}));
@@ -327,9 +453,8 @@ export async function fetchCreatorCampaigns(): Promise<Campaign[]> {
 }
 
 export async function submitClip(data: { campaign_id: number, clip_url: string }): Promise<SubmitClipResponse> {
-  const res = await fetch(`${API_BASE}/api/creator/submit-clip`, {
+  const res = await apiFetch(`${API_BASE}/api/creator/submit-clip`, {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify(data)
   });
   const result: SubmitClipResponse = await res.json();
@@ -338,17 +463,14 @@ export async function submitClip(data: { campaign_id: number, clip_url: string }
 }
 
 export async function fetchCreatorClipsForCampaign(campaign_id: number): Promise<ClipData[]> {
-  const res = await fetch(`${API_BASE}/api/creator/campaign-clips?campaign_id=${campaign_id}`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/creator/campaign-clips?campaign_id=${campaign_id}`);
   if (!res.ok) throw new Error('Failed to fetch submitted clips');
   return res.json();
 }
 
 export async function deleteCampaign(id: number): Promise<DeleteResponse> {
-  const res = await fetch(`${API_BASE}/api/brand/campaigns/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${id}`, {
+    method: 'DELETE'
   });
   
   // If the campaign was already deleted (404), that's fine - it's already gone
@@ -374,9 +496,8 @@ export async function deleteCampaign(id: number): Promise<DeleteResponse> {
 }
 
 export async function deleteClip(id: number): Promise<DeleteResponse> {
-  const res = await fetch(`${API_BASE}/api/creator/clip/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
+  const res = await apiFetch(`${API_BASE}/api/creator/clip/${id}`, {
+    method: 'DELETE'
   });
   const data: DeleteResponse = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to delete clip');
@@ -384,9 +505,8 @@ export async function deleteClip(id: number): Promise<DeleteResponse> {
 }
 
 export async function deleteClipAdmin(id: number): Promise<DeleteResponse> {
-  const res = await fetch(`${API_BASE}/api/admin/clip/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
+  const res = await apiFetch(`${API_BASE}/api/admin/clip/${id}`, {
+    method: 'DELETE'
   });
   const data: DeleteResponse = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to delete clip');
@@ -394,9 +514,8 @@ export async function deleteClipAdmin(id: number): Promise<DeleteResponse> {
 }
 
 export async function updateCampaignBudget(id: number, payload: { budget: number }): Promise<UpdateClipResponse> {
-  const res = await fetch(`${API_BASE}/api/brand/campaigns/${id}/budget`, {
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${id}/budget`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
   const data: UpdateClipResponse = await res.json();
@@ -405,9 +524,8 @@ export async function updateCampaignBudget(id: number, payload: { budget: number
 }
 
 export async function updateCampaignRequirements(id: number, payload: { requirements: string }): Promise<UpdateClipResponse> {
-  const res = await fetch(`${API_BASE}/api/brand/campaigns/${id}/requirements`, {
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${id}/requirements`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
   const data: UpdateClipResponse = await res.json();
@@ -416,9 +534,8 @@ export async function updateCampaignRequirements(id: number, payload: { requirem
 }
 
 export async function updateCampaignStatus(id: number, payload: { is_active: boolean }): Promise<UpdateClipResponse> {
-  const res = await fetch(`${API_BASE}/api/brand/campaigns/${id}/status`, {
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${id}/status`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
   const data: UpdateClipResponse = await res.json();
@@ -427,9 +544,8 @@ export async function updateCampaignStatus(id: number, payload: { is_active: boo
 }
 
 export async function updateCampaignViewThreshold(id: number, payload: { view_threshold: number }): Promise<UpdateClipResponse> {
-  const res = await fetch(`${API_BASE}/api/brand/campaigns/${id}/view_threshold`, {
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${id}/view_threshold`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
   const data: UpdateClipResponse = await res.json();
@@ -438,9 +554,8 @@ export async function updateCampaignViewThreshold(id: number, payload: { view_th
 }
 
 export async function updateCampaignDeadline(id: number, payload: { deadline: string }): Promise<UpdateClipResponse> {
-  const res = await fetch(`${API_BASE}/api/brand/campaigns/${id}/deadline`, {
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${id}/deadline`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
   const data: UpdateClipResponse = await res.json();
@@ -449,17 +564,16 @@ export async function updateCampaignDeadline(id: number, payload: { deadline: st
 }
 
 export async function fetchAdminCampaigns(): Promise<Campaign[]> {
-  const res = await fetch(`${API_BASE}/api/admin/campaigns`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/admin/campaigns`, {
+      });
   if (!res.ok) throw new Error('Failed to fetch admin campaigns');
   return res.json();
 }
 
 export async function adminUpdateClip(id: number, payload: { status: string; feedback?: string }): Promise<UpdateClipResponse> {
-  const res = await fetch(`${API_BASE}/api/admin/clip/${id}`, {
+  const res = await apiFetch(`${API_BASE}/api/admin/clip/${id}`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify(payload)
   });
   const data: UpdateClipResponse = await res.json();
@@ -469,9 +583,8 @@ export async function adminUpdateClip(id: number, payload: { status: string; fee
 
 export async function fetchCreatorProfile(): Promise<CreatorProfile> {
   try {
-    const res = await fetch(`${API_BASE}/api/creator/profile`, {
-      headers: getAuthHeaders()
-    });
+    const res = await apiFetch(`${API_BASE}/api/creator/profile`, {
+          });
     const data = await res.json();
     if (!res.ok) {
       const errorData: ErrorResponse = data;
@@ -486,11 +599,21 @@ export async function fetchCreatorProfile(): Promise<CreatorProfile> {
   }
 }
 
-export async function updateCreatorProfile(profileData: { nickname?: string; bio?: string; phone?: string }): Promise<UpdateClipResponse> {
+export async function verifyInstagram(username: string): Promise<{ exists: boolean; msg?: string }> {
+  const res = await apiFetch(`${API_BASE}/verify-instagram`, {
+    method: 'POST',
+    body: JSON.stringify({ username })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to verify Instagram username');
+  return data;
+}
+
+export async function updateCreatorProfile(profileData: { nickname?: string; bio?: string; phone?: string; instagram_username?: string; }): Promise<UpdateClipResponse> {
   try {
-    const res = await fetch(`${API_BASE}/api/creator/profile`, {
+    const res = await apiFetch(`${API_BASE}/api/creator/profile`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
+      
       body: JSON.stringify(profileData)
     });
     const data: UpdateClipResponse = await res.json();
@@ -507,7 +630,7 @@ export async function updateCreatorProfile(profileData: { nickname?: string; bio
 // --- NEW BRAND PROFILE ENDPOINTS ---
 
 export interface BrandProfile {
-  id: number;
+  id: string;
   username: string;
   email: string;
   phone?: string;
@@ -516,9 +639,8 @@ export interface BrandProfile {
 
 export async function getBrandProfile(): Promise<BrandProfile> {
   try {
-    const res = await fetch(`${API_BASE}/api/brand/profile`, {
-      headers: getAuthHeaders()
-    });
+    const res = await apiFetch(`${API_BASE}/api/brand/profile`, {
+          });
     const data = await res.json();
     if (!res.ok) {
       const errorData: ErrorResponse = data;
@@ -535,9 +657,9 @@ export async function getBrandProfile(): Promise<BrandProfile> {
 
 export async function updateBrandProfile(profileData: { username?: string; phone?: string }): Promise<UpdateClipResponse> {
   try {
-    const res = await fetch(`${API_BASE}/api/brand/profile`, {
+    const res = await apiFetch(`${API_BASE}/api/brand/profile`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
+      
       body: JSON.stringify(profileData)
     });
     const data: UpdateClipResponse = await res.json();
@@ -566,9 +688,9 @@ export interface VirtualAccountResponse {
 }
 
 export async function createDepositOrder(amount: number): Promise<CashfreeOrderResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/create-deposit-order`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/create-deposit-order`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({ amount })
   });
   const data = await res.json();
@@ -577,9 +699,9 @@ export async function createDepositOrder(amount: number): Promise<CashfreeOrderR
 }
 
 export async function verifyDeposit(orderId: string): Promise<{ msg: string; new_balance: number }> {
-  const res = await fetch(`${API_BASE}/api/payments/verify-deposit`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/verify-deposit`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({ order_id: orderId })
   });
   const data = await res.json();
@@ -588,9 +710,8 @@ export async function verifyDeposit(orderId: string): Promise<{ msg: string; new
 }
 
 export async function getVirtualAccount(): Promise<VirtualAccountResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/virtual-account`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/payments/virtual-account`, {
+      });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch virtual account');
   return data;
@@ -600,9 +721,8 @@ export async function getVirtualAccount(): Promise<VirtualAccountResponse> {
 
 // 3. ADD New Functions
 export async function getWalletBalance(): Promise<WalletBalanceResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/wallet-balance`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/payments/wallet-balance`, {
+      });
   if (!res.ok) throw new Error('Failed to fetch wallet balance');
   return res.json();
 }
@@ -613,9 +733,9 @@ export async function allocateBudget(campaignId: number, amount: number): Promis
   new_wallet_balance: number; 
   new_funds_allocated: number;
   campaign_id: number; }> {
-  const res = await fetch(`${API_BASE}/api/payments/allocate-budget`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/allocate-budget`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({ campaign_id: campaignId, amount })
   });
   const data = await res.json();
@@ -630,9 +750,9 @@ export async function reclaimBudget(campaignId: number, amount: number): Promise
   new_funds_allocated: number;
   campaign_id: number;
  }> {
-  const res = await fetch(`${API_BASE}/api/payments/reclaim-budget`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/reclaim-budget`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({ campaign_id: campaignId, amount })
   });
   const data = await res.json();
@@ -645,7 +765,7 @@ export async function reclaimBudget(campaignId: number, amount: number): Promise
 export interface DistributeFundsResponse {
   msg: string;
   campaign_id: number;
-  creator_id: number;
+  creator_id: string;
   total_earnings: number;
   creator_share: number;
   platform_commission: number;
@@ -656,14 +776,14 @@ export interface DistributeFundsResponse {
 
 export async function distributeFundsToCreator(
   campaignId: number,
-  creatorId: number,
+  creatorId: string,
   viewCount: number,
   cpv: number,
   viewThreshold: number
 ): Promise<DistributeFundsResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/distribute-to-creator`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/distribute-to-creator`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({
       campaign_id: campaignId,
       creator_id: creatorId,
@@ -706,9 +826,9 @@ export async function creatorWithdraw(
     payload.ifsc = ifsc;
   }
 
-  const res = await fetch(`${API_BASE}/api/payments/creator-withdraw`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/creator-withdraw`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify(payload)
   });
   const data = await res.json();
@@ -719,7 +839,7 @@ export async function creatorWithdraw(
 export interface Transaction {
   id: number;
   user_type: string;
-  user_id: number;
+  user_id: string;
   campaign_id?: number;
   amount: number;
   type: string;  // 'deposit', 'allocation', 'reclaim', 'earning', 'payout', 'commission'
@@ -735,7 +855,7 @@ export interface Transaction {
 export interface TransactionsResponse {
   msg: string;
   user_type: string;
-  user_id: number;
+  user_id: string;
   count: number;
   transactions: Transaction[];
   limit: number;
@@ -744,7 +864,7 @@ export interface TransactionsResponse {
 
 export async function getTransactions(
   userType: 'brand' | 'creator',
-  userId: number,
+  userId: string,
   campaignId?: number,
   txnType?: string,
   status?: string,
@@ -758,11 +878,10 @@ export async function getTransactions(
   params.append('limit', limit.toString());
   params.append('offset', offset.toString());
 
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE}/api/payments/transactions/${userType}/${userId}?${params.toString()}`,
     {
-      headers: getAuthHeaders()
-    }
+          }
   );
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch transactions');
@@ -781,9 +900,9 @@ export interface RefundResponse {
 }
 
 export async function refundCampaign(campaignId: number): Promise<RefundResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/refund-campaign`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/refund-campaign`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({ campaign_id: campaignId })
   });
   const data = await res.json();
@@ -815,16 +934,15 @@ export interface CampaignSummaryResponse {
 }
 
 export async function getCampaignSummary(campaignId: number): Promise<CampaignSummaryResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/campaign-summary/${campaignId}`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/payments/campaign-summary/${campaignId}`, {
+      });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch campaign summary');
   return data;
 }
 
 export interface PendingPayout {
-  creator_id: number;
+  creator_id: string;
   creator_name: string;
   total_views: number;
   total_earnings: number;
@@ -848,9 +966,8 @@ export interface PendingPayoutsResponse {
 }
 
 export async function getPendingPayouts(campaignId: number): Promise<PendingPayoutsResponse> {
-  const res = await fetch(`${API_BASE}/api/brand/campaigns/${campaignId}/pending-payouts`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${campaignId}/pending-payouts`, {
+      });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch pending payouts');
   return data;
@@ -870,11 +987,11 @@ export interface CreatorEarnings {
 export interface EarningsCalculationResponse {
   msg: string;
   campaign_id: number;
-  creator_id: number;
+  creator_id: string;
   campaign_metrics: {
     cpv: number;
     view_threshold: number;
-    brand_id: number;
+    brand_id: string;
   };
   performance: {
     total_clips: number;
@@ -887,17 +1004,16 @@ export interface EarningsCalculationResponse {
 
 export async function calculateEarnings(
   campaignId: number,
-  creatorId: number,
+  creatorId: string,
   includeClips: boolean = false
 ): Promise<EarningsCalculationResponse> {
   const params = new URLSearchParams();
   if (includeClips) params.append('include_clips', 'true');
 
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE}/api/payments/calculate-earnings/${campaignId}/${creatorId}?${params.toString()}`,
     {
-      headers: getAuthHeaders()
-    }
+          }
   );
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to calculate earnings');
@@ -906,7 +1022,7 @@ export async function calculateEarnings(
 
 export interface BulkDistributionResult {
   campaign_id: number;
-  creator_id: number;
+  creator_id: string;
   status: 'success' | 'failed';
   reason?: string;
   total_earnings?: number;
@@ -928,14 +1044,14 @@ export interface BulkDistributeResponse {
 
 export async function bulkDistribute(distributions: Array<{
   campaign_id: number;
-  creator_id: number;
+  creator_id: string;
   view_count: number;
   cpv: number;
   view_threshold: number;
 }>): Promise<BulkDistributeResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/bulk-distribute`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/bulk-distribute`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({ distributions })
   });
   const data = await res.json();
@@ -955,9 +1071,9 @@ export interface UpdateViewCountResponse {
 }
 
 export async function updateClipViewCount(clipId: number, viewCount: number): Promise<UpdateViewCountResponse> {
-  const res = await fetch(`${API_BASE}/api/admin/clip/${clipId}/view-count`, {
+  const res = await apiFetch(`${API_BASE}/api/admin/clip/${clipId}/view-count`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({ view_count: viewCount })
   });
   const data = await res.json();
@@ -980,9 +1096,9 @@ export async function updateCampaignViewCount(campaignId: number, totalViewCount
     body.total_view_count = totalViewCount;
   }
 
-  const res = await fetch(`${API_BASE}/api/admin/campaign/${campaignId}/update-views`, {
+  const res = await apiFetch(`${API_BASE}/api/admin/campaign/${campaignId}/update-views`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify(body)
   });
   const data = await res.json();
@@ -991,7 +1107,7 @@ export async function updateCampaignViewCount(campaignId: number, totalViewCount
 }
 
 export interface CreatorPerformanceMetric {
-  creator_id: number;
+  creator_id: string;
   creator_name: string;
   total_views: number;
   clips: number;
@@ -1023,9 +1139,8 @@ export interface CampaignPerformanceAnalytics {
 }
 
 export async function getCampaignPerformanceAnalytics(campaignId: number): Promise<CampaignPerformanceAnalytics> {
-  const res = await fetch(`${API_BASE}/api/admin/analytics/campaign-performance/${campaignId}`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/admin/analytics/campaign-performance/${campaignId}`, {
+      });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch analytics');
   return data;
@@ -1058,9 +1173,9 @@ export async function savePayoutDetails(
     account_holder_name?: string;
   }
 ): Promise<SavePayoutDetailsResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/creator/payout-details`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/creator/payout-details`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({
       payout_method: payoutMethod,
       ...details
@@ -1072,9 +1187,8 @@ export async function savePayoutDetails(
 }
 
 export async function getPayoutDetails(): Promise<SavePayoutDetailsResponse | { msg: string; payout_method: null }> {
-  const res = await fetch(`${API_BASE}/api/payments/creator/payout-details`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/payments/creator/payout-details`, {
+      });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch payout details');
   return data;
@@ -1088,9 +1202,9 @@ export interface VerifyPayoutDetailsResponse {
 }
 
 export async function verifyPayoutDetails(): Promise<VerifyPayoutDetailsResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/creator/verify-payout-details`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/creator/verify-payout-details`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({})
   });
   const data = await res.json();
@@ -1106,6 +1220,7 @@ export interface WithdrawalRecord {
   reference_id?: string;
   utr?: string;
   created_at: string;
+  type: string;
 }
 
 export interface WithdrawalHistoryResponse {
@@ -1126,11 +1241,39 @@ export async function getWithdrawalHistory(
   params.append('limit', limit.toString());
   params.append('offset', offset.toString());
 
-  const res = await fetch(`${API_BASE}/api/payments/creator/withdrawals?${params}`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/payments/creator/withdrawals?${params}`, {
+      });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch withdrawal history');
+  return data;
+}
+
+// --- NEW NOTIFICATION ENDPOINTS ---
+
+export interface Notification {
+  message: string;
+  type: 'clip_approved' | 'clip_rejected' | 'earning_payout' | 'withdrawal_initiated';
+  timestamp: string; // ISO format
+  campaign_id?: number;
+  clip_id?: number;
+  amount?: number;
+  payout_method?: string;
+  // Add other fields as needed based on the notification data in backend
+}
+
+export interface NotificationsResponse {
+  msg: string;
+  notifications: Notification[];
+}
+
+export async function getCreatorNotifications(creatorId: string): Promise<NotificationsResponse> {
+  if (!creatorId) {
+    throw new Error('creatorId not provided.');
+  }
+
+  const res = await apiFetch(`${API_BASE}/api/payments/creator/notifications/${creatorId}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch creator notifications');
   return data;
 }
 
@@ -1171,9 +1314,9 @@ export async function requestRefund(
   status: string;
   created_at: string;
 }> {
-  const res = await fetch(`${API_BASE}/api/payments/request-refund`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/request-refund`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({
       campaign_id: campaignId,
       requested_amount: requestedAmount,
@@ -1197,9 +1340,8 @@ export async function getRefundRequests(
   params.append('limit', limit.toString());
   params.append('offset', offset.toString());
 
-  const res = await fetch(`${API_BASE}/api/payments/refund-requests?${params}`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/payments/refund-requests?${params}`, {
+      });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch refund requests');
   return data;
@@ -1230,9 +1372,8 @@ export interface RefundStatusResponse {
 }
 
 export async function getRefundStatus(refundId: number): Promise<RefundStatusResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/refund-status/${refundId}`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/payments/refund-status/${refundId}`, {
+      });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch refund status');
   return data;
@@ -1253,9 +1394,9 @@ export async function approveRefund(
   approvedAmount?: number,
   approvalReason?: string
 ): Promise<ApproveRefundResponse> {
-  const res = await fetch(`${API_BASE}/api/payments/admin/approve-refund`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/admin/approve-refund`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({
       refund_id: refundId,
       approved_amount: approvedAmount,
@@ -1276,9 +1417,9 @@ export async function rejectRefund(
   status: string;
   rejection_reason: string;
 }> {
-  const res = await fetch(`${API_BASE}/api/payments/admin/reject-refund`, {
+  const res = await apiFetch(`${API_BASE}/api/payments/admin/reject-refund`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    
     body: JSON.stringify({
       refund_id: refundId,
       rejection_reason: rejectionReason
@@ -1291,7 +1432,7 @@ export async function rejectRefund(
 
 export interface AuditTrailRecord {
   refund_id: number;
-  brand_id: number;
+  brand_id: string;
   campaign_id: number;
   type: string;
   requested_amount: number;
@@ -1315,23 +1456,45 @@ export interface RefundAuditTrailResponse {
 }
 
 export async function getRefundAuditTrail(
-  brandId?: number,
+  brandId?: string,
   campaignId?: number,
   status?: string,
   limit = 50,
   offset = 0
 ): Promise<RefundAuditTrailResponse> {
   const params = new URLSearchParams();
-  if (brandId) params.append('brand_id', brandId.toString());
+  if (brandId) params.append('brand_id', brandId);
   if (campaignId) params.append('campaign_id', campaignId.toString());
   if (status) params.append('status', status);
   params.append('limit', limit.toString());
   params.append('offset', offset.toString());
 
-  const res = await fetch(`${API_BASE}/api/payments/admin/refund-audit-trail?${params}`, {
-    headers: getAuthHeaders()
-  });
+  const res = await apiFetch(`${API_BASE}/api/payments/admin/refund-audit-trail?${params}`, {
+      });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch refund audit trail');
+  return data;
+}
+
+// Revert a failed withdrawal
+export const revertFailedWithdrawal = async (transaction_id: number): Promise<{ msg: string; new_balance: number }> => {
+  const res = await apiFetch(`${API_BASE}/api/payments/creator/revert-withdrawal`, {
+    method: 'POST',
+    
+    body: JSON.stringify({ transaction_id })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to revert withdrawal');
+  return data;
+};
+
+export async function requestPasswordReset(email: string): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/request-password-reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to send reset email');
   return data;
 }

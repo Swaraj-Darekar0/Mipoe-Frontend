@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 const Index = React.lazy(() => import("./pages/Index"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Login = React.lazy(() => import("./pages/Login"));
+const ResetPassword = React.lazy(() => import("./pages/creator/ResetPassword"));
 const Register = React.lazy(() => import("./pages/Register"));
 const CreatorDashboard = React.lazy(() => import("./pages/creator/Dashboard"));
 const SubmitClip = React.lazy(() => import("./pages/creator/SubmitClip"));
@@ -21,9 +22,13 @@ const CreatorProfile = React.lazy(() => import("./pages/creator/Profile"));
 const CompleteProfile = React.lazy(() => import("./pages/creator/CompleteProfile"));
 const AdminPage = React.lazy(() => import("./pages/admin/Admin"));
 const AdminLogin = React.lazy(() => import("./pages/AdminLogin"));
+
 const Wallet = React.lazy(() => import("./pages/creator/Wallet"));
 const Withdrawals = React.lazy(() => import("./pages/creator/Withdrawals"));
 const BrandTransactions = React.lazy(() => import("./pages/brand/Transactions"));
+const CampaignsPage = React.lazy(() => import("./pages/creator/Campaigns"));
+const SubmissionsPage = React.lazy(() => import("./pages/creator/Submissions"));
+const AuthCallback = React.lazy(() => import("./pages/creator/AuthCallback"));
 
 const queryClient = new QueryClient();
 
@@ -43,8 +48,11 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/register" element={<Register />} />
             <Route path="/creator/dashboard" element={<CreatorDashboard />} />
+            <Route path="/creator/campaigns" element={<CampaignsPage />} />
+            <Route path="/creator/submissions" element={<SubmissionsPage />} />
             <Route path="/creator/submit/:campaignId" element={<SubmitClip />} />
             <Route path="/brand/dashboard" element={<BrandDashboard />} />
             <Route path="/brand/dashboard/:campaignId" element={<CampaignAnalytics />} />
@@ -56,6 +64,7 @@ const App = () => (
             <Route path="/creator/withdrawals" element={<Withdrawals />} />
             <Route path="/brand/transactions" element={<BrandTransactions />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/AdminLogin" element={<AdminLogin />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

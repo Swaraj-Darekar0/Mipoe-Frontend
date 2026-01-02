@@ -13,9 +13,21 @@ import {
   verifyPayoutDetails,
   savePayoutDetails,
   getWithdrawalHistory,
-  creatorWithdraw
+  creatorWithdraw,
+  revertFailedWithdrawal
 } from '@/lib/api';
-import { Loader2, Wallet, Send, Edit2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Wallet, Send, Edit2, CheckCircle2, AlertCircle, RotateCcw, RefreshCw } from 'lucide-react';
+
+import {
+  CreditCard,
+  CreditCardFlipper,
+  CreditCardFront,
+  CreditCardBack,
+  CreditCardChip,
+  CreditCardLogo,
+  CreditCardName,
+  CreditCardMagStripe,
+} from '@/components/creator/creditCard';
 
 import CreatorLayout from '@/layouts/CreatorLayout';
 
@@ -30,11 +42,12 @@ interface PayoutDetailsState {
 interface WithdrawalRecord {
   id: number;
   amount: number;
-  status: 'pending' | 'success' | 'failed';
+  status: 'pending' | 'success' | 'failed' | 'reverted';
   payout_method: 'upi' | 'bank';
   reference_id?: string;
   utr?: string;
   created_at: string;
+  type: string;
 }
 
 export default function CreatorWallet() {
@@ -47,6 +60,7 @@ export default function CreatorWallet() {
   const [payoutDetails, setPayoutDetails] = useState<PayoutDetailsState>({ payout_method: null });
   const [editingPayoutDetails, setEditingPayoutDetails] = useState(false);
   const [verifiedPayoutDetails, setVerifiedPayoutDetails] = useState(false);
+  const [creatorDisplayName, setCreatorDisplayName] = useState('Creator');
   
   // Payout details form state
   const [payoutMethod, setPayoutMethod] = useState<'upi' | 'bank'>('upi');
@@ -60,10 +74,13 @@ export default function CreatorWallet() {
   const [withdrawalLoading, setWithdrawalLoading] = useState(false);
   const [showWithdrawalConfirm, setShowWithdrawalConfirm] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRecord[]>([]);
+  const [revertingId, setRevertingId] = useState<number | null>(null);
+  const [refreshingHistory, setRefreshingHistory] = useState(false);
   
   const loadWalletData = async (isInitialLoad = false) => {
     try {
       if (isInitialLoad) setLoading(true);
+      else setRefreshingHistory(true);
       
       const [balanceRes, payoutRes, historyRes] = await Promise.all([
         getWalletBalance(),
@@ -107,6 +124,7 @@ export default function CreatorWallet() {
       }
     } finally {
       if (isInitialLoad) setLoading(false);
+      else setRefreshingHistory(false);
     }
   };
 
@@ -126,6 +144,31 @@ export default function CreatorWallet() {
       return () => clearInterval(intervalId); // Cleanup on unmount or when data changes
     }
   }, [withdrawalHistory]); // Dependency on withdrawalHistory to re-evaluate polling
+
+  useEffect(() => {
+    if (payoutDetails.account_holder_name) {
+      setCreatorDisplayName(payoutDetails.account_holder_name);
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      const storedName = localStorage.getItem('creator_name');
+      if (storedName) {
+        setCreatorDisplayName(storedName);
+      }
+    }
+  }, [payoutDetails.account_holder_name]);
+
+  const maskAccountNumber = (account?: string | null) => {
+    if (!account) return 'Account not added';
+    const visible = account.slice(-4);
+    return `${'•'.repeat(Math.max(account.length - 4, 4))}${visible}`;
+  };
+
+  const payoutMethodLabel = payoutDetails.payout_method === 'upi'
+    ? 'UPI'
+    : payoutDetails.payout_method === 'bank'
+      ? 'Net B.'
+      : 'Add Method';
   
   const handleSavePayoutDetails = async () => {
     try {
@@ -192,6 +235,29 @@ export default function CreatorWallet() {
       });
     } finally {
       setWithdrawalLoading(false);
+    }
+  };
+
+  const handleRevertWithdrawal = async (transactionId: number) => {
+    if (!window.confirm('Are you sure you want to revert this failed transaction? The amount will be credited back to your wallet.')) {
+      return;
+    }
+    try {
+      setRevertingId(transactionId);
+      const response = await revertFailedWithdrawal(transactionId);
+      await loadWalletData(true); // Refresh wallet data
+      toast({
+        title: 'Success',
+        description: `Failed withdrawal reverted successfully. Your new balance is ₹${response.new_balance.toFixed(2)}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to revert transaction.',
+        variant: 'destructive',
+      });
+    } finally {
+      setRevertingId(null);
     }
   };
 
@@ -283,23 +349,77 @@ export default function CreatorWallet() {
       <>
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Wallet</h1>
-          <p className="text-gray-600 mt-2">Manage your earnings and withdraw funds</p>
+          <h1 className="text-3xl font-bold text-primary">Wallet</h1>
+          <p className="text-gray-200 mt-2">Manage your earnings and withdraw funds</p>
         </div>
 
         {/* Wallet Balance Card */}
-        <Card className="mb-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-6 w-6" />
-              Total Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold mb-2">₹{walletBalance.toFixed(2)}</div>
-            <p className="text-blue-100">Available for withdrawal</p>
-          </CardContent>
-        </Card>
+        <div className="mb-8 flex w-full justify-center">
+          <CreditCard className="max-w-md w-full">
+            <CreditCardFlipper
+              className="relative"
+              style={{ transformStyle: 'preserve-3d' }}
+            >
+              <CreditCardFront
+                safeArea={24}
+                className="bg-gradient-to-br from-[#f56f10] via-[#f78b3c] to-[#f56f10] text-white"
+              >
+                <div className="flex h-full flex-col justify-between">
+                  <div className="flex items-start justify-between text-sm font-semibold uppercase">
+                    <span className="tracking-[0.4em]">Mipoe</span>
+                    <CreditCardLogo className="text-xs font-semibold tracking-[0.3em] text-white/80">
+                      Wallet
+                    </CreditCardLogo>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <CreditCardChip />
+                    
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <CreditCardName className="text-lg font-semibold tracking-wide">
+                      {creatorDisplayName}
+                    </CreditCardName>
+                    <span className="text-sm font-semibold uppercase tracking-[0.2em]">
+                      {payoutMethodLabel}
+                    </span>
+                  </div>
+                </div>
+              </CreditCardFront>
+              <CreditCardBack
+                safeArea={20}
+                className="bg-gradient-to-br from-[#f56f10] via-[#f78b3c] to-[#f56f10] text-white"
+              >
+                {/* <CreditCardMagStripe /> */}
+                <div className="flex h-full flex-col justify-between pt-8">
+                  <div />
+                  <div className="text-center space-y-2">
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/60">Total Balance</p>
+                    <p className="text-3xl font-bold">₹{walletBalance.toFixed(2)}</p>
+                    <p className="text-xs text-white/70">Available for withdrawal</p>
+                  </div>
+                  <div className="space-y-1 text-sm text-white/80">
+                    {payoutDetails.payout_method === 'upi' && payoutDetails.upi_id ? (
+                      <>
+                        <p className="text-xs uppercase tracking-[0.3em] text-white/60">UPI ID</p>
+                        <p className="font-semibold break-all">{payoutDetails.upi_id}</p>
+                      </>
+                    ) : payoutDetails.payout_method === 'bank' && payoutDetails.bank_account ? (
+                      <>
+                        <p className="text-xs uppercase tracking-[0.3em] text-white/60">Account</p>
+                        <p className="font-semibold">{maskAccountNumber(payoutDetails.bank_account)}</p>
+                        {payoutDetails.ifsc && (
+                          <p className="text-xs text-white/60">IFSC {payoutDetails.ifsc}</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-white/60">Add payout details to complete setup</p>
+                    )}
+                  </div>
+                </div>
+              </CreditCardBack>
+            </CreditCardFlipper>
+          </CreditCard>
+        </div>
 
         {/* Payout Details & Withdrawal Tabs */}
         <Tabs defaultValue="payout-details" className="w-full">
@@ -557,8 +677,23 @@ export default function CreatorWallet() {
             {/* Recent Withdrawals */}
             {withdrawalHistory.length > 0 && (
               <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>Recent Withdrawals</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div className="flex items-center gap-2">
+                    <CardTitle>Recent Withdrawals</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => loadWalletData(false)}
+                      disabled={refreshingHistory}
+                      className="h-8 w-8"
+                    >
+                      {refreshingHistory ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                   <CardDescription>
                     Your last 10 withdrawal requests
                   </CardDescription>
@@ -569,20 +704,32 @@ export default function CreatorWallet() {
                       <div key={withdrawal.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex-1">
                           <p className="font-medium">₹{withdrawal.amount.toFixed(2)}</p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(withdrawal.created_at).toLocaleDateString()}
+                          <p className="text-xs text-gray-500 capitalize">
+                            {withdrawal.type} • {new Date(withdrawal.created_at).toLocaleDateString()}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             withdrawal.status === 'success' ? 'bg-green-100 text-green-800' :
                             withdrawal.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            withdrawal.status === 'reverted' ? 'bg-blue-100 text-blue-800' :
                             'bg-red-100 text-red-800'
                           }`}>
                             {withdrawal.status.charAt(0).toUpperCase() + withdrawal.status.slice(1)}
                           </span>
                           {withdrawal.utr && (
                             <p className="text-xs text-gray-500">UTR: {withdrawal.utr.slice(-6)}</p>
+                          )}
+                          {withdrawal.status === 'failed' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-blue-600 hover:text-blue-800"
+                              onClick={() => handleRevertWithdrawal(withdrawal.id)}
+                              disabled={revertingId === withdrawal.id}
+                            >
+                              {revertingId === withdrawal.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                            </Button>
                           )}
                         </div>
                       </div>

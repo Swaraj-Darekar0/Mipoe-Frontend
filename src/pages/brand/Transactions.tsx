@@ -21,13 +21,14 @@ import BrandLayout from "@/layouts/BrandLayout";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowDownRight, ArrowUpRight, Download, MoreVertical, Wallet, TrendingUp, DollarSign, Clock, ArrowLeft } from "lucide-react";
-import { getTransactions, Transaction as ApiTransaction } from "@/lib/api";
+import { getTransactions } from "@/lib/api";
 
+// 1. UPDATE INTERFACE TO MATCH API.TS (String IDs)
 interface Transaction {
-  id: number;
+  id: number; // Transaction ID is still a number (Serial)
   user_type: string;
-  user_id: number;
-  campaign_id?: number;
+  user_id: string; // 👈 CHANGED to string (UUID)
+  campaign_id?: number; // 👈 KEEP as number (Campaign ID is Serial)
   amount: number;
   type: string;
   status: string;
@@ -64,7 +65,8 @@ const BrandTransactions = () => {
     const fetchTransactions = async () => {
       try {
         setLoading(true);
-        const userId = parseInt(localStorage.getItem("user_id") || "0");
+        // 2. DO NOT PARSE INT. Keep as string.
+        const userId = localStorage.getItem("user_id"); 
         const role = localStorage.getItem("role");
 
         console.log("Fetching transactions for:", { userId, role, token: !!token });
@@ -76,10 +78,13 @@ const BrandTransactions = () => {
           return;
         }
 
+        // 3. Call API with string ID
+        // @ts-ignore (Temporary ignore if api.ts hasn't updated types yet)
         const response = await getTransactions('brand', userId);
         console.log("Transactions response:", response);
         
-        setTransactions(response.transactions || []);
+        // Ensure we cast or validate the response matches our interface
+        setTransactions(response.transactions as unknown as Transaction[] || []);
       } catch (error) {
         console.error("Error fetching transactions:", error);
         toast({
@@ -112,10 +117,12 @@ const BrandTransactions = () => {
       filtered = filtered.filter((t) => t.status === statusFilter);
     }
 
+    // 4. Fix Campaign Filter Logic
     if (campaignFilter !== "all") {
       if (campaignFilter === "null-campaign") {
-        filtered = filtered.filter((t) => t.campaign_id === null);
+        filtered = filtered.filter((t) => t.campaign_id === null || t.campaign_id === undefined);
       } else {
+        // Parse the filter value to Int because campaign_id is a number
         filtered = filtered.filter((t) => t.campaign_id === parseInt(campaignFilter));
       }
     }
@@ -136,6 +143,7 @@ const BrandTransactions = () => {
     pending: transactions.filter((t) => t.status === "pending").length,
   };
 
+  // 5. Fix Campaign Options Reduce
   const campaignOptions = transactions.reduce((acc, t) => {
     if (t.campaign_id && t.campaign && !acc.some(c => c.id === t.campaign_id)) {
       acc.push({ id: t.campaign_id, name: t.campaign.name });
@@ -143,7 +151,7 @@ const BrandTransactions = () => {
     return acc;
   }, [] as { id: number; name: string }[]);
 
-  const hasNullCampaignId = transactions.some(t => t.campaign_id === null);
+  const hasNullCampaignId = transactions.some(t => !t.campaign_id);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -182,7 +190,6 @@ const BrandTransactions = () => {
       refund: "bg-orange-100 text-orange-800",
       deposit: "bg-purple-100 text-purple-800",
       reclaim: "bg-red-100 text-red-800",
-
     };
     return (
       <Badge className={colors[type] || "bg-gray-100 text-gray-800"}>
@@ -242,7 +249,7 @@ const BrandTransactions = () => {
   
     const creatorColumn: Column = {
       header: "Creator",
-      accessor: (t) => t.creator?.username || (t.user_id ? `User ${t.user_id}` : '-'),
+      accessor: (t) => t.creator?.username || (t.user_id ? `User` : '-'),
     };
   
     const externalIdColumn: Column = {

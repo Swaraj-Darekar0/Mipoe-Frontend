@@ -12,7 +12,7 @@ interface CampaignCardProps {
   hashtag?: string;
   audio?: string;
   deadline: string;
-  brand_id?: number;
+  brand_id?: string;
   submitted?: boolean;
   hideStatusActions?: boolean;
   image_url?: string; // Added image support
@@ -64,7 +64,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
             loading="lazy"
             referrerPolicy="no-referrer"
             onError={() => setImgError(true)}
-            className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
+            className="w-full h-full object-cover object-top "
           />
         ) : (
           // Fallback: Dark Aesthetic Gradient

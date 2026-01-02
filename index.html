@@ -5,8 +5,42 @@
     <link rel="icon" type="image/svg+xml" href="/play-symbol.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>mipoe</title>
+    <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&amp;family=Space+Mono:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Mono:wght@300;400;500&amp;display=swap"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
   </head>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#f56f10", // Liquid Lava
+            "dark-void": "#151419", // Dark Void (Background Dark)
+            "snow": "#fbfbfb", // Snow (Background Light/Text)
+            "dusty-grey": "#878787", // Dusty Grey
+            "glucon-grey": "#1b1a1f", // Glucon Grey (Alt Background)
+            "background-light": "#fbfbfb",
+            "background-dark": "#151419",
+          },
+          fontFamily: {
+            Homedisplay: ['"Playfair Display"', 'serif'] // Massive Serif (Font A/B)
+             // Pixel/Data (Font C)
+          },
 
+          borderRadius: {
+            DEFAULT: "0px", // Neo-brutalist often uses sharp edges
+            'pixel': '2px',
+          },
+          spacing: {
+            '128': '32rem',
+          }
+        },
+      },
+    };
+  </script>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

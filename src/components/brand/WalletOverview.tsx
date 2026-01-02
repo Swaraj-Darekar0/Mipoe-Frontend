@@ -65,7 +65,7 @@ const WalletOverview: React.FC<WalletOverviewProps> = ({ balance, onRefresh }) =
   };
 
   return (
-    <Card className="bg-gradient-to-r from-zinc-900 to-zinc-800 text-white border-none shadow-xl mb-8">
+    <Card className="bg-black text-white border-none shadow-xl mb-8">
       <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
         {/* Left: Balance Info */}
         <div className="flex items-center gap-4">

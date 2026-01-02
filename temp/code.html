@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Authentication Page - Mipoe</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f56f10",
+              "background-light": "#f6f6f8",
+              "dark-void": "#151419",
+              "glucon-grey-1": "#1b1a1f",
+              "glucon-grey-2": "#262626",
+              "dusty-grey": "#878787",
+              "snow": "#fbfbfb",
+            },
+            fontFamily: {
+              "display": ["Space Grotesk", "sans-serif"],
+              "body": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    </style>
+</head>
+<body class="font-body bg-dark-void dark:bg-dark-void">
+<div class="group/design-root relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<div class="flex h-full min-h-screen w-full grow flex-col">
+<div class="flex min-h-screen w-full flex-1">
+<div class="grid w-full grid-cols-1 md:grid-cols-2">
+<div class="relative hidden flex-col justify-end bg-black p-10 text-white md:flex">
+<div class="absolute inset-0 z-0">
+<div class="h-full w-full bg-cover bg-center bg-no-repeat" data-alt="A young female creator with a camera filming content in a modern, well-lit room." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBlCKj4xZv5Z-fkVA5FdK2yD9RQGMV741kamgW0Kqi0rYWHIsJn0PwsRm9Cjsx7Kbu4hiLXiiZQy-ISNz7O730nWWskQR4mQC-ry5cGEiKM2d5kzn4c1TpwIRuq8r4p4bSJ3n0ZHv7iqfGqMnM3Lgt2f9Dpl4Vk0Wg-HOmIfqFru-Df4IFRD_T7POVg6uJoI30pkbO9vDo6_mGWCUWBQFV933McbY7FLryt3Sz3Tkxg2ZzIE6-cxYFlIAZ1nS5tLg-FdCvkV2xqP0Mt");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/10"></div>
+</div>
+<div class="relative z-10">
+<h1 class="font-display text-4xl font-bold leading-tight tracking-[-0.033em] text-snow lg:text-5xl">Your Story, Your Stage.</h1>
+</div>
+</div>
+<div class="flex w-full items-center justify-center bg-dark-void p-6 sm:p-8 lg:p-12">
+<div class="flex w-full max-w-md flex-col gap-8">
+<div class="flex flex-col items-center text-center">
+<h1 class="font-display text-snow tracking-tight text-[32px] font-bold leading-tight">Join Mipoe</h1>
+<p class="mt-2 text-base text-dusty-grey">Create an account to start your journey.</p>
+</div>
+<div class="flex flex-col gap-6">
+<div class="flex h-12 flex-1 items-center justify-center rounded-xl bg-glucon-grey-1 p-1.5">
+<label class="flex h-full flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg px-2 text-sm font-medium leading-normal text-dusty-grey has-[:checked]:bg-primary has-[:checked]:text-snow has-[:checked]:shadow-md transition-all">
+<span class="truncate">Sign up as Brand</span>
+<input class="invisible w-0" name="user_type" type="radio" value="brand"/>
+</label>
+<label class="flex h-full flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg px-2 text-sm font-medium leading-normal text-dusty-grey has-[:checked]:bg-primary has-[:checked]:text-snow has-[:checked]:shadow-md transition-all">
+<span class="truncate">Sign up as Creator</span>
+<input checked="" class="invisible w-0" name="user_type" type="radio" value="creator"/>
+</label>
+</div>
+<div class="flex flex-col gap-4">
+<label class="flex flex-col">
+<p class="text-snow text-base font-medium leading-normal pb-2">Full Name</p>
+<input class="form-input flex h-14 w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-glucon-grey-2 bg-glucon-grey-1 p-[15px] text-base font-normal leading-normal text-snow placeholder:text-dusty-grey focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/20" placeholder="Enter your full name" type="text" value=""/>
+</label>
+<label class="flex flex-col">
+<p class="text-snow text-base font-medium leading-normal pb-2">Email</p>
+<input class="form-input flex h-14 w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-glucon-grey-2 bg-glucon-grey-1 p-[15px] text-base font-normal leading-normal text-snow placeholder:text-dusty-grey focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/20" placeholder="Enter your email" type="email" value=""/>
+</label>
+<label class="flex flex-col">
+<p class="text-snow text-base font-medium leading-normal pb-2">Password</p>
+<div class="relative flex w-full items-center">
+<input class="form-input flex h-14 w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-glucon-grey-2 bg-glucon-grey-1 p-[15px] pr-12 text-base font-normal leading-normal text-snow placeholder:text-dusty-grey focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/20" placeholder="Enter your password" type="password" value=""/>
+<button class="absolute right-4 text-dusty-grey">
+<span class="material-symbols-outlined text-xl">visibility_off</span>
+</button>
+</div>
+</label>
+</div>
+<button class="flex h-14 w-full items-center justify-center rounded-lg bg-primary px-4 text-base font-bold text-snow shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-dark-void">
+                                    Create Account
+                                </button>
+<div class="relative flex items-center">
+<div class="h-px w-full flex-1 bg-glucon-grey-2"></div>
+<p class="shrink-0 px-4 text-sm text-dusty-grey">Or continue with</p>
+<div class="h-px w-full flex-1 bg-glucon-grey-2"></div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<button class="flex h-12 items-center justify-center gap-2 rounded-lg border border-glucon-grey-2 bg-glucon-grey-1 text-snow transition-colors hover:bg-glucon-grey-2">
+<svg class="h-5 w-5" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" fill="#FFC107"></path><path d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" fill="#FF3D00"></path><path d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" fill="#4CAF50"></path><path d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.022,35.244,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z" fill="#1976D2"></path>
+</svg>
+<span>Google</span>
+</button>
+<button class="flex h-12 items-center justify-center gap-2 rounded-lg border border-glucon-grey-2 bg-glucon-grey-1 text-snow transition-colors hover:bg-glucon-grey-2">
+<svg class="h-5 w-5 text-snow" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M17.381 3.205a5.552 5.552 0 0 0-4.664-2.115c-1.63 0-3.32.748-4.542 2.115c-1.22 1.366-2.189 3.42-2.189 5.492c0 2.22 1.018 4.342 2.238 5.663c1.22 1.321 2.81 2.025 4.493 2.025c.15 0 .29-.02.44-.04c.04-.01.07-.01.119-.02c.08-.02.15-.03.22-.05c1.4-.29 2.87-1.01 3.99-2.074c-1.57.01-3.13-.74-4.22-2.18c-1.09-1.44-1.64-3.2-1.64-5.28c0-2.11.58-3.86 1.74-5.24a4.13 4.13 0 0 1 3.03-1.61c-1.53-.05-2.98.6-4.04 1.84c-1.06 1.24-1.59 2.96-1.59 4.95c0 1.93.53 3.44 1.58 4.54c1.05 1.1 2.45 1.65 4.19 1.65c.12 0 .23-.01.34-.02c.08-.01.17-.02.25-.03c.1-.02.2-.04.3-.06c.24-.05.48-.12.71-.21a1.2 1.2 0 0 1 .15-.07c.07-.03.14-.07.2-.11c.1-.05.18-.12.27-.19a6.04 6.04 0 0 0 2.37-3.95h-5.21v-2.85h8.04a6.4 6.4 0 0 1-.22 1.96a6.32 6.32 0 0 1-1.61 3.28c-1.29 1.45-3.03 2.28-5.01 2.48a4.92 4.92 0 0 1-3.61-.13a5.57 5.57 0 0 1-2.07-5.46c.11-1.07.5-2.14 1.18-3.17A5.02 5.02 0 0 1 12.04 3.9c.7-.35 1.48-.52 2.29-.52c.8 0 1.58.17 2.32.52a4.12 4.12 0 0 1 1.44 3.86c-.1 1.02-.6 1.9-1.5 2.6c.92.2 1.8.03 2.58-.51a4.2 4.2 0 0 0 1.83-3.65c-.06-.98-.44-1.96-1.12-2.9Z" fill="currentColor"></path>
+</svg>
+<span>Apple</span>
+</button>
+</div>
+<p class="text-center text-sm text-dusty-grey">
+                                    Already have an account? 
+                                    <a class="font-semibold text-primary hover:underline" href="#">Sign In</a>
+</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

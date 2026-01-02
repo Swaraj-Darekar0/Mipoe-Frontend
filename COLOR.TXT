@@ -1,0 +1,6 @@
+Color Name,HEX Code,Approximate HSL,Primary UI Role,Description
+1. Dark Void,#202020,"H=0,S=0%,L=13%",Background / Primary Text,"A deep, near-black charcoal/dark gray. Excellent for primary backgrounds (especially dark mode) or primary text in a light mode. Conveys sophistication and depth."
+2. Liquid Lava,#FF5C00,"H=22,S=100%,L=50%",Accent,"A vibrant, saturated orange, similar to a hot lava or traffic orange. Ideal for Call-to-Action (CTA) buttons, notifications, alerts, and key interactive elements. Conveys energy, urgency, and action."
+3. Glucon Grey,#989898,"H=0,S=0%,L=60%",Secondary Text / Borders,"A balanced, mid-range gray. Perfect for secondary body text, disabled states, borders, dividing lines, and inactive icons. Provides necessary contrast against the dark/light neutrals."
+4. Snow,#F7F7F7,"H=0,S=0%,L=97%",Background / Primary Text,"A very light, off-white. The dominant primary color for backgrounds in light mode. Provides a clean, spacious, and highly legible canvas."
+5. Dusty Grey,#C4C4C4,"H=0,S=0%,L=77%",Secondary Background / Toggles,"A light, cool-leaning gray. Useful for subtle secondary backgrounds (like cards or sidebars), shadows, input fields, and hover states."
