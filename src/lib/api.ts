@@ -3,20 +3,21 @@ import { supabase } from './supabaseClient';
 const API_BASE = 'http://localhost:5000';
 
 // --- NEW: Token Management ---
-const setAuthTokens = (accessToken: string, refreshToken: string, userId: string) => {
+export const setAuthTokens = (accessToken: string, refreshToken: string, userId: string) => {
   sessionStorage.setItem('accessToken', accessToken);
   localStorage.setItem('refreshToken', refreshToken);
-  sessionStorage.setItem('user_id', userId); // Store user_id
+  sessionStorage.setItem('user_id', userId); 
 };
 
+// ... keep getAccessToken, getRefreshToken, etc. as they are
 const getAccessToken = () => sessionStorage.getItem('accessToken');
 const getRefreshToken = () => localStorage.getItem('refreshToken');
-export const getUserId = () => sessionStorage.getItem('user_id'); // Export for use in components
+export const getUserId = () => sessionStorage.getItem('user_id');
 
 const clearAuthTokens = () => {
   sessionStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
-  sessionStorage.removeItem('user_id'); // Clear user_id
+  sessionStorage.removeItem('user_id');
 };
 
 export async function logout(): Promise<void> {
@@ -128,10 +129,20 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
   return response;
 }
 
-export async function syncGoogleUser(): Promise<{ msg: string; username?: string }> {
+
+
+// Update the return type
+export async function syncGoogleUser(): Promise<{ 
+  msg: string; 
+  access_token: string; 
+  refresh_token: string; 
+  user_id: string; 
+  role: string; 
+}> {
+  // apiFetch will still attach the Supabase token (from setAuthTokens) initially
   const res = await apiFetch(`${API_BASE}/api/auth/google-sync`, {
     method: 'POST',
-    body: JSON.stringify({}) // Empty body, data comes from Token
+    body: JSON.stringify({}) 
   });
   
   const data = await res.json();
