@@ -138,6 +138,7 @@ export async function syncGoogleUser(): Promise<{
   refresh_token: string; 
   user_id: string; 
   role: string; 
+  profile_completed: boolean;
 }> {
   // apiFetch will still attach the Supabase token (from setAuthTokens) initially
   const res = await apiFetch(`${API_BASE}/api/auth/google-sync`, {

@@ -75,12 +75,14 @@ const AuthCallback = () => {
         // We trust the backend's response for the final role.
         if (response.role === "brand") {
           navigate("/brand/dashboard");
+        } else if (response.profile_completed) {
+            navigate("/creator/dashboard");
         } else {
-          navigate("/creator/dashboard");
+          navigate("/creator/complete-profile");
         }
+
         
         // --- NEW TOKEN SWAP LOGIC ENDS HERE ---
-
       } catch (error: any) {
         console.error("Auth Callback Error:", error);
         toast.error(error.message || "An error occurred during sign-in.");
