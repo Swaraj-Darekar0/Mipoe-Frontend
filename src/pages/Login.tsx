@@ -69,7 +69,7 @@ const handleGoogleLogin = async () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `http://localhost:8080/auth/callback?role=${role}`, // Your frontend callback route
+          redirectTo: `https://mipoe.vercel.app/auth/callback?role=${role}`, // Your frontend callback route
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
