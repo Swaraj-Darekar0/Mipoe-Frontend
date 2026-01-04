@@ -59,15 +59,14 @@ const BrandTransactions = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("accessToken");
 
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
         setLoading(true);
-        // 2. DO NOT PARSE INT. Keep as string.
-        const userId = localStorage.getItem("user_id"); 
-        const role = localStorage.getItem("role");
+        const userId = sessionStorage.getItem("user_id"); 
+        const role = sessionStorage.getItem("role");
 
         console.log("Fetching transactions for:", { userId, role, token: !!token });
 

@@ -3,21 +3,24 @@ import { supabase } from './supabaseClient';
 const API_BASE = 'http://localhost:5000';
 
 // --- NEW: Token Management ---
-export const setAuthTokens = (accessToken: string, refreshToken: string, userId: string) => {
+export const setAuthTokens = (accessToken: string, refreshToken: string, userId: string, role: string) => {
   sessionStorage.setItem('accessToken', accessToken);
   localStorage.setItem('refreshToken', refreshToken);
   sessionStorage.setItem('user_id', userId); 
+  sessionStorage.setItem('role', role);
 };
 
 // ... keep getAccessToken, getRefreshToken, etc. as they are
 const getAccessToken = () => sessionStorage.getItem('accessToken');
 const getRefreshToken = () => localStorage.getItem('refreshToken');
 export const getUserId = () => sessionStorage.getItem('user_id');
+export const getRole = () => sessionStorage.getItem('role');
 
 const clearAuthTokens = () => {
   sessionStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   sessionStorage.removeItem('user_id');
+  sessionStorage.removeItem('role');
 };
 
 export async function logout(): Promise<void> {
@@ -386,8 +389,8 @@ export async function login({ email, password, role }: { email: string, password
     }
     
     // Set tokens and user_id upon successful login
-    if (data.access_token && data.refresh_token && data.user_id) {
-        setAuthTokens(data.access_token, data.refresh_token, data.user_id);
+    if (data.access_token && data.refresh_token && data.user_id && data.role) {
+        setAuthTokens(data.access_token, data.refresh_token, data.user_id, data.role);
     }
 
     return data;
