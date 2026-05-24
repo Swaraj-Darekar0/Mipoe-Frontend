@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 
-const API_BASE = 'http://localhost:5000';
+const API_BASE = 'http://127.0.0.1:5000';
 
 // --- NEW: Token Management ---
 export const setAuthTokens = (accessToken: string, refreshToken: string, userId: string, role: string) => {
@@ -155,10 +155,6 @@ export async function syncGoogleUser(): Promise<{
 }
 
 
-interface RegisterResponse {
-  msg: string;
-}
-
 interface LoginResponse {
   access_token: string;
   refresh_token: string;
@@ -167,6 +163,10 @@ interface LoginResponse {
   user_id: string;
   profile_completed?: boolean;
   msg?: string;
+}
+
+interface RegisterResponse extends LoginResponse {
+  msg: string;
 }
 
 interface ErrorResponse {
@@ -367,6 +367,11 @@ export async function register({ email, password, role, username }: { email: str
     });
     const data: RegisterResponse = await res.json();
     if (!res.ok) throw new Error(data.msg || 'Registration failed');
+
+    if (data.access_token && data.refresh_token && data.user_id && data.role) {
+      setAuthTokens(data.access_token, data.refresh_token, data.user_id, data.role);
+    }
+
     return data;
   } catch (error: unknown) {
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
@@ -382,9 +387,9 @@ export async function login({ email, password, role }: { email: string, password
       method: 'POST',
       body: JSON.stringify({ email, password, role })
     });
-    const data: LoginResponse = await res.json();
+    const data = await res.json();
     if (!res.ok) {
-      const errorData: ErrorResponse = data;
+      const errorData: ErrorResponse = data as ErrorResponse;
       throw new Error(errorData.msg || 'Login failed');
     }
     
@@ -1510,6 +1515,17 @@ export async function requestPasswordReset(email: string): Promise<{ msg: string
     body: JSON.stringify({ email })
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.msg || 'Failed to send reset email');
+  if (!res.ok) throw new Error(data.msg || data.detail || 'Failed to send reset email');
+  return data;
+}
+
+export async function resetPassword(token: string, password: string): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || data.detail || 'Failed to reset password');
   return data;
 }

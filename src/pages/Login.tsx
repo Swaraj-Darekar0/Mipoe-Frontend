@@ -88,9 +88,9 @@ const handleForgotPassword = async (e: React.FormEvent) => {
     setResetStatus("loading");
     setResetMessage("");
     try {
-      await requestPasswordReset(resetEmail);
+      const response = await requestPasswordReset(resetEmail);
       setResetStatus("success");
-      setResetMessage("Check your email for the password reset link.");
+      setResetMessage(response.msg || "Check your email for the password reset link.");
     } catch (err: any) {
       setResetStatus("error");
       setResetMessage(err.message || "Failed to send email. Please try again.");
@@ -175,7 +175,7 @@ const handleForgotPassword = async (e: React.FormEvent) => {
             <DialogHeader>
               <DialogTitle>Reset Password</DialogTitle>
               <DialogDescription className="text-[#989898]">
-                Enter your email address and we'll send you a link to reset your password.
+                Enter your email address and we'll send you a secure password reset link.
               </DialogDescription>
             </DialogHeader>
             

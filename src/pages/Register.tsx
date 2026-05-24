@@ -17,6 +17,17 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const navigateAfterAuth = (registeredRole: string, profileCompleted?: boolean) => {
+    if (registeredRole === "brand") {
+      navigate("/brand/dashboard");
+      return;
+    }
+
+    if (registeredRole === "creator") {
+      navigate(profileCompleted ? "/creator/dashboard" : "/creator/complete-profile");
+    }
+  };
+
   const handleGoogleLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -56,12 +67,9 @@ const Register = () => {
             setError("");
             setLoading(true);
             try {
-              await registerApi({ username, email, password, role });
-              navigate("/login", {
-                state: {
-                  toastMessage: "Account created! Please check your email to verify your account."
-                }
-              });
+              const data = await registerApi({ username, email, password, role });
+              toast.success(data.msg || "Account created successfully.");
+              navigateAfterAuth(data.role, data.profile_completed);
             } catch (err: unknown) {
               if (err instanceof Error) {
                 setError(err.message);

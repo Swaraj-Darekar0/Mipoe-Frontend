@@ -108,7 +108,7 @@ const WalletOverview: React.FC<WalletOverviewProps> = ({ balance, onRefresh }) =
                 </>
               )}
           </Button>
-          <DialogContent className="sm:max-w-[900px] p-0 bg-transparent border-none shadow-none">
+          <DialogContent className="w-full max-w-[900px] p-0 bg-transparent border-none shadow-none">
             <AddFunds />
           </DialogContent>
         </Dialog>
