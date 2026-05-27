@@ -1,14 +1,20 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AuthLayout from "@/layouts/AuthLayout";
 import { register as registerApi } from "@/lib/api";
-import { RoleSwitcher } from "@/components/ui/RoleSwitcher"; // Import the new component
 import { toast } from "sonner"; 
 import { supabase } from "@/lib/supabaseClient";
+import { ArrowLeft } from "lucide-react";
 
+// Policy dialog components
+import CookiePolicy from "@/components/policies/CookiePolicy";
+import PrivacyPolicy from "@/components/policies/PrivacyPolicy";
+import TermsConditions from "@/components/policies/TermsConditions";
 
 const Register = () => {
-  const [role, setRole] = useState<"creator" | "brand">("creator");
+  const [searchParams] = useSearchParams();
+  const queryRole = searchParams.get("role") === "brand" ? "brand" : "creator";
+  const [role, setRole] = useState<"creator" | "brand">(queryRole);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,6 +22,19 @@ const Register = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [showCookiePolicy, setShowCookiePolicy] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showTermsConditions, setShowTermsConditions] = useState(false);
+
+  // Sync role state with query param if it changes
+  useEffect(() => {
+    const r = searchParams.get("role");
+    if (r === "brand" || r === "creator") {
+      setRole(r);
+    }
+  }, [searchParams]);
 
   const navigateAfterAuth = (registeredRole: string, profileCompleted?: boolean) => {
     if (registeredRole === "brand") {
@@ -33,7 +52,7 @@ const Register = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `https://mipoe.vercel.app/auth/callback?role=${role}`, // Your frontend callback route
+          redirectTo: `https://mipoe.vercel.app/auth/callback?role=${role}`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -49,12 +68,19 @@ const Register = () => {
   return (
     <AuthLayout>
       <div className="w-full max-w-sm mx-auto">
-        <div className="text-center mb-10">
-          <h1 className="font-display text-4xl font-bold mb-2 text-[#F7F7F7]">Join Mipoe</h1>
-          <p className="text-[#989898]">Create an account to start your journey.</p>
-        </div>
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center text-sm font-medium text-[#989898] hover:text-[#FF5C00] transition-colors mb-6"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+        </button>
 
-        <RoleSwitcher role={role} setRole={setRole} />
+        <div className="text-center mb-10">
+          <h1 className="font-display text-4xl font-bold mb-2 text-[#F7F7F7]">
+            {role === "brand" ? "Brand Registration" : "Creator Registration"}
+          </h1>
+          <p className="text-[#989898]">Create an account to continue as a {role}.</p>
+        </div>
 
         <form
           className="space-y-6"
@@ -67,7 +93,7 @@ const Register = () => {
             setError("");
             setLoading(true);
             try {
-              const data = await registerApi({ username, email, password, role });
+              const data = await registerApi({ username, email, password, role, consentGiven });
               toast.success(data.msg || "Account created successfully.");
               navigateAfterAuth(data.role, data.profile_completed);
             } catch (err: unknown) {
@@ -81,8 +107,6 @@ const Register = () => {
             }
           }}
         >
-
-          
           <div>
             <label className="block text-[#F7F7F7] text-sm font-medium pb-2">Full Name</label>
             <input
@@ -128,12 +152,50 @@ const Register = () => {
             />
           </div>
 
+          <div className="flex items-start gap-3 mt-4">
+            <input
+              id="consent"
+              type="checkbox"
+              checked={consentGiven}
+              onChange={(e) => setConsentGiven(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-[#3A3A3A] bg-[#2A2A2A] text-[#FF5C00] focus:ring-[#FF5C00] focus:ring-offset-0 accent-[#FF5C00]"
+              required
+            />
+            <label htmlFor="consent" className="text-xs text-[#989898] leading-tight select-none">
+              I agree to the secure storage of login cookies as detailed in the{" "}
+              <button
+                type="button"
+                onClick={() => setShowCookiePolicy(true)}
+                className="text-[#FF5C00] hover:underline focus:outline-none font-medium font-sans"
+              >
+                Cookie Policy
+              </button>
+              , and agree to the{" "}
+              <button
+                type="button"
+                onClick={() => setShowPrivacyPolicy(true)}
+                className="text-[#FF5C00] hover:underline focus:outline-none font-medium font-sans"
+              >
+                Privacy Policy
+              </button>{" "}
+              and{" "}
+              <button
+                type="button"
+                onClick={() => setShowTermsConditions(true)}
+                className="text-[#FF5C00] hover:underline focus:outline-none font-medium font-sans"
+              >
+                Terms & Conditions
+              </button>
+              .
+            </label>
+          </div>
+
           {error && <div className="text-red-500 text-sm text-center">{error}</div>}
 
           <button
             type="submit"
             className="flex h-14 w-full items-center justify-center rounded-lg bg-[#FF5C00] px-4 text-base font-bold text-[#F7F7F7] shadow-lg shadow-[#FF5C00]/20 transition-all hover:bg-[#FF5C00]/90 focus:outline-none focus:ring-2 focus:ring-[#FF5C00] focus:ring-offset-2 focus:ring-offset-dark-void disabled:opacity-50"
-            disabled={!username || !email || !password || !confirm || loading}
+            disabled={!username || !email || !password || !confirm || !consentGiven || loading}
           >
             {loading ? "Creating Account..." : "Create Account"}
           </button>
@@ -154,10 +216,14 @@ const Register = () => {
 
         <p className="text-center text-sm text-[#989898] mt-8">
           Already have an account?{" "}
-          <Link to="/login" className="font-semibold text-[#FF5C00] hover:underline">
+          <Link to={`/login?role=${role}`} className="font-semibold text-[#FF5C00] hover:underline">
             Sign In
           </Link>
         </p>
+
+        <CookiePolicy open={showCookiePolicy} onOpenChange={setShowCookiePolicy} />
+        <PrivacyPolicy open={showPrivacyPolicy} onOpenChange={setShowPrivacyPolicy} />
+        <TermsConditions open={showTermsConditions} onOpenChange={setShowTermsConditions} />
       </div>
     </AuthLayout>
   );

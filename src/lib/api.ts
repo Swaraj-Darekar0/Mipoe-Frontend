@@ -201,6 +201,8 @@ export interface Campaign {
     clip_url: string;
     media_id?: string;
     view_count: number;
+    like_count?: number;
+    comment_count?: number;
     caption?: string;
     instagram_posted_at?: string;
     submitted_at: string;
@@ -359,17 +361,17 @@ interface UpdateClipResponse {
   msg: string;
 }
 
-export async function register({ email, password, role, username }: { email: string, password: string, role: string, username: string }): Promise<RegisterResponse> {
+export async function register({ email, password, role, username, consentGiven }: { email: string, password: string, role: string, username: string, consentGiven: boolean }): Promise<RegisterResponse> {
   try {
     const res = await apiFetch(`${API_BASE}/register`, {
       method: 'POST',
-      body: JSON.stringify({ email, password, role, username })
+      body: JSON.stringify({ email, password, role, username, consent_given: consentGiven })
     });
     const data: RegisterResponse = await res.json();
     if (!res.ok) throw new Error(data.msg || 'Registration failed');
 
-    if (data.access_token && data.refresh_token && data.user_id && data.role) {
-      setAuthTokens(data.access_token, data.refresh_token, data.user_id, data.role);
+    if (data.user_id && data.role && data.access_token && data.refresh_token) {
+        setAuthTokens(data.access_token, data.refresh_token, data.user_id, data.role);
     }
 
     return data;
@@ -381,11 +383,11 @@ export async function register({ email, password, role, username }: { email: str
   }
 }
 
-export async function login({ email, password, role }: { email: string, password: string, role: string }): Promise<LoginResponse> {
+export async function login({ email, password, role, consentGiven }: { email: string, password: string, role: string, consentGiven: boolean }): Promise<LoginResponse> {
   try {
     const res = await apiFetch(`${API_BASE}/login`, {
       method: 'POST',
-      body: JSON.stringify({ email, password, role })
+      body: JSON.stringify({ email, password, role, consent_given: consentGiven })
     });
     const data = await res.json();
     if (!res.ok) {
@@ -393,8 +395,7 @@ export async function login({ email, password, role }: { email: string, password
       throw new Error(errorData.msg || 'Login failed');
     }
     
-    // Set tokens and user_id upon successful login
-    if (data.access_token && data.refresh_token && data.user_id && data.role) {
+    if (data.user_id && data.role && data.access_token && data.refresh_token) {
         setAuthTokens(data.access_token, data.refresh_token, data.user_id, data.role);
     }
 

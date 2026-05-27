@@ -44,9 +44,7 @@ const CampaignView = () => {
       const clipsData = clips.value;
       const processedClips = clipsData.map((clip: ClipData) => ({
         ...clip,
-        status: clip.is_deleted_by_admin
-          ? "rejected"
-          : clip.status || "in_review",
+        status: clip.status === "pending" ? "in_review" : clip.status,
         view_count: clip.view_count ?? 0,
       }));
 
@@ -77,9 +75,7 @@ const CampaignView = () => {
       const clips = await fetchCreatorClipsForCampaign(Number(campaign_id));
       const processedClips = clips.map((clip) => ({
         ...clip,
-        status: clip.is_deleted_by_admin
-          ? "rejected"
-          : clip.status || "in_review",
+        status: clip.status === "pending" ? "in_review" : clip.status,
         view_count: clip.view_count ?? 0,
       }));
 

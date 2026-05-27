@@ -8,7 +8,7 @@ const NavigationLinks: React.FC = () => {
     <section className="w-full flex flex-col">
       <a
         className="group grid-border text-black dark:text-dark w-full flex justify-between items-center p-6 md:p-10 bg-background-light dark:bg-background-dark hover:bg-primary hover:text-dark-void dark:hover:bg-primary dark:hover:text-dark-void transition-colors duration-300 cursor-pointer relative overflow-hidden"
-        onClick={() => navigate("/login")}
+        onClick={() => navigate("/login?role=brand")}
       >
         <div className="z-10 flex flex-col md:flex-row md:items-baseline gap-4">
           <span className=" font-display font-bold text-4xl md:text-5xl lg:text-6xl tracking-tight">
@@ -27,7 +27,7 @@ const NavigationLinks: React.FC = () => {
       </a>
       <a
         className="group grid-border-black w-full flex justify-between items-center p-6 md:p-10 dark:bg-dark-void dark:text-white text-snow hover:bg-primary hover:text-dark-void dark:hover:bg-primary dark:hover:text-dark-void transition-colors duration-300 cursor-pointer border-t border-dark-void dark:border-dusty-grey/30"
-        onClick={() => navigate("/login")}
+        onClick={() => navigate("/login?role=creator")}
       >
         <div className="z-10 flex flex-col md:flex-row md:items-baseline gap-4">
           <span className="font-display font-bold text-4xl md:text-5xl lg:text-6xl tracking-tight">

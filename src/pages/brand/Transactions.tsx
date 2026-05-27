@@ -21,7 +21,7 @@ import BrandLayout from "@/layouts/BrandLayout";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowDownRight, ArrowUpRight, Download, MoreVertical, Wallet, TrendingUp, DollarSign, Clock, ArrowLeft } from "lucide-react";
-import { getTransactions } from "@/lib/api";
+import { getTransactions, getUserId, getRole } from "@/lib/api";
 
 // 1. UPDATE INTERFACE TO MATCH API.TS (String IDs)
 interface Transaction {
@@ -59,20 +59,19 @@ const BrandTransactions = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const token = sessionStorage.getItem("accessToken");
+  const userId = getUserId();
+  const role = getRole();
 
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
         setLoading(true);
-        const userId = sessionStorage.getItem("user_id"); 
-        const role = sessionStorage.getItem("role");
 
-        console.log("Fetching transactions for:", { userId, role, token: !!token });
+        console.log("Fetching transactions for:", { userId, role });
 
         // Verify user is authenticated as brand
-        if (!token || !userId || role !== "brand") {
-          console.warn("Auth check failed:", { token: !!token, userId, role });
+        if (!userId || role !== "brand") {
+          console.warn("Auth check failed:", { userId, role });
           navigate("/login");
           return;
         }
@@ -97,13 +96,13 @@ const BrandTransactions = () => {
       }
     };
 
-    if (token) {
+    if (userId) {
       fetchTransactions();
     } else {
-      console.warn("No token found, redirecting to login");
+      console.warn("No user ID found, redirecting to login");
       navigate("/login");
     }
-  }, [token, navigate, toast]);
+  }, [userId, role, navigate, toast]);
 
   useEffect(() => {
     let filtered = transactions;

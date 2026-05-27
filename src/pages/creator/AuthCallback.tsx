@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
-import { syncGoogleUser, setAuthTokens } from "@/lib/api"; // <--- 1. Import setAuthTokens
+import { syncGoogleUser, setAuthTokens, clearAuthTokens } from "@/lib/api"; // <--- 1. Import setAuthTokens and clearAuthTokens
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,36 +42,24 @@ const AuthCallback = () => {
 
         const user = refreshedSession.user;
         
-        // --- NEW TOKEN SWAP LOGIC STARTS HERE ---
+        // --- NEW COOKIE SWAP LOGIC STARTS HERE ---
 
-        // 5. Temporarily save Supabase Token
-        // We do this so 'syncGoogleUser' (which uses apiFetch) has a token to send to the backend.
-        console.log("AuthCallback: Setting temporary Supabase tokens...");
-        setAuthTokens(
-          refreshedSession.access_token,
-          refreshedSession.refresh_token,
-          user.id
-        );
-
-        // 6. Call backend to Sync AND Swap Tokens
-        // This sends the Supabase token -> Flask verifies it -> Flask returns NEW Flask tokens
+        // 5. Call backend to Sync AND Swap Tokens
+        // This sends the Supabase token -> FastAPI verifies it -> FastAPI returns metadata and sets HttpOnly Cookie
         console.log("AuthCallback: Calling backend to sync & swap tokens...");
-        const response = await syncGoogleUser();
+        const response = await syncGoogleUser(refreshedSession.access_token);
         console.log("AuthCallback: Backend response received (Token Swap successful).");
 
-        // 7. OVERWRITE with the new Flask Tokens
-        // This is the critical step. We discard the Supabase token and save the Flask token.
-        // Future API calls will now be authenticated against your Flask backend.
-        console.log("AuthCallback: Overwriting with Flask tokens...");
+        // 6. Save the user metadata (role and user_id)
+        console.log("AuthCallback: Saving user session metadata...");
         setAuthTokens(
-          response.access_token,
-          response.refresh_token,
-          response.user_id
+          response.user_id,
+          response.role
         );
 
         toast.success("Successfully signed in with Google!");
         
-        // 8. Redirect based on the role returned from the BACKEND
+        // 7. Redirect based on the role returned from the BACKEND
         // We trust the backend's response for the final role.
         if (response.role === "brand") {
           navigate("/brand/dashboard");
@@ -81,16 +69,12 @@ const AuthCallback = () => {
           navigate("/creator/complete-profile");
         }
 
-        
-        // --- NEW TOKEN SWAP LOGIC ENDS HERE ---
+        // --- NEW COOKIE SWAP LOGIC ENDS HERE ---
       } catch (error: any) {
         console.error("Auth Callback Error:", error);
         toast.error(error.message || "An error occurred during sign-in.");
         
-        // Clear tokens using the helper function or manually if needed
-        sessionStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        sessionStorage.removeItem("user_id");
+        clearAuthTokens();
         
         navigate("/login");
       }

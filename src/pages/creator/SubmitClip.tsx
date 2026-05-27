@@ -5,6 +5,34 @@ import { Button } from "@/components/ui/button";
 import { submitClip, fetchCampaignById, Campaign } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
+// Extract media code from various Instagram Reels URL formats
+const extractInstagramMediaCode = (url: string): string | null => {
+  // Remove trailing slashes
+  url = url.trim().replace(/\/$/, "");
+
+  // Pattern 1: https://www.instagram.com/reels/MEDIAID
+  const pattern1 = /instagram\.com\/reels\/([A-Za-z0-9_-]+)/;
+  const match1 = url.match(pattern1);
+  if (match1) return match1[1];
+
+  // Pattern 2: https://www.instagram.com/p/MEDIAID (old format)
+  const pattern2 = /instagram\.com\/p\/([A-Za-z0-9_-]+)/;
+  const match2 = url.match(pattern2);
+  if (match2) return match2[1];
+
+  // Pattern 3: Just the media code itself
+  if (/^[A-Za-z0-9_-]{11}$/.test(url)) {
+    return url;
+  }
+
+  return null;
+};
+
+// Convert extracted media code to standardized format
+const convertToStandardFormat = (mediaCode: string): string => {
+  return `https://www.instagram.com/reels/${mediaCode}`;
+};
+
 const SubmitClip = () => {
   const { campaignId } = useParams();
   const navigate = useNavigate();
@@ -51,9 +79,21 @@ const SubmitClip = () => {
       if (!campaignId) {
         throw new Error("Cannot submit clip: Campaign ID is missing.");
       }
+
+      // Extract media code from the provided URL
+      const mediaCode = extractInstagramMediaCode(link);
+      if (!mediaCode) {
+        throw new Error(
+          "Invalid Instagram Reels URL format. Please provide a valid Instagram Reels link or media code."
+        );
+      }
+
+      // Convert to standard format
+      const standardizedUrl = convertToStandardFormat(mediaCode);
+
       await submitClip({
         campaign_id: Number(campaignId),
-        clip_url: link
+        clip_url: standardizedUrl
       });
       setSuccess("Clip submitted successfully!");
       setLink("");

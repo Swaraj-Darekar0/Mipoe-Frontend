@@ -3,7 +3,7 @@ import CreatorLayout from "@/layouts/CreatorLayout";
 import CampaignCard from "@/components/creator/CampaignCard";
 import QuickStats from "@/components/creator/QuickStats";
 import { Button } from "@/components/ui/button";
-import { fetchCreatorCampaigns, Campaign, getCreatorNotifications, Notification as ApiNotification, getWalletBalance, getUserId } from "@/lib/api";
+import { fetchCreatorCampaigns, Campaign, getCreatorNotifications, deleteCreatorNotification, Notification as ApiNotification, getWalletBalance, getUserId } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import Notifications, { DisplayNotification } from "@/components/creator/Notifications";
 import { useToast } from '@/hooks/use-toast';
@@ -94,6 +94,24 @@ const CreatorDashboard = () => {
 
   const handleCardClick = (id: number) => navigate(`/creator/dashboard/${id}`);
 
+  const handleDismissNotification = async (notificationId: string) => {
+    try {
+      await deleteCreatorNotification(notificationId);
+      setProcessedNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+      toast({
+        title: "Notification dismissed",
+        description: "The notification was deleted from your history."
+      });
+    } catch (err: any) {
+      console.error("Failed to dismiss notification:", err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Failed to dismiss notification"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <CreatorLayout>
@@ -123,7 +141,7 @@ const CreatorDashboard = () => {
             <QuickStats currentEarnings={walletBalance} activeSubmissions={activeSubmissions} loading={loading} />
           </div>
           <div className="lg:col-span-1">
-             <Notifications processedNotifications={processedNotifications} loading={notificationsLoading} error={notificationsError} />
+             <Notifications processedNotifications={processedNotifications} loading={notificationsLoading} error={notificationsError} onDismiss={handleDismissNotification} />
           </div>
         </div>
 

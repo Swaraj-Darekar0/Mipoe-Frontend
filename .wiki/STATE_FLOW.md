@@ -16,10 +16,10 @@
 4. **UI Components** receive data via props or context, rendering the latest state.
 
 ## Example
-- **Login Flow:**
-  - `/src/pages/Login.tsx` uses a hook to call the login API.
-  - On success, updates Zustand store with user/session info.
-  - UI updates to reflect authenticated state.
+- **Login Flow & Cookie Session:**
+  - `/src/pages/Login.tsx` calls login endpoint. On success, the backend sets an HttpOnly cookie session and returns user metadata (saved in `localStorage` for driving client-side UI).
+  - **API Fetch (`api.ts`)**: Requests default to `options.credentials = 'include'` so cookies are sent automatically. If a request returns `401 Unauthorized`, the client clears user metadata and redirects to `/login`.
+  - **OAuth Callback (`AuthCallback.tsx`)**: Exchanges Supabase Google login credentials with the FastAPI backend, which verifies the identity, sets the local `access_token` cookie, and registers metadata.
 
 ## Maintenance
 - Any new API endpoint or stateful feature must update this file with its data flow pattern.

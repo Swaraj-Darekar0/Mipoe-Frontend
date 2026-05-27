@@ -1,9 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BrandLayout from "@/layouts/BrandLayout";
-import { createCampaign, uploadCampaignImage, Campaign } from "@/lib/api";
+import { createCampaign, uploadCampaignImage, Campaign, getBrandProfile } from "@/lib/api";
 import { compressImage } from "@/utils/imageCompression"; // Assumes utils file exists
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const CreateCampaign = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const checkCompliance = async () => {
+      try {
+        const profile = await getBrandProfile();
+        if (profile.onboarding_status !== "verified") {
+          toast({
+            title: "Access Restricted",
+            description: "Please complete business verification to create campaigns.",
+            variant: "destructive"
+          });
+          navigate("/brand/dashboard");
+        }
+      } catch (err) {
+        console.error("Compliance check failed", err);
+      }
+    };
+    checkCompliance();
+  }, [navigate]);
   const [platform, setPlatform] = useState("");
 
   const [cpv, setCpv] = useState<number>(0);
