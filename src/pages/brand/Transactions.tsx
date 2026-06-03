@@ -81,8 +81,21 @@ const BrandTransactions = () => {
         const response = await getTransactions('brand', userId);
         console.log("Transactions response:", response);
         
-        // Ensure we cast or validate the response matches our interface
-        setTransactions(response.transactions as unknown as Transaction[] || []);
+        // Map database flat fields, status, and campaign_funding type to the frontend interface structure
+        const processed = (response.transactions || []).map((t: any) => {
+          const rawStatus = (t.status || "").toLowerCase();
+          const mappedStatus = (rawStatus === "completed" || rawStatus === "success" || rawStatus === "paid")
+            ? "success"
+            : rawStatus;
+          return {
+            ...t,
+            type: t.type === "campaign_funding" ? "allocation" : t.type,
+            status: mappedStatus,
+            campaign: t.campaign_name && t.campaign_name !== "N/A" ? { name: t.campaign_name } : undefined,
+            creator: t.creator_username && t.creator_username !== "N/A" ? { username: t.creator_username } : undefined,
+          };
+        });
+        setTransactions(processed);
       } catch (error) {
         console.error("Error fetching transactions:", error);
         toast({
@@ -104,6 +117,11 @@ const BrandTransactions = () => {
     }
   }, [userId, role, navigate, toast]);
 
+  const isDeletedCampaignTransaction = (t: Transaction) => {
+    const isCampaignRelated = ["allocation", "refund", "distribution"].includes(t.type);
+    return (isCampaignRelated || !!t.campaign_id) && (!t.campaign_id || !t.campaign);
+  };
+
   useEffect(() => {
     let filtered = transactions;
 
@@ -118,27 +136,35 @@ const BrandTransactions = () => {
     // 4. Fix Campaign Filter Logic
     if (campaignFilter !== "all") {
       if (campaignFilter === "null-campaign") {
-        filtered = filtered.filter((t) => t.campaign_id === null || t.campaign_id === undefined);
+        filtered = filtered.filter(isDeletedCampaignTransaction);
       } else {
         // Parse the filter value to Int because campaign_id is a number
-        filtered = filtered.filter((t) => t.campaign_id === parseInt(campaignFilter));
+        filtered = filtered.filter((t) => t.campaign_id === parseInt(campaignFilter) && t.campaign);
       }
     }
 
     setFilteredTransactions(filtered);
   }, [transactions, typeFilter, statusFilter, campaignFilter]);
 
+  const campaignFilteredTxns = campaignFilter === "all" 
+    ? transactions 
+    : transactions.filter(t => 
+        campaignFilter === "null-campaign" 
+          ? isDeletedCampaignTransaction(t) 
+          : (t.campaign_id === parseInt(campaignFilter) && t.campaign)
+      );
+
   const stats = {
-    totalAllocated: transactions
+    totalAllocated: campaignFilteredTxns
       .filter((t) => t.type === "allocation" && t.status === "success")
       .reduce((sum, t) => sum + t.amount, 0),
-    totalDistributed: transactions
+    totalDistributed: campaignFilteredTxns
       .filter((t) => t.type === "distribution" && t.status === "success")
       .reduce((sum, t) => sum + t.amount, 0),
-    totalRefunded: transactions
+    totalRefunded: campaignFilteredTxns
       .filter((t) => t.type === "refund" && t.status === "success")
       .reduce((sum, t) => sum + t.amount, 0),
-    pending: transactions.filter((t) => t.status === "pending").length,
+    pending: campaignFilteredTxns.filter((t) => t.status === "pending").length,
   };
 
   // 5. Fix Campaign Options Reduce
@@ -149,7 +175,7 @@ const BrandTransactions = () => {
     return acc;
   }, [] as { id: number; name: string }[]);
 
-  const hasNullCampaignId = transactions.some(t => !t.campaign_id);
+  const hasDeletedCampaignTransactions = transactions.some(isDeletedCampaignTransaction);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -169,29 +195,34 @@ const BrandTransactions = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    const s = (status || "").toLowerCase();
+    switch (s) {
       case "success":
-        return <Badge variant="default" className="bg-green-500">Success</Badge>;
+        return <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium px-2.5 py-0.5 rounded-full shadow-sm">Success</Badge>;
       case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
+        return <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200/50 hover:bg-amber-100 font-medium px-2.5 py-0.5 rounded-full">Pending</Badge>;
       case "failed":
-        return <Badge variant="destructive">Failed</Badge>;
+        return <Badge variant="destructive" className="bg-rose-500 hover:bg-rose-600 text-white font-medium px-2.5 py-0.5 rounded-full shadow-sm">Failed</Badge>;
+      case "cancelled":
+        return <Badge variant="outline" className="text-gray-500 border-gray-300 font-medium px-2.5 py-0.5 rounded-full">Cancelled</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge className="font-medium px-2.5 py-0.5 rounded-full">{status}</Badge>;
     }
   };
 
   const getTypeBadge = (type: string) => {
     const colors: Record<string, string> = {
-      allocation: "bg-blue-100 text-blue-800",
-      distribution: "bg-green-100 text-green-800",
-      refund: "bg-orange-100 text-orange-800",
-      deposit: "bg-purple-100 text-purple-800",
-      reclaim: "bg-red-100 text-red-800",
+      allocation: "bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50",
+      distribution: "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50",
+      refund: "bg-orange-50 text-orange-700 border-orange-200/60 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/50",
+      deposit: "bg-purple-50 text-purple-700 border-purple-200/60 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800/50",
+      withdrawal: "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800/50",
+      reclaim: "bg-red-50 text-red-700 border-red-200/60 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/50",
     };
+    const colorClass = colors[type] || "bg-gray-50 text-gray-700 border-gray-200";
     return (
-      <Badge className={colors[type] || "bg-gray-100 text-gray-800"}>
-        {type.charAt(0).toUpperCase() + type.slice(1)}
+      <Badge className={`${colorClass} border font-semibold px-2.5 py-0.5 rounded-md`}>
+        {type === "campaign_funding" ? "Allocation" : type.charAt(0).toUpperCase() + type.slice(1)}
       </Badge>
     );
   };
@@ -232,16 +263,20 @@ const BrandTransactions = () => {
     const campaignColumn: Column = {
       header: "Campaign",
       accessor: (t) =>
-        t.campaign_id ? (
+        t.campaign_id && t.campaign ? (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(`/brand/dashboard/${t.campaign_id}`)}
           >
-            {t.campaign ? t.campaign.name : `Campaign ${t.campaign_id}`}
+            {t.campaign.name}
           </Button>
         ) : (
-          <span className="text-gray-500">-</span>
+          <span className="text-gray-500 font-medium">
+            {["allocation", "refund", "distribution"].includes(t.type) || t.campaign_id
+              ? "N/A (Deleted Campaign)"
+              : "-"}
+          </span>
         ),
     };
   
@@ -454,12 +489,14 @@ const BrandTransactions = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Campaigns</SelectItem>
-                    {hasNullCampaignId && <SelectItem value="null-campaign">N/A</SelectItem>}
                     {campaignOptions.map((campaign) => (
                       <SelectItem key={campaign.id} value={campaign.id.toString()}>
                         {campaign.name}
                       </SelectItem>
                     ))}
+                    {hasDeletedCampaignTransactions && (
+                      <SelectItem value="null-campaign">N/A (Deleted Campaigns)</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

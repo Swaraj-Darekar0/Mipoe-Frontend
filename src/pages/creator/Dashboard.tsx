@@ -53,7 +53,7 @@ const CreatorDashboard = () => {
             colorClass = "bg-purple-500/10 border-purple-500/20";
             break;
         }
-        return { ...notif, id: `${notif.type}-${notif.timestamp}-${notif.clip_id || ''}`, displayMessage, icon, colorClass };
+        return { ...notif, id: notif.id || `${notif.type}-${notif.timestamp}-${notif.clip_id || ''}`, displayMessage, icon, colorClass };
       })
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };

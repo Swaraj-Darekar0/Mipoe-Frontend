@@ -1,34 +1,25 @@
 import { supabase } from './supabaseClient';
 
-const API_BASE = 'http://127.0.0.1:5000';
+const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'http://127.0.0.1:5000';
 
 // --- NEW: Token Management ---
-export const setAuthTokens = (accessToken: string, refreshToken: string, userId: string, role: string) => {
-  sessionStorage.setItem('accessToken', accessToken);
-  localStorage.setItem('refreshToken', refreshToken);
+export const setAuthTokens = (userId: string, role: string) => {
   sessionStorage.setItem('user_id', userId); 
   sessionStorage.setItem('role', role);
 };
 
-// ... keep getAccessToken, getRefreshToken, etc. as they are
-const getAccessToken = () => sessionStorage.getItem('accessToken');
-const getRefreshToken = () => localStorage.getItem('refreshToken');
 export const getUserId = () => sessionStorage.getItem('user_id');
 export const getRole = () => sessionStorage.getItem('role');
 
-const clearAuthTokens = () => {
-  sessionStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
+export const clearAuthTokens = () => {
   sessionStorage.removeItem('user_id');
   sessionStorage.removeItem('role');
 };
 
 export async function logout(): Promise<void> {
-    const refreshToken = getRefreshToken();
     try {
-        await fetch(`${API_BASE}/logout`, { // Using fetch directly for logout
+        await apiFetch(`${API_BASE}/logout`, {
             method: 'DELETE',
-            headers: { Authorization: `Bearer ${refreshToken}` }
         });
     } catch (error) {
         console.error("Logout failed on backend, clearing tokens from frontend anyway.", error);
@@ -37,115 +28,45 @@ export async function logout(): Promise<void> {
     }
 }
 
-function getAuthHeaders() {
-  const token = getAccessToken();
-  return token
-    ? {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      }
-    : {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
-}
-
-// --- NEW: apiFetch with Interceptor Logic ---
-
-let isRefreshing = false;
-let failedQueue: { resolve: (value?: any) => void; reject: (reason?: any) => void; }[] = [];
-
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
-
 async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  // Set auth headers for the initial request
-  options.headers = { ...getAuthHeaders(), ...options.headers };
+  options.credentials = 'include';
+  
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    ...options.headers as any
+  };
 
-  console.log('API Request:', { url, options }); // For debugging headers
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
-  let response = await fetch(url, options);
+  options.headers = headers;
+
+  const response = await fetch(url, options);
 
   if (response.status === 401) {
-    if (isRefreshing) {
-      // If a refresh is already in progress, queue the request
-      return new Promise((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      })
-        .then(() => {
-          options.headers = { ...getAuthHeaders(), ...options.headers };
-          return fetch(url, options); // Retry with the new token
-        })
-        .catch(err => Promise.reject(err));
-    }
-
-    isRefreshing = true;
-    const refreshToken = getRefreshToken();
-
-    if (!refreshToken) {
-      isRefreshing = false;
-      clearAuthTokens();
-      window.location.href = '/login'; // Or your app's designated logout route
-      return Promise.reject(new Error('Session expired. No refresh token.'));
-    }
-
-    try {
-      const refreshResponse = await fetch(`${API_BASE}/refresh`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${refreshToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!refreshResponse.ok) {
-        throw new Error('Failed to refresh token.');
-      }
-
-      const { access_token } = await refreshResponse.json();
-      sessionStorage.setItem('accessToken', access_token); // Only update access token
-
-      processQueue(null, access_token);
-
-      // Retry the original request with the new token
-      options.headers = { ...getAuthHeaders(), ...options.headers };
-      return fetch(url, options);
-    } catch (error) {
-      processQueue(error, null);
+    const isAuthRoute = url.endsWith('/login') || url.endsWith('/register') || url.endsWith('/api/auth/google-sync');
+    if (!isAuthRoute) {
       clearAuthTokens();
       window.location.href = '/login';
-      return Promise.reject(error);
-    } finally {
-      isRefreshing = false;
     }
   }
 
   return response;
 }
 
-
-
 // Update the return type
-export async function syncGoogleUser(): Promise<{ 
+export async function syncGoogleUser(supabaseToken: string): Promise<{ 
   msg: string; 
-  access_token: string; 
-  refresh_token: string; 
   user_id: string; 
   role: string; 
   profile_completed: boolean;
 }> {
-  // apiFetch will still attach the Supabase token (from setAuthTokens) initially
   const res = await apiFetch(`${API_BASE}/api/auth/google-sync`, {
     method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${supabaseToken}`
+    },
     body: JSON.stringify({}) 
   });
   
@@ -156,8 +77,6 @@ export async function syncGoogleUser(): Promise<{
 
 
 interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
   role: string;
   username: string;
   user_id: string;
@@ -190,6 +109,9 @@ export interface Campaign {
   total_view_count: number;
   view_threshold: number;
   category: string;  // Changed from specific union type to string
+  campaign_type?: 'influencer' | 'clipping';
+  campaign_approval?: 'pending_approval' | 'approved' | 'rejected';
+  rejection_reason?: string;
   asset_link: string;
   image_url: string;
   submitted_clips?: SubmittedClipData[]; // Changed from ClipData[]
@@ -340,6 +262,8 @@ export interface CreatorProfile {
   profile_completed: boolean;
   instagram_username?: string;
   instagram_verified?: boolean;
+  instagram_account_id?: string;
+  instagram_account_type?: string;
   msg?: string;
 }
 
@@ -370,8 +294,8 @@ export async function register({ email, password, role, username, consentGiven }
     const data: RegisterResponse = await res.json();
     if (!res.ok) throw new Error(data.msg || 'Registration failed');
 
-    if (data.user_id && data.role && data.access_token && data.refresh_token) {
-        setAuthTokens(data.access_token, data.refresh_token, data.user_id, data.role);
+    if (data.user_id && data.role) {
+        setAuthTokens(data.user_id, data.role);
     }
 
     return data;
@@ -395,8 +319,8 @@ export async function login({ email, password, role, consentGiven }: { email: st
       throw new Error(errorData.msg || 'Login failed');
     }
     
-    if (data.user_id && data.role && data.access_token && data.refresh_token) {
-        setAuthTokens(data.access_token, data.refresh_token, data.user_id, data.role);
+    if (data.user_id && data.role) {
+        setAuthTokens(data.user_id, data.role);
     }
 
     return data;
@@ -584,6 +508,32 @@ export async function updateCampaignDeadline(id: number, payload: { deadline: st
   return data;
 }
 
+export async function fetchBrandCampaignClips(campaignId: number): Promise<{
+  campaign_id: number;
+  accepted_clips: ClipData[];
+  submitted_clips: ClipData[];
+  all_clips: ClipData[];
+}> {
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${campaignId}/clips`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch brand campaign clips');
+  return data;
+}
+
+export async function updateBrandCampaignClipStatus(
+  campaignId: number,
+  clipId: number,
+  payload: { status: 'accepted' | 'rejected'; feedback?: string }
+): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${campaignId}/clips/${clipId}/status`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to update clip status');
+  return data;
+}
+
 export async function fetchAdminCampaigns(): Promise<Campaign[]> {
   const res = await apiFetch(`${API_BASE}/api/admin/campaigns`, {
       });
@@ -630,6 +580,23 @@ export async function verifyInstagram(username: string): Promise<{ exists: boole
   return data;
 }
 
+export async function getInstagramAuthUrl(): Promise<{ url: string }> {
+  const res = await apiFetch(`${API_BASE}/api/auth/meta/authorize`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch Instagram authorization URL');
+  return data;
+}
+
+export async function simulateMockMetaCallback(payload: { status: 'success' | 'failure'; username?: string; error_msg?: string }): Promise<{ msg: string; username?: string }> {
+  const res = await apiFetch(`${API_BASE}/api/auth/meta/mock-callback`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to simulate Instagram callback');
+  return data;
+}
+
 export async function updateCreatorProfile(profileData: { nickname?: string; bio?: string; phone?: string; instagram_username?: string; }): Promise<UpdateClipResponse> {
   try {
     const res = await apiFetch(`${API_BASE}/api/creator/profile`, {
@@ -651,10 +618,24 @@ export async function updateCreatorProfile(profileData: { nickname?: string; bio
 // --- NEW BRAND PROFILE ENDPOINTS ---
 
 export interface BrandProfile {
-  id: string;
+  id: number;
   username: string;
   email: string;
   phone?: string;
+  onboarding_status?: string;
+  pan_verification_status?: string;
+  pan_holder_name?: string;
+  business_address?: string;
+  logo_url?: string;
+  banner_url?: string;
+  description?: string;
+  instagram_url?: string;
+  youtube_url?: string;
+  website_url?: string;
+  category?: string;
+  consent_given?: boolean;
+  PII_verify_consent_given?: boolean;
+  rejection_reason?: string;
   msg?: string;
 }
 
@@ -692,6 +673,101 @@ export async function updateBrandProfile(profileData: { username?: string; phone
     }
     throw error;
   }
+}
+
+export interface VerifyPanRequest {
+  pan_number: string;
+  pan_holder_name: string;
+  business_address: string;
+  PII_verify_consent_given: boolean;
+}
+
+export async function verifyBrandPan(payload: VerifyPanRequest): Promise<{ msg: string; status: string }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/onboarding/verify-pan`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'PAN verification submission failed');
+  return data;
+}
+
+export interface SubmitBrandProfileRequest {
+  logo_url?: string;
+  banner_url?: string;
+  description?: string;
+  instagram_url?: string;
+  youtube_url?: string;
+  website_url?: string;
+  category: "Personal Agency" | "Product Based" | "SaaS Based";
+}
+
+export async function submitBrandProfile(payload: SubmitBrandProfileRequest): Promise<{ msg: string; status: string }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/onboarding/profile`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Brand profile submission failed');
+  return data;
+}
+
+export async function uploadBrandLogo(file: File): Promise<{ logo_url: string; msg: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const res = await apiFetch(`${API_BASE}/api/brand/onboarding/logo`, {
+    method: 'POST',
+    body: formData
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Logo upload failed');
+  return data;
+}
+
+export async function adminDeleteBrand(brandId: number): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/admin/brands/${brandId}`, {
+    method: 'DELETE'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Brand deletion failed');
+  return data;
+}
+
+export interface AdminOnboardingBrand {
+  id: number;
+  username: string;
+  email: string;
+  phone?: string;
+  onboarding_status: string;
+  pan_verification_status?: string;
+  pan_holder_name?: string;
+  business_address?: string;
+  logo_url?: string;
+  banner_url?: string;
+  description?: string;
+  instagram_url?: string;
+  youtube_url?: string;
+  website_url?: string;
+  category?: string;
+  masked_pan?: string;
+  rejection_reason?: string;
+}
+
+export async function fetchAdminBrandsOnboarding(): Promise<AdminOnboardingBrand[]> {
+  const res = await apiFetch(`${API_BASE}/api/admin/brands/onboarding`);
+  if (!res.ok) throw new Error('Failed to fetch admin brands onboarding');
+  return res.json();
+}
+
+export async function verifyBrandCompliance(brandId: number, payload: { action: 'approve' | 'reject'; reason?: string }): Promise<{ msg: string; onboarding_status: string }> {
+  const res = await apiFetch(`${API_BASE}/api/admin/brands/${brandId}/verify`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to update compliance status');
+  return data;
 }
 
 
@@ -1272,6 +1348,7 @@ export async function getWithdrawalHistory(
 // --- NEW NOTIFICATION ENDPOINTS ---
 
 export interface Notification {
+  id?: string;
   message: string;
   type: 'clip_approved' | 'clip_rejected' | 'earning_payout' | 'withdrawal_initiated';
   timestamp: string; // ISO format
@@ -1279,7 +1356,8 @@ export interface Notification {
   clip_id?: number;
   amount?: number;
   payout_method?: string;
-  // Add other fields as needed based on the notification data in backend
+  clip_thumbnail?: string;
+  feedback?: string;
 }
 
 export interface NotificationsResponse {
@@ -1295,6 +1373,19 @@ export async function getCreatorNotifications(creatorId: string): Promise<Notifi
   const res = await apiFetch(`${API_BASE}/api/payments/creator/notifications/${creatorId}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch creator notifications');
+  return data;
+}
+
+export async function deleteCreatorNotification(notificationId: string): Promise<{ msg: string }> {
+  if (!notificationId) {
+    throw new Error('notificationId not provided.');
+  }
+
+  const res = await apiFetch(`${API_BASE}/api/payments/creator/notifications/${notificationId}`, {
+    method: 'DELETE',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to delete creator notification');
   return data;
 }
 
@@ -1528,5 +1619,24 @@ export async function resetPassword(token: string, password: string): Promise<{ 
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || data.detail || 'Failed to reset password');
+  return data;
+}
+
+export async function approveCampaign(campaignId: number): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/admin/campaigns/${campaignId}/approve`, {
+    method: 'POST'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to approve campaign');
+  return data;
+}
+
+export async function rejectCampaign(campaignId: number, reason: string): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/admin/campaigns/${campaignId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to reject campaign');
   return data;
 }

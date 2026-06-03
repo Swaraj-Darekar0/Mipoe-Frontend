@@ -17,6 +17,7 @@ interface CampaignCardProps {
   hideStatusActions?: boolean;
   image_url?: string; // Added image support
   funds_distributed?: number; // New prop for distributed funds
+  campaign_type?: 'influencer' | 'clipping';
 }
 
 const CampaignCard: React.FC<CampaignCardProps> = ({
@@ -31,6 +32,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   hideStatusActions = false,
   image_url,
   funds_distributed = 0, // Default to 0 if not provided
+  campaign_type = 'influencer',
 }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -87,14 +89,21 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
           )}
         </div>
 
-        {/* 3. Floating Overlay: Status Badge (Top Left) */}
-        {!hideStatusActions && submitted && (
-          <div className="absolute top-2 left-2">
+        {/* 3. Floating Overlay: Status & Campaign Type Badges (Top Left) */}
+        <div className="absolute top-2 left-2 flex gap-1.5 flex-wrap">
+          {!hideStatusActions && submitted && (
             <Badge className="bg-green-500/90 hover:bg-green-500 text-white border-none shadow-md backdrop-blur-sm text-[10px] px-2 py-0.5">
               Applied
             </Badge>
-          </div>
-        )}
+          )}
+          <Badge className={`${
+            campaign_type === 'clipping' 
+              ? 'bg-purple-600/95 hover:bg-purple-600 text-purple-100' 
+              : 'bg-pink-600/95 hover:bg-pink-600 text-pink-100'
+          } border-none shadow-md backdrop-blur-sm text-[9px] px-2 py-0.5 uppercase font-bold tracking-wider`}>
+            {campaign_type === 'clipping' ? 'Clipping' : 'Influencer'}
+          </Badge>
+        </div>
         
         {/* 4. Gradient protection for text legibility (bottom) */}
         <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-zinc-900 via-zinc-900/50 to-transparent" />

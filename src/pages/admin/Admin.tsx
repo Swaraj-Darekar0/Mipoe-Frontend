@@ -8,7 +8,9 @@ import {
   AcceptedClipData,
   fetchAdminBrandsOnboarding,
   verifyBrandCompliance,
-  AdminOnboardingBrand
+  AdminOnboardingBrand,
+  approveCampaign,
+  rejectCampaign
 } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -43,7 +45,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 const AdminPage = () => {
-  const [activeTab, setActiveTab] = useState<"clips" | "brands">("clips");
+  const [activeTab, setActiveTab] = useState<"clips" | "brands" | "campaigns">("clips");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -60,6 +62,12 @@ const AdminPage = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [processingCompliance, setProcessingCompliance] = useState(false);
+
+  // Campaigns Approval States
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [showCampaignRejectModal, setShowCampaignRejectModal] = useState(false);
+  const [campaignRejectionReason, setCampaignRejectionReason] = useState("");
+  const [processingCampaignApproval, setProcessingCampaignApproval] = useState(false);
 
   // Load clips data
   const loadClips = () => {
@@ -196,6 +204,49 @@ const AdminPage = () => {
     }
   };
 
+  const handleCampaignApproval = async (campaignId: number) => {
+    if (!window.confirm("Approve this campaign? It will be made available for creators to view and brands to fund.")) return;
+    setProcessingCampaignApproval(true);
+    try {
+      await approveCampaign(campaignId);
+      toast({
+        title: "Campaign Approved",
+        description: "The campaign was approved successfully.",
+      });
+      setSelectedCampaign(null);
+      loadClips();
+    } catch (err: any) {
+      toast({ title: "Approval Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setProcessingCampaignApproval(false);
+    }
+  };
+
+  const handleCampaignRejection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCampaign) return;
+    if (!campaignRejectionReason.trim()) {
+      alert("Please specify a rejection reason.");
+      return;
+    }
+    setProcessingCampaignApproval(true);
+    try {
+      await rejectCampaign(selectedCampaign.id, campaignRejectionReason);
+      toast({
+        title: "Campaign Rejected",
+        description: "The campaign has been rejected and deactivated.",
+      });
+      setShowCampaignRejectModal(false);
+      setCampaignRejectionReason("");
+      setSelectedCampaign(null);
+      loadClips();
+    } catch (err: any) {
+      toast({ title: "Rejection Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setProcessingCampaignApproval(false);
+    }
+  };
+
   const formatUrl = (url: string) => {
     if (url.length > 50) {
       return url.substring(0, 30) + '...' + url.substring(url.length - 15);
@@ -212,6 +263,8 @@ const AdminPage = () => {
   };
 
   const pendingBrandsCount = brands.length;
+  const pendingCampaigns = campaigns.filter(c => c.campaign_approval === "pending_approval");
+  const pendingCampaignsCount = pendingCampaigns.length;
 
   const renderClipsTab = () => (
     <div className="space-y-6">
@@ -716,6 +769,314 @@ const AdminPage = () => {
   );
 };
 
+  const renderCampaignsTab = () => {
+    const formatCategory = (category: string): string => {
+      if (!category) return "General";
+      return category
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" / ");
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Left Side: Campaigns List */}
+          <div className="lg:col-span-1 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm h-[600px] overflow-y-auto">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 px-2">Campaigns ({pendingCampaigns.length})</h2>
+            
+            {pendingCampaigns.length === 0 ? (
+              <div className="text-center py-20 text-gray-400">No campaigns pending approval.</div>
+            ) : (
+              <div className="space-y-2">
+                {pendingCampaigns.map(camp => (
+                  <button
+                    key={camp.id}
+                    onClick={() => {
+                      setSelectedCampaign(camp);
+                      setShowCampaignRejectModal(false);
+                    }}
+                    className={`w-full text-left p-4 rounded-xl border transition-all duration-150 ${
+                      selectedCampaign?.id === camp.id
+                        ? "border-indigo-600 bg-indigo-50/50 shadow-sm"
+                        : "border-gray-150 bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-bold text-gray-900 truncate">{camp.name}</span>
+                      <span className="text-xs text-gray-400">#{camp.id}</span>
+                    </div>
+                    <div className="flex gap-1.5 flex-wrap my-2">
+                      {camp.campaign_type && (
+                        <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded ${
+                          camp.campaign_type === 'clipping' 
+                            ? 'bg-purple-100 text-purple-800' 
+                            : 'bg-pink-100 text-pink-800'
+                        }`}>
+                          {camp.campaign_type === 'clipping' ? 'Clipping' : 'Influencer'}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-800 text-[10px] font-semibold uppercase tracking-wider rounded">
+                        {formatCategory(camp.category)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-500">
+                      <span>Budget: ₹{camp.budget.toLocaleString()}</span>
+                      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                        Pending Approval
+                      </Badge>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right Side: Detail & Creator Dashboard Preview (Dark Theme Container) */}
+          <div className="lg:col-span-2">
+            {selectedCampaign ? (
+              <div className="bg-[#0A0A0B] border border-zinc-800 text-zinc-100 rounded-2xl shadow-2xl overflow-hidden h-[600px] overflow-y-auto flex flex-col">
+                {/* Visual Header / Banner */}
+                <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/40">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-indigo-400" />
+                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Creator Dashboard Preview</span>
+                  </div>
+                  <Badge className="bg-amber-500/20 border border-amber-500/30 text-amber-400 uppercase text-[10px] font-bold tracking-wider px-2.5 py-0.5">
+                    Pending Approval
+                  </Badge>
+                </div>
+
+                <div className="p-6 md:p-8 flex-1">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch">
+                    
+                    {/* Main Preview Content */}
+                    <div className="md:col-span-2 flex flex-col gap-6">
+                      
+                      {/* Image Preview */}
+                      <div className="w-full aspect-video bg-zinc-950 border border-zinc-800 overflow-hidden relative rounded-xl flex items-center justify-center">
+                        {selectedCampaign.image_url ? (
+                          <img
+                            src={selectedCampaign.image_url}
+                            alt={selectedCampaign.name}
+                            className="w-full h-full object-cover object-top"
+                          />
+                        ) : (
+                          <div className="text-zinc-650 flex flex-col items-center gap-2 text-xs uppercase tracking-wider">
+                            <AlertCircle size={32} className="opacity-40" />
+                            No Preview Image Added
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Header Title */}
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div>
+                            <h3 className="text-xl sm:text-2xl font-bold text-white leading-tight">
+                              {selectedCampaign.name}
+                            </h3>
+                            <span className="text-xs text-zinc-505 mt-1 block">Brand ID: {selectedCampaign.brand_id}</span>
+                          </div>
+                          
+                          <div className="flex gap-2 flex-wrap items-center">
+                            {selectedCampaign.campaign_type && (
+                              <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest border rounded ${
+                                selectedCampaign.campaign_type === 'clipping' 
+                                  ? 'border-purple-500/40 text-purple-400 bg-purple-500/10' 
+                                  : 'border-pink-500/40 text-pink-400 bg-pink-500/10'
+                              }`}>
+                                {selectedCampaign.campaign_type === 'clipping' ? 'Clipping' : 'Influencer'}
+                              </span>
+                            )}
+                            {selectedCampaign.category && (
+                              <span className="inline-flex items-center px-2.5 py-1 border border-zinc-700 text-[10px] font-semibold uppercase tracking-widest text-zinc-300 rounded">
+                                {formatCategory(selectedCampaign.category)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {selectedCampaign.asset_link ? (
+                          <a
+                            href={selectedCampaign.asset_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-400 hover:text-indigo-300 text-[11px] sm:text-xs underline font-medium flex items-center gap-1 w-fit mt-1"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            View campaign assets
+                          </a>
+                        ) : null}
+                      </div>
+
+                      {/* Requirements */}
+                      <div className="flex flex-col gap-3 border-t border-zinc-800/80 pt-6">
+                        <h4 className="text-sm font-semibold text-zinc-200 uppercase tracking-wider">
+                          Requirements
+                        </h4>
+                        <div className="flex flex-col gap-2.5 text-xs sm:text-sm text-zinc-400">
+                          {selectedCampaign.requirements ? (
+                            selectedCampaign.requirements.split("\n").filter((req) => req.trim() !== "").map((req, index) => (
+                              <div key={index} className="flex items-start gap-2.5 leading-relaxed">
+                                <span className="text-zinc-650 select-none font-bold">•</span>
+                                <span>{req}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <>
+                              <div className="flex items-start gap-2.5">
+                                <span className="text-zinc-650 select-none">•</span>
+                                <span>1. Don't use bots</span>
+                              </div>
+                              <div className="flex items-start gap-2.5">
+                                <span className="text-zinc-650 select-none">•</span>
+                                <span>2. Don't portray bad the brand image</span>
+                              </div>
+                              <div className="flex items-start gap-2.5">
+                                <span className="text-zinc-650 select-none">•</span>
+                                <span>3. Adhere to all platform guidelines</span>
+                              </div>
+                            </>
+                          )}
+
+                          {selectedCampaign.hashtag && (
+                            <div className="text-indigo-400 font-mono text-xs mt-2 bg-indigo-955/20 border border-indigo-900/30 px-3 py-1.5 rounded w-fit">
+                              Hashtag: #{selectedCampaign.hashtag.replace(/^#/, '')}
+                            </div>
+                          )}
+                          {selectedCampaign.audio && (
+                            <div className="text-purple-400 font-mono text-xs mt-1 bg-purple-955/20 border border-purple-900/30 px-3 py-1.5 rounded w-fit">
+                              Audio: {selectedCampaign.audio}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Financials & Action Panel */}
+                    <div className="flex flex-col gap-6 justify-between h-full">
+                      <div className="bg-zinc-900/40 border border-zinc-800 p-5 rounded-xl flex flex-col gap-4">
+                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Campaign Parameters</h4>
+                        <div className="h-px bg-zinc-800" />
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Total Budget</span>
+                            <span className="font-bold text-xl text-white">₹{selectedCampaign.budget.toLocaleString()}</span>
+                          </div>
+                          
+                          <div>
+                            <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Cost Per View (CPV)</span>
+                            <span className="font-bold text-base text-white">₹{selectedCampaign.cpv}</span>
+                          </div>
+
+                          <div>
+                            <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">View Threshold</span>
+                            <span className="font-semibold text-sm text-white">
+                              {selectedCampaign.view_threshold?.toLocaleString() || "0"} views
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Deadline Date</span>
+                            <span className="font-semibold text-sm text-white">
+                              {selectedCampaign.deadline ? formatDate(selectedCampaign.deadline) : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 pt-6 border-t border-zinc-800/80 mt-auto">
+                        <Button
+                          onClick={() => handleCampaignApproval(selectedCampaign.id)}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+                          disabled={processingCampaignApproval}
+                        >
+                          Approve Campaign
+                        </Button>
+                        <Button
+                          onClick={() => setShowCampaignRejectModal(true)}
+                          variant="outline"
+                          className="w-full border-red-800 text-red-400 hover:bg-red-955/30 hover:text-red-300 font-semibold py-3"
+                          disabled={processingCampaignApproval}
+                        >
+                          Reject Campaign
+                        </Button>
+                      </div>
+
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            ) : (
+              <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center text-gray-500 h-[600px] flex flex-col justify-center items-center">
+                <ShieldCheck className="w-16 h-16 text-indigo-200 mb-4" />
+                <h3 className="text-xl font-bold text-gray-700 mb-2">Campaigns Approval Panel</h3>
+                <p className="text-gray-400 text-sm max-w-sm">
+                  Select a pending campaign from the list on the left to preview it as creators will see it, check its settings, and moderate its approval status.
+                </p>
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* Campaign Reject Modal dialog form */}
+        {showCampaignRejectModal && selectedCampaign && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <form 
+              onSubmit={handleCampaignRejection}
+              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300"
+            >
+              <div className="flex items-center gap-3 text-red-600 mb-4">
+                <AlertTriangle className="w-7 h-7" />
+                <h4 className="text-lg font-bold text-gray-900">Reject Campaign Request</h4>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                Specify the reason for rejecting <strong>{selectedCampaign.name}</strong>. This message will be shown on the brand's dashboard.
+              </p>
+
+              <div className="mb-6">
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Rejection Reason</label>
+                <Textarea
+                  placeholder="e.g. Budget size mismatch, unacceptable image, or description details are unclear. Please revise."
+                  value={campaignRejectionReason}
+                  onChange={(e) => setCampaignRejectionReason(e.target.value)}
+                  rows={4}
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowCampaignRejectModal(false)}
+                  disabled={processingCampaignApproval}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  disabled={processingCampaignApproval}
+                >
+                  {processingCampaignApproval ? "Processing..." : "Reject Campaign"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
       
@@ -758,6 +1119,23 @@ const AdminPage = () => {
               </span>
             )}
           </button>
+
+          <button
+            onClick={() => setActiveTab("campaigns")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition ${
+              activeTab === "campaigns"
+                ? "bg-indigo-600 text-white shadow-lg"
+                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5" />
+            Campaigns Approval
+            {pendingCampaignsCount > 0 && (
+              <span className="ml-auto bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                {pendingCampaignsCount}
+              </span>
+            )}
+          </button>
         </nav>
 
         <div className="p-4 border-t border-slate-800 text-xs text-slate-500">
@@ -769,7 +1147,11 @@ const AdminPage = () => {
       <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
         <header className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-slate-900">
-            {activeTab === "clips" ? "Clips Moderation & Review" : "Brand Compliance Verification"}
+            {activeTab === "clips" 
+              ? "Clips Moderation & Review" 
+              : activeTab === "brands" 
+              ? "Brand Compliance Verification" 
+              : "Campaigns Approval"}
           </h1>
           <button 
             onClick={() => navigate("/")} 
@@ -780,7 +1162,11 @@ const AdminPage = () => {
         </header>
 
         <main className="p-8 max-w-7xl w-full mx-auto flex-1">
-          {activeTab === "clips" ? renderClipsTab() : renderBrandsTab()}
+          {activeTab === "clips" 
+            ? renderClipsTab() 
+            : activeTab === "brands" 
+            ? renderBrandsTab() 
+            : renderCampaignsTab()}
         </main>
       </div>
 

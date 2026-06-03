@@ -582,16 +582,50 @@ const handleReclaim = async () => {
   return (
     <BrandLayout>
       <div className="-mx-4 space-y-6 px-4 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+        {/* Approval Banner Notification */}
+        {campaign.campaign_approval === "pending_approval" && (
+          <div className="bg-amber-50 border border-amber-250 text-amber-800 px-4 py-3.5 rounded-xl flex items-center gap-3 shadow-sm">
+            <Clock className="w-5 h-5 animate-pulse text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="font-bold text-sm">Campaign Pending Approval</p>
+              <p className="text-xs text-amber-700 mt-0.5">This campaign is currently being reviewed by the admin panel. Editing and budget controls are temporarily locked.</p>
+            </div>
+          </div>
+        )}
+        {campaign.campaign_approval === "rejected" && (
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3.5 rounded-xl flex items-start gap-3 shadow-sm">
+            <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm">Campaign Disapproved / Rejected</p>
+              <p className="text-xs text-red-800 mt-1 font-semibold bg-red-100/50 p-2 rounded-lg border border-red-200/40">
+                Reason: {campaign.rejection_reason || "Does not comply with platform guidelines."}
+              </p>
+              <p className="text-xs text-red-650 mt-1.5">Please create a new campaign correcting these details.</p>
+            </div>
+          </div>
+        )}
+
         {/* Header Section */}
         <div className="flex items-start justify-between">
           <div>
-            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 items-center">
               <h2 className="text-2xl font-bold text-gray-800">{campaign.name}</h2>
-              {campaign.category && (
-                <span className="text-sm text-gray-500">
-                  {campaign.category.replace('_', ' / ')}
-                </span>
-              )}
+              <div className="flex gap-2 items-center flex-wrap">
+                {campaign.campaign_type && (
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border rounded ${
+                    campaign.campaign_type === 'clipping'
+                      ? 'border-purple-500 text-purple-600 bg-purple-50'
+                      : 'border-pink-500 text-pink-600 bg-pink-50'
+                  }`}>
+                    {campaign.campaign_type === 'clipping' ? 'Clipping' : 'Influencer'}
+                  </span>
+                )}
+                {campaign.category && (
+                  <span className="text-sm text-gray-500">
+                    {campaign.category.replace('_', ' / ')}
+                  </span>
+                )}
+              </div>
             </div>
             <span className="text-sm text-gray-400">Campaign ID: {campaign.id}</span>
           </div>
@@ -661,7 +695,7 @@ const handleReclaim = async () => {
                       <Switch
                         checked={isActive}
                         onCheckedChange={handleUpdateStatus}
-                        disabled={!isActive && (campaign?.funds_allocated || 0) <= 0}
+                        disabled={(!isActive && (campaign?.funds_allocated || 0) <= 0) || campaign.campaign_approval !== "approved"}
                       />
                       <span className={isActive ? "text-green-600" : "text-gray-500"}>
                         {isActive ? "Campaign Active" : "Paused"}
@@ -685,8 +719,9 @@ const handleReclaim = async () => {
                       onChange={e => setViewThresholdInput(Number(e.target.value))}
                       min="0"
                       className="w-full max-w-[180px]"
+                      disabled={campaign.campaign_approval !== "approved"}
                     />
-                    <Button className="mt-2 w-fit self-end" variant="secondary" size="sm" onClick={handleUpdateViewThreshold}>
+                    <Button className="mt-2 w-fit self-end" variant="secondary" size="sm" onClick={handleUpdateViewThreshold} disabled={campaign.campaign_approval !== "approved"}>
                       Update Threshold
                     </Button>
                   </div>
@@ -699,8 +734,9 @@ const handleReclaim = async () => {
                       value={deadlineInput}
                       onChange={e => setDeadlineInput(e.target.value)}
                       className="w-full max-w-[180px]"
+                      disabled={campaign.campaign_approval !== "approved"}
                     />
-                    <Button className="mt-2 w-fit self-end" variant="secondary" size="sm" onClick={handleUpdateDeadline}>
+                    <Button className="mt-2 w-fit self-end" variant="secondary" size="sm" onClick={handleUpdateDeadline} disabled={campaign.campaign_approval !== "approved"}>
                       Update Deadline
                     </Button>
                   </div>
@@ -747,6 +783,7 @@ const handleReclaim = async () => {
                             min="0"
                             placeholder="0"
                             className="w-full"
+                            disabled={campaign.campaign_approval !== "approved"}
                           />
                         </div>
 
@@ -754,7 +791,7 @@ const handleReclaim = async () => {
                           <Button
                             size="sm"
                             onClick={handleAllocate}
-                            disabled={isProcessingFund || allocationAmount > walletBalance}
+                            disabled={isProcessingFund || allocationAmount > walletBalance || campaign.campaign_approval !== "approved"}
                             className="bg-blue-600 hover:bg-blue-700 px-4"
                           >
                             Allocate Funds
@@ -764,7 +801,7 @@ const handleReclaim = async () => {
                             size="sm"
                             variant="outline"
                             onClick={handleReclaim}
-                            disabled={isProcessingFund || isLive || allocationAmount > (campaign?.funds_allocated || 0)}
+                            disabled={isProcessingFund || isLive || allocationAmount > (campaign?.funds_allocated || 0) || campaign.campaign_approval !== "approved"}
                             className={`px-4 ${isLive ? 'opacity-50 cursor-not-allowed' : ''}`}
                             title={isLive ? "Cannot reclaim funds while campaign is live" : "Return funds to wallet"}
                           >
@@ -824,6 +861,7 @@ const handleReclaim = async () => {
                           accept="image/*"
                           onChange={handleImageChange}
                           className="text-sm cursor-pointer"
+                          disabled={campaign.campaign_approval !== "approved"}
                         />
                         <p className="text-[10px] text-gray-400 mt-1 pl-1">
                           Recommended: 1280x720 (WebP/JPG)
@@ -869,8 +907,9 @@ const handleReclaim = async () => {
                       onChange={e => setRequirements(e.target.value)}
                       rows={4}
                       className="resize-y"
+                      disabled={campaign.campaign_approval !== "approved"}
                     />
-                    <Button className="mt-2 w-fit self-end" size="sm" onClick={handleUpdateRequirements}>
+                    <Button className="mt-2 w-fit self-end" size="sm" onClick={handleUpdateRequirements} disabled={campaign.campaign_approval !== "approved"}>
                       Update Requirements
                     </Button>
                   </div>

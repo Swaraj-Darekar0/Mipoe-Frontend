@@ -6,7 +6,9 @@ import { logout as logoutApi } from "@/lib/api";
 
 const NavLink = ({ to, icon, children }: { to: string; icon: React.ReactNode; children: React.ReactNode }) => {
   const location = useLocation();
-  const isActive = location.pathname === to;
+  const isActive = to.includes('?') 
+    ? (location.pathname + location.search) === to 
+    : location.pathname === to && !location.search;
 
   return (
     <Link
@@ -60,7 +62,13 @@ const Sidebar = () => {
       </div>
       <nav className="flex flex-col gap-2 flex-grow">
         <NavLink to="/creator/dashboard" icon={<LayoutGrid className="w-5 h-5" />}>Hub</NavLink>
-        <NavLink to="/creator/campaigns" icon={<Flame className="w-5 h-5" />}>Campaigns</NavLink>
+        <div className="mt-4 mb-1 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          Campaigns
+        </div>
+        <div className="flex flex-col gap-1 pl-2 mb-2">
+          <NavLink to="/creator/campaigns?type=influencer" icon={<Flame className="w-4 h-4 text-pink-500" />}>Influencer</NavLink>
+          <NavLink to="/creator/campaigns?type=clipping" icon={<Flame className="w-4 h-4 text-purple-500" />}>Clipping</NavLink>
+        </div>
         <NavLink to="/creator/submissions" icon={<Send className="w-5 h-5" />}>Submissions</NavLink>
         <NavLink to="/creator/wallet" icon={<Wallet className="w-5 h-5" />}>Earnings</NavLink>
       </nav>

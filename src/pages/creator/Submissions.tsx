@@ -19,11 +19,11 @@ import {
   XCircle
 } from "lucide-react";
 
-type Clip = (SubmittedClipData | AcceptedClipData) & { campaignName: string };
+type Clip = (SubmittedClipData | AcceptedClipData) & { campaignName: string; isAccepted?: boolean };
 type ApprovalFilter = "all" | "approved" | "not_approved";
 type ViewSort = "high_to_low" | "low_to_high";
 
-const isApprovedClip = (clip: Clip) => "media_id" in clip && !!clip.media_id;
+const isApprovedClip = (clip: Clip) => !!clip.isAccepted;
 const getViewCount = (clip: Clip) => clip.view_count ?? 0;
 
 const getClipStatusInfo = (clip: Clip) => {
@@ -54,10 +54,10 @@ const SubmissionsPage = () => {
 
       campaigns.forEach((campaign: Campaign) => {
         campaign.submitted_clips?.forEach((clip) => {
-          allClips.push({ ...clip, campaignName: campaign.name });
+          allClips.push({ ...clip, campaignName: campaign.name, isAccepted: false });
         });
         campaign.accepted_clips?.forEach((clip) => {
-          allClips.push({ ...clip, campaignName: campaign.name });
+          allClips.push({ ...clip, campaignName: campaign.name, isAccepted: true });
         });
       });
 

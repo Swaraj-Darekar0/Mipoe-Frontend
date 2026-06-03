@@ -44,7 +44,6 @@ const CampaignView = () => {
       const clipsData = clips.value;
       const processedClips = clipsData.map((clip: ClipData) => ({
         ...clip,
-        status: clip.status === "pending" ? "in_review" : clip.status,
         view_count: clip.view_count ?? 0,
       }));
 
@@ -69,16 +68,15 @@ const CampaignView = () => {
     fetchCampaignAndClips();
   }, [fetchCampaignAndClips]);
 
+  
   const refreshClips = useCallback(async () => {
     try {
       setLoading(true);
       const clips = await fetchCreatorClipsForCampaign(Number(campaign_id));
       const processedClips = clips.map((clip) => ({
         ...clip,
-        status: clip.status === "pending" ? "in_review" : clip.status,
         view_count: clip.view_count ?? 0,
       }));
-
       setSubmittedClips(
         processedClips.filter((c) => c.status === "in_review"),
       );
@@ -207,11 +205,22 @@ const CampaignView = () => {
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground-800 leading-tight flex-1 min-w-[160px]">
                     {campaign.name}
                   </h1>
-                  {campaign.category && (
-                    <span className="inline-flex items-center px-2.5 sm:px-3 py-1 border border-foreground-800 text-[10px] sm:text-xs font-semibold uppercase tracking-widest whitespace-nowrap flex-shrink-0">
-                      {formatCategory(campaign.category)}
-                    </span>
-                  )}
+                  <div className="flex gap-2 flex-wrap items-center">
+                    {campaign.campaign_type && (
+                      <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-widest whitespace-nowrap flex-shrink-0 border ${
+                        campaign.campaign_type === 'clipping' 
+                          ? 'border-purple-500 text-purple-400 bg-purple-500/10' 
+                          : 'border-pink-500 text-pink-400 bg-pink-500/10'
+                      }`}>
+                        {campaign.campaign_type === 'clipping' ? 'Clipping' : 'Influencer'}
+                      </span>
+                    )}
+                    {campaign.category && (
+                      <span className="inline-flex items-center px-2.5 sm:px-3 py-1 border border-foreground-800 text-[10px] sm:text-xs font-semibold uppercase tracking-widest whitespace-nowrap flex-shrink-0">
+                        {formatCategory(campaign.category)}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {campaign.asset_link ? (
                   <a

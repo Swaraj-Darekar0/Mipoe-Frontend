@@ -44,15 +44,40 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
   const [editPanMode, setEditPanMode] = useState(false);
 
   // Step 3 (Profile Setup) States
-  const [category, setCategory] = useState("Fashion");
+  const [category, setCategory] = useState("Personal Agency");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
+  const [logoFileToUpload, setLogoFileToUpload] = useState<File | null>(null);
   const [bannerUrl, setBannerUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  
+  // Logo file upload states
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoValidationError, setLogoValidationError] = useState("");
+  const [showLogoErrorModal, setShowLogoErrorModal] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [submittingProfile, setSubmittingProfile] = useState(false);
+
+  // Simulated OAuth States
+  const [oauthModalOpen, setOauthModalOpen] = useState(false);
+  const [oauthProvider, setOauthProvider] = useState<"instagram" | "youtube" | null>(null);
+  const [mockInputName, setMockInputName] = useState("");
+
+  const getInstagramHandle = (url: string) => {
+    if (!url) return "";
+    const parts = url.split("/");
+    return "@" + parts[parts.length - 1];
+  };
+
+  const getYoutubeChannel = (url: string) => {
+    if (!url) return "";
+    const parts = url.split("/");
+    const name = parts[parts.length - 1];
+    return decodeURIComponent(name).replace(/_/g, " ");
+  };
 
   // Initialize values from profile
   useEffect(() => {
@@ -63,7 +88,6 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
       if (profile.website_url) setWebsiteUrl(profile.website_url);
       if (profile.description) setDescription(profile.description);
       if (profile.logo_url) setLogoUrl(profile.logo_url);
-      if (profile.banner_url) setBannerUrl(profile.banner_url);
       if (profile.instagram_url) setInstagramUrl(profile.instagram_url);
       if (profile.youtube_url) setYoutubeUrl(profile.youtube_url);
       
@@ -107,7 +131,7 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
         pan_number: panNumber.toUpperCase(),
         pan_holder_name: panHolderName,
         business_address: businessAddress,
-        consent_given: true
+        PII_verify_consent_given: true
       });
       toast({
         title: "Verification Initiated",
@@ -123,25 +147,151 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
     }
   };
 
+  const handleLogoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1. File size check (25MB)
+    const maxBytes = 25 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setLogoValidationError("File size exceeds 25MB. Please choose a smaller file.");
+      setShowLogoErrorModal(true);
+      return;
+    }
+
+    // 2. Format validation
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (!allowedTypes.includes(file.type)) {
+      setLogoValidationError("Invalid format. Only JPG, PNG, and WebP images are allowed.");
+      setShowLogoErrorModal(true);
+      return;
+    }
+
+    // 3. Canvas crop and compress browser-side
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            setLogoValidationError("Browser canvas is not supported.");
+            setShowLogoErrorModal(true);
+            return;
+          }
+
+          // Force output to a standard 480x480 pixel square
+          canvas.width = 480;
+          canvas.height = 480;
+
+          // Determine square cropping coordinates from source
+          const minDim = Math.min(img.width, img.height);
+          const sx = (img.width - minDim) / 2;
+          const sy = (img.height - minDim) / 2;
+
+          // Draw center-cropped portion onto 480x480 canvas
+          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, 480, 480);
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                setLogoValidationError("Failed to compress image.");
+                setShowLogoErrorModal(true);
+                return;
+              }
+
+              // Create local preview immediately
+              const previewUrl = URL.createObjectURL(blob);
+              setLogoPreviewUrl(previewUrl);
+
+              // Convert blob to File object (usually ~50KB)
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                type: "image/webp",
+                lastModified: Date.now()
+              });
+              setLogoFileToUpload(compressedFile);
+
+              toast({
+                title: "Logo Optimized",
+              });
+            },
+            "image/webp",
+            0.85
+          );
+        } catch (canvasErr: any) {
+          setLogoValidationError("Error processing image on client side: " + canvasErr.message);
+          setShowLogoErrorModal(true);
+        }
+      };
+      img.onerror = () => {
+        setLogoValidationError("Could not load image file.");
+        setShowLogoErrorModal(true);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => {
+      setLogoValidationError("Failed to read image file.");
+      setShowLogoErrorModal(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleProfileSetupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileError("");
     setSubmittingProfile(true);
 
+    if (!logoUrl && !logoFileToUpload) {
+      setProfileError("Please select a brand logo first.");
+      setSubmittingProfile(false);
+      return;
+    }
+    if (!instagramUrl && !youtubeUrl) {
+      setProfileError("Please connect at least one social media channel (Instagram or YouTube).");
+      setSubmittingProfile(false);
+      return;
+    }
+
     try {
+      let finalLogoUrl = logoUrl;
+
+      // If a new file is staged, upload it now
+      if (logoFileToUpload) {
+        setUploadingLogo(true);
+        try {
+          const { uploadBrandLogo } = await import("@/lib/api");
+          const res = await uploadBrandLogo(logoFileToUpload);
+          finalLogoUrl = res.logo_url;
+          setLogoUrl(res.logo_url);
+        } catch (err: any) {
+          throw new Error(err.message || "Failed to upload logo to storage.");
+        } finally {
+          setUploadingLogo(false);
+        }
+      }
+
       const res = await submitBrandProfile({
-        logo_url: logoUrl || undefined,
-        banner_url: bannerUrl || undefined,
+        logo_url: finalLogoUrl || undefined,
         description: description || undefined,
         instagram_url: instagramUrl || undefined,
         youtube_url: youtubeUrl || undefined,
         website_url: websiteUrl || undefined,
-        category: category
+        category: category as any
       });
+
       toast({
         title: "Setup Complete",
         description: res.msg || "Onboarding profile details submitted for compliance review.",
       });
+
+      // Clear staged states and preview URLs
+      setLogoFileToUpload(null);
+      setLogoPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return "";
+      });
+
       await onProfileUpdated();
     } catch (err: any) {
       setProfileError(err.message || "Failed to submit brand profile setup.");
@@ -255,14 +405,8 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
               <span className="text-lg font-bold text-green-700">Verification Success</span>
               <p className="text-xs text-gray-500 mt-1 max-w-[240px] text-center">Your business credentials have been successfully validated.</p>
               
-              {/* Edit button in bottom right */}
-              <button
-                onClick={() => setEditPanMode(true)}
-                className="absolute bottom-4 right-4 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 shadow-sm px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition active:scale-95"
-              >
-                <Edit className="w-3.5 h-3.5" />
-                Edit
-              </button>
+            
+
             </div>
           )}
 
@@ -375,23 +519,85 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
             </div>
 
             <form onSubmit={handleProfileSetupSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-6">
                 <div>
-                  <label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-2">Business Category</label>
-                  <select
-                    id="category"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:border-indigo-500"
-                    disabled={onboardingStatus === "pending_verification"}
-                  >
-                    <option value="Gaming">Gaming</option>
-                    <option value="Fashion">Fashion</option>
-                    <option value="Electronics">Electronics</option>
-                    <option value="Beauty & Skin care">Beauty & Skin care</option>
-                    <option value="Fitness">Fitness</option>
-                    <option value="Software Platforms">Software Platforms</option>
-                  </select>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Business Category</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {[
+                      {
+                        id: "Personal Agency",
+                        title: "Personal Agency",
+                        benefits: ["Clipping", "Influencer UGC"],
+                        description: "Best for agencies managing creator networks or talent.",
+                        badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200"
+                      },
+                      {
+                        id: "Product Based",
+                        title: "Product Based",
+                        benefits: ["Clipping", "Influencer UGC", "Affiliate"],
+                        description: "Best for e-commerce and physical product brands.",
+                        badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "SaaS Based",
+                        title: "SaaS Based",
+                        benefits: ["Clipping", "Influencer UGC", "Affiliate"],
+                        description: "Best for software platforms and subscription tools.",
+                        badgeColor: "bg-blue-50 text-blue-700 border-blue-200"
+                      }
+                    ].map((opt) => {
+                      const isSelected = category === opt.id;
+                      const isDisabled = onboardingStatus === "pending_verification";
+                      return (
+                        <div
+                          key={opt.id}
+                          onClick={() => {
+                            if (!isDisabled) {
+                              setCategory(opt.id);
+                            }
+                          }}
+                          className={`flex flex-col justify-between border-2 rounded-xl p-4 transition-all duration-200 text-left h-full ${
+                            isSelected
+                              ? "border-indigo-600 bg-indigo-50/30 shadow-md ring-2 ring-indigo-600/10"
+                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/50 bg-white"
+                          } ${isDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <div>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="font-bold text-sm text-gray-900">{opt.title}</span>
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                isSelected ? "border-indigo-600 bg-indigo-600" : "border-gray-300"
+                              }`}>
+                                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                              </div>
+                            </div>
+                            <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
+                              {opt.description}
+                            </p>
+                          </div>
+                          <div className="mt-auto pt-2 border-t border-dashed border-gray-100">
+                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                              Campaign Benefits
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {opt.benefits.map((b) => (
+                                <span 
+                                  key={b} 
+                                  className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                                    isSelected 
+                                      ? opt.badgeColor
+                                      : "bg-gray-50 text-gray-600 border-gray-200"
+                                  }`}
+                                >
+                                  {b}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div>
@@ -417,51 +623,187 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Logo URL (Optional)</label>
-                  <Input
-                    type="url"
-                    placeholder="https://example.com/logo.png"
-                    value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
-                    disabled={onboardingStatus === "pending_verification"}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Banner Image URL (Optional)</label>
-                  <Input
-                    type="url"
-                    placeholder="https://example.com/banner.png"
-                    value={bannerUrl}
-                    onChange={(e) => setBannerUrl(e.target.value)}
-                    disabled={onboardingStatus === "pending_verification"}
-                  />
-                </div>
+              <div className="space-y-4">
+                <label className="block text-sm font-semibold text-gray-700">Brand Logo (Mandatory)</label>
+                
+                {logoUrl || logoPreviewUrl ? (
+                  <div className="flex items-center gap-6 p-2">
+                    {/* Circular Logo Preview */}
+                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-indigo-500 shadow-md bg-white flex items-center justify-center flex-shrink-0">
+                      <img 
+                        src={logoPreviewUrl || logoUrl} 
+                        alt="Brand Logo" 
+                        className="w-full h-full object-cover"
+                      />
+                      {uploadingLogo && (
+                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {logoFileToUpload ? (
+                        <p className="text-xs font-semibold text-amber-600">New logo staged</p>
+                      ) : (
+                        <p className="text-xs font-semibold text-green-600">Brand Logo verified and uploaded</p>
+                      )}
+                      
+                      <div className="flex gap-2">
+                        {/* Replace Button */}
+                        <label className="relative cursor-pointer bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 shadow-sm px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition active:scale-95">
+                          <span>Replace Logo</span>
+                          <input 
+                            type="file" 
+                            accept="image/png, image/jpeg, image/jpg, image/webp"
+                            onChange={handleLogoFileChange}
+                            disabled={uploadingLogo || onboardingStatus === "pending_verification"}
+                            className="sr-only" 
+                          />
+                        </label>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+                            setLogoUrl("");
+                            setLogoPreviewUrl("");
+                            setLogoFileToUpload(null);
+                          }}
+                          disabled={uploadingLogo || onboardingStatus === "pending_verification"}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 px-2.5 h-8 font-semibold text-xs"
+                        >
+                          Remove Logo
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-8 hover:bg-gray-50 transition duration-150">
+                    <div className="text-center space-y-2">
+                      <div className="mx-auto w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                        {uploadingLogo ? (
+                          <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <Building2 className="w-6 h-6" />
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <label className="relative cursor-pointer bg-white rounded-md font-semibold text-indigo-600 hover:text-indigo-500 focus-within:outline-none">
+                          <span>{uploadingLogo ? "Uploading logo..." : "Upload Logo Image"}</span>
+                          <input 
+                            type="file" 
+                            accept="image/png, image/jpeg, image/jpg, image/webp"
+                            onChange={handleLogoFileChange}
+                            disabled={uploadingLogo || onboardingStatus === "pending_verification"}
+                            className="sr-only" 
+                          />
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-400">
+                        JPG, PNG, or WebP (Max size 25MB)
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-gray-100 pt-6">
-                <h4 className="text-sm font-bold text-gray-800 mb-4">Social Media Channels (Optional)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex items-center gap-2">
-                    <Instagram className="w-5 h-5 text-pink-600 flex-shrink-0" />
-                    <Input
-                      type="url"
-                      placeholder="Instagram Account URL"
-                      value={instagramUrl}
-                      onChange={(e) => setInstagramUrl(e.target.value)}
-                      disabled={onboardingStatus === "pending_verification"}
-                    />
+                <div className="mb-4">
+                  <h4 className="text-sm font-bold text-gray-800">Social Media Channels (Mandatory)</h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Connect either your Instagram Professional Account, your YouTube Channel, or both.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-4">
+                  {/* Instagram Connection */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-pink-100 p-2.5 rounded-lg text-pink-600 flex-shrink-0">
+                        <Instagram className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">Instagram Professional Account</p>
+                        {instagramUrl ? (
+                          <p className="text-xs text-green-600 font-medium">Connected as {getInstagramHandle(instagramUrl)}</p>
+                        ) : (
+                          <p className="text-xs text-gray-500">Not connected</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      {instagramUrl ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setInstagramUrl("")}
+                          disabled={onboardingStatus === "pending_verification"}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 w-full sm:w-auto"
+                        >
+                          Disconnect
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            setOauthProvider("instagram");
+                            setMockInputName("brand_instagram");
+                            setOauthModalOpen(true);
+                          }}
+                          className="bg-pink-600 hover:bg-pink-700 text-white font-semibold shadow-sm w-full sm:w-auto"
+                        >
+                          Connect Account
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Youtube className="w-5 h-5 text-red-600 flex-shrink-0" />
-                    <Input
-                      type="url"
-                      placeholder="YouTube Channel URL"
-                      value={youtubeUrl}
-                      onChange={(e) => setYoutubeUrl(e.target.value)}
-                      disabled={onboardingStatus === "pending_verification"}
-                    />
+
+                  {/* YouTube Connection */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-red-100 p-2.5 rounded-lg text-red-600 flex-shrink-0">
+                        <Youtube className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">YouTube Channel</p>
+                        {youtubeUrl ? (
+                          <p className="text-xs text-green-600 font-medium">Connected as {getYoutubeChannel(youtubeUrl)}</p>
+                        ) : (
+                          <p className="text-xs text-gray-500">Not connected</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      {youtubeUrl ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setYoutubeUrl("")}
+                          disabled={onboardingStatus === "pending_verification"}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 w-full sm:w-auto"
+                        >
+                          Disconnect
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            setOauthProvider("youtube");
+                            setMockInputName("Brand Official Channel");
+                            setOauthModalOpen(true);
+                          }}
+                          className="bg-red-600 hover:bg-red-700 text-white font-semibold shadow-sm w-full sm:w-auto"
+                        >
+                          Connect Channel
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -573,6 +915,118 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
               >
                 I Agree & Consent
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Simulated OAuth modal */}
+      {oauthModalOpen && oauthProvider && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300">
+            <div className="flex items-center gap-3 text-indigo-600 mb-4">
+              {oauthProvider === "instagram" ? (
+                <Instagram className="w-7 h-7 text-pink-600" />
+              ) : (
+                <Youtube className="w-7 h-7 text-red-600" />
+              )}
+              <h4 className="text-lg font-bold text-gray-900">
+                {oauthProvider === "instagram" ? "Connect Instagram (Sandbox)" : "Connect YouTube (Sandbox)"}
+              </h4>
+            </div>
+            
+            <p className="text-sm text-gray-600 leading-relaxed mb-6">
+              You are currently in sandbox mode. Choose how you want to simulate this OAuth flow:
+            </p>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  {oauthProvider === "instagram" ? "Mock Instagram Handle" : "Mock Channel Name"}
+                </label>
+                <Input
+                  type="text"
+                  value={mockInputName}
+                  onChange={(e) => setMockInputName(e.target.value)}
+                  placeholder={oauthProvider === "instagram" ? "brand_username" : "Brand Channel Title"}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  if (oauthProvider === "instagram") {
+                    setInstagramUrl(`https://instagram.com/${mockInputName.trim()}`);
+                    toast({
+                      title: "Instagram Linked",
+                      description: `Successfully linked @${mockInputName.trim()}`,
+                    });
+                  } else {
+                    const slug = mockInputName.trim().toLowerCase().replace(/\s+/g, "_");
+                    setYoutubeUrl(`https://youtube.com/c/${encodeURIComponent(slug)}`);
+                    toast({
+                      title: "YouTube Linked",
+                      description: `Successfully linked ${mockInputName.trim()}`,
+                    });
+                  }
+                  setOauthModalOpen(false);
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold w-full"
+              >
+                Simulate OAuth Success
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  toast({
+                    title: "OAuth Cancelled",
+                    description: "Simulation resulted in a user cancellation or invalid credentials.",
+                    variant: "destructive",
+                  });
+                  setOauthModalOpen(false);
+                }}
+                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 w-full"
+              >
+                Simulate OAuth Failure
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOauthModalOpen(false)}
+                className="w-full text-gray-500 mt-2"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Logo Validation Error Modal */}
+      {showLogoErrorModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-red-600 mb-4">
+              <ShieldAlert className="w-7 h-7" />
+              <h4 className="text-lg font-bold text-gray-900">Upload Validation Error</h4>
+            </div>
+            
+            <p className="text-sm text-gray-600 leading-relaxed mb-6">
+              {logoValidationError}
+            </p>
+
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                onClick={() => setShowLogoErrorModal(false)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+              >
+                Close & Try Again
               </Button>
             </div>
           </div>
