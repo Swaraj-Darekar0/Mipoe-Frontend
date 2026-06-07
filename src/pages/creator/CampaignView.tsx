@@ -9,7 +9,30 @@ import {
   deleteClip,
   Campaign,
   ClipData,
+  fetchCreatorProfile,
+  CreatorProfile,
 } from "@/lib/api";
+
+// Check if creator's follower count meets the campaign range requirement
+const checkFollowerRangeMatch = (followers: number, rangeStr: string): boolean => {
+  if (!rangeStr) return true;
+
+  const cleanedRange = rangeStr.replace(/,/g, "").trim();
+
+  if (cleanedRange.endsWith("+")) {
+    const val = parseInt(cleanedRange.slice(0, -1).trim(), 10);
+    return !isNaN(val) && followers >= val;
+  }
+
+  const parts = cleanedRange.split("-");
+  if (parts.length === 2) {
+    const minVal = parseInt(parts[0].trim(), 10);
+    const maxVal = parseInt(parts[1].trim(), 10);
+    return !isNaN(minVal) && !isNaN(maxVal) && followers >= minVal && followers <= maxVal;
+  }
+
+  return false;
+};
 
 const CampaignView = () => {
   const { campaign_id } = useParams();
@@ -20,6 +43,7 @@ const CampaignView = () => {
   const [submittedClips, setSubmittedClips] = useState<ClipData[]>([]);
   const [acceptedClips, setAcceptedClips] = useState<ClipData[]>([]);
   const [rejectedClips, setRejectedClips] = useState<ClipData[]>([]);
+  const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingClipId, setDeletingClipId] = useState<number | null>(null);
@@ -28,9 +52,10 @@ const CampaignView = () => {
     try {
       setLoading(true);
       setError("");
-      const [camp, clips] = await Promise.allSettled([
+      const [camp, clips, profile] = await Promise.allSettled([
         fetchCampaignById(Number(campaign_id)),
         fetchCreatorClipsForCampaign(Number(campaign_id)),
+        fetchCreatorProfile(),
       ]);
 
       if (camp.status === "rejected") {
@@ -46,6 +71,10 @@ const CampaignView = () => {
         ...clip,
         view_count: clip.view_count ?? 0,
       }));
+
+      if (profile.status === "fulfilled") {
+        setCreatorProfile(profile.value);
+      }
 
       setCampaign(campaignData);
       setSubmittedClips(
@@ -149,6 +178,8 @@ const CampaignView = () => {
     : defaultRequirements;
 
   const formatCategory = (category: string): string => {
+    if (category === "promotional") return "Promotional (YouTube, Gaming, Business)";
+    if (!category) return "General";
     return category
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -178,6 +209,13 @@ const CampaignView = () => {
     }
     return `${views.toLocaleString()} Views`;
   };
+
+  const hasInstagram = creatorProfile?.instagram_verified && creatorProfile?.instagram_username;
+  const followerCount = creatorProfile?.instagram_follower_count ?? 0;
+  
+  const qualifies = campaign.campaign_type !== "influencer" || 
+    !campaign.follower_range || 
+    (!!hasInstagram && checkFollowerRangeMatch(followerCount, campaign.follower_range));
 
   return (
     <CreatorLayout>
@@ -220,6 +258,11 @@ const CampaignView = () => {
                         {formatCategory(campaign.category)}
                       </span>
                     )}
+                    {campaign.campaign_type === 'influencer' && campaign.follower_range && (
+                      <span className="inline-flex items-center px-2.5 sm:px-3 py-1 border border-blue-500 text-blue-400 bg-blue-500/10 text-[10px] sm:text-xs font-bold uppercase tracking-wide whitespace-nowrap flex-shrink-0">
+                        Req: {campaign.follower_range} followers
+                      </span>
+                    )}
                   </div>
                 </div>
                 {campaign.asset_link ? (
@@ -233,6 +276,16 @@ const CampaignView = () => {
                   </a>
                 ) : null}
               </div>
+              {campaign.description && (
+                <div className="flex flex-col gap-2.5 md:gap-3">
+                  <h2 className="text-sm sm:text-base font-semibold text-foreground-800">
+                    Campaign Description
+                  </h2>
+                  <p className="text-xs sm:text-sm text-foreground-700 whitespace-pre-wrap leading-relaxed">
+                    {campaign.description}
+                  </p>
+                </div>
+              )}
               <div className="flex flex-col gap-2.5 md:gap-3">
                 <h2 className="text-sm sm:text-base font-semibold text-foreground-800">
                   Requirements
@@ -354,11 +407,23 @@ const CampaignView = () => {
             <div className="w-full md:w-auto md:flex-shrink-0 md:basis-72 lg:basis-80">
               <div className="bg-[#0A0A0A] border border-foreground-200 p-5 sm:p-6 flex flex-col gap-4 sm:gap-5 w-full">
                 <button
-                  className="bg-white text-black px-4 py-2 text-center font-semibold text-xs sm:text-sm cursor-pointer tracking-wide"
-                  onClick={() => navigate(`/creator/submit/${campaign.id}`)}
+                  className={`px-4 py-2.5 text-center font-bold text-xs sm:text-sm tracking-wide transition-all border ${
+                    qualifies 
+                      ? "bg-white text-black border-transparent cursor-pointer hover:bg-zinc-200" 
+                      : "bg-zinc-900/50 text-zinc-500 border-zinc-800 cursor-not-allowed opacity-50"
+                  }`}
+                  onClick={() => qualifies && navigate(`/creator/submit/${campaign.id}`)}
+                  disabled={!qualifies}
                 >
-                  Submit Clip
+                  {qualifies ? "Submit Clip" : "Locked (Requirement)"}
                 </button>
+                {!qualifies && (
+                  <p className="text-[10px] text-red-300 text-center leading-normal -mt-2.5">
+                    {!hasInstagram 
+                      ? "Requires verified Instagram connection." 
+                      : `Requires ${campaign.follower_range} followers (You: ${followerCount.toLocaleString()}).`}
+                  </p>
+                )}
                 <div className="h-px bg-foreground-200 w-full" />
                 <div className="flex flex-col gap-2.5 sm:gap-3 text-xs sm:text-sm text-foreground-800">
                   <div>

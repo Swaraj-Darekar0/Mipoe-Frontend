@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import CreatorLayout from "@/layouts/CreatorLayout";
 import { Button } from "@/components/ui/button";
-import { submitClip, fetchCampaignById, Campaign } from "@/lib/api";
+import { submitClip, fetchCampaignById, Campaign, fetchCreatorProfile, CreatorProfile } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
 // Extract media code from various Instagram Reels URL formats
@@ -33,20 +33,42 @@ const convertToStandardFormat = (mediaCode: string): string => {
   return `https://www.instagram.com/reels/${mediaCode}`;
 };
 
+// Check if creator's follower count meets the campaign range requirement
+const checkFollowerRangeMatch = (followers: number, rangeStr: string): boolean => {
+  if (!rangeStr) return true;
+
+  const cleanedRange = rangeStr.replace(/,/g, "").trim();
+
+  if (cleanedRange.endsWith("+")) {
+    const val = parseInt(cleanedRange.slice(0, -1).trim(), 10);
+    return !isNaN(val) && followers >= val;
+  }
+
+  const parts = cleanedRange.split("-");
+  if (parts.length === 2) {
+    const minVal = parseInt(parts[0].trim(), 10);
+    const maxVal = parseInt(parts[1].trim(), 10);
+    return !isNaN(minVal) && !isNaN(maxVal) && followers >= minVal && followers <= maxVal;
+  }
+
+  return false;
+};
+
 const SubmitClip = () => {
   const { campaignId } = useParams();
   const navigate = useNavigate();
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
   const [link, setLink] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [campaignLoading, setCampaignLoading] = useState(true);
 
-  // Fetch campaign details when component mounts or campaignId changes
+  // Fetch campaign details and creator profile when component mounts or campaignId changes
   useEffect(() => {
-    const getCampaignDetails = async () => {
+    const getCampaignAndProfileDetails = async () => {
       if (!campaignId) {
         setCampaignLoading(false);
         setError("Campaign ID is missing.");
@@ -54,8 +76,12 @@ const SubmitClip = () => {
       }
       try {
         setCampaignLoading(true);
-        const fetchedCampaign = await fetchCampaignById(Number(campaignId));
+        const [fetchedCampaign, fetchedProfile] = await Promise.all([
+          fetchCampaignById(Number(campaignId)),
+          fetchCreatorProfile(),
+        ]);
         setCampaign(fetchedCampaign);
+        setCreatorProfile(fetchedProfile);
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message);
@@ -67,8 +93,15 @@ const SubmitClip = () => {
         setCampaignLoading(false);
       }
     };
-    getCampaignDetails();
+    getCampaignAndProfileDetails();
   }, [campaignId]);
+
+  const hasInstagram = creatorProfile?.instagram_verified && creatorProfile?.instagram_username;
+  const followerCount = creatorProfile?.instagram_follower_count ?? 0;
+  
+  const qualifies = campaign?.campaign_type !== "influencer" || 
+    !campaign?.follower_range || 
+    (!!hasInstagram && checkFollowerRangeMatch(followerCount, campaign.follower_range));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +111,18 @@ const SubmitClip = () => {
     try {
       if (!campaignId) {
         throw new Error("Cannot submit clip: Campaign ID is missing.");
+      }
+
+      // Hard check follower range requirement on submit
+      if (campaign?.campaign_type === "influencer" && campaign.follower_range) {
+        if (!hasInstagram) {
+          throw new Error("Please link and verify your Instagram account first to participate in influencer campaigns.");
+        }
+        if (!checkFollowerRangeMatch(followerCount, campaign.follower_range)) {
+          throw new Error(
+            `Your linked Instagram follower count (${followerCount.toLocaleString()}) does not meet the campaign's target follower requirement (${campaign.follower_range} followers).`
+          );
+        }
       }
 
       // Extract media code from the provided URL
@@ -134,10 +179,10 @@ const SubmitClip = () => {
   return (
     <CreatorLayout>
       <div className="max-w-md text-gray-600 bg-white p-8 rounded-lg shadow mx-auto">
-        <h2 className="text-xl font-bold mb-4">Submit Clip</h2>
-        <div className="mb-3">
+        <h2 className="text-xl font-bold mb-4 text-gray-900">Submit Clip</h2>
+        <div className="mb-4">
           <span className="text-gray-600">Campaign:</span>{" "}
-          <span className="font-semibold">
+          <span className="font-semibold text-gray-800">
             {campaign?.name ?? campaignId ?? "Unknown"}
           </span>
         </div>
@@ -147,21 +192,20 @@ const SubmitClip = () => {
         >
           {/* Video clip link section */}
           <div>
-            <label className="block text-gray-700 mb-1">
-              Video Clip Link (IG/YouTube)
+            <label className="block text-gray-700 mb-1 text-sm font-semibold">
+              Video Clip Link (IG Reels)
             </label>
             <input
               type="url"
-              className="w-full text-gray-600 border rounded px-3 py-2"
+              className="w-full text-gray-600 border rounded px-3 py-2 bg-gray-50 focus:bg-white"
               value={link}
               onChange={e => setLink(e.target.value)}
-              placeholder="https://youtube.com/..."
+              placeholder="https://www.instagram.com/reels/..."
               required
             />
           </div>
-          {/* Removed Add Media section */}
-          {error && <div className="text-red-600 text-sm">{error}</div>}
-          {success && <div className="text-green-600 text-sm">{success}</div>}
+          {error && <div className="text-red-650 text-sm font-medium">{error}</div>}
+          {success && <div className="text-green-650 text-sm font-medium">{success}</div>}
           <Button
             type="submit"
             className="w-full"

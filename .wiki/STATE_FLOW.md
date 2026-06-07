@@ -30,7 +30,7 @@
 
 - **Brand Onboarding & Social Media Linkage Flow:**
   - `/src/components/brand/BrandOnboarding.tsx` performs PAN card validation and collects brand profile customizations.
-  - **Logo File Upload Flow**: Brand onboarding replaces text inputs with an image file input (supporting source images up to 25MB). The frontend validates format (JPG, PNG, WebP) and size, then center-crops and compresses the image browser-side using HTML5 Canvas to a **480x480px WebP** format. A local object URL is generated to render an instant live mockup preview. The tiny compressed WebP file (~50KB) is then uploaded to the backend upload endpoint `/api/brand/onboarding/logo`, which validates, re-encodes, and saves the file to Supabase storage.
+  - **Logo File Upload Flow**: Brand onboarding replaces text inputs with an image file input (supporting source images up to 25MB). The frontend validates format (JPG, PNG, WebP) and size, then center-crops and compresses the image browser-side using HTML5 Canvas to an **up to 720x720px WebP** format. A local object URL is generated to render an instant live mockup preview. The tiny compressed WebP file (~50KB) is then uploaded to the backend upload endpoint `/api/brand/onboarding/logo`, which validates, re-encodes, and saves the file to Supabase storage.
   - Connecting Instagram and YouTube channels is **mandatory** for completing profile setup.
   - **Developer Sandbox Mode**: Connect buttons open a sandbox simulation modal allowing the user to select "Simulate OAuth Success" (which populates the profile fields with `@brand_instagram` / `Brand Official Channel` handles and saves them to the database) or "Simulate OAuth Failure" (resulting in connection cancel notifications).
 

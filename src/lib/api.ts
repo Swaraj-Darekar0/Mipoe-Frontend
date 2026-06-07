@@ -104,6 +104,7 @@ export interface Campaign {
   audio: string | null;
   deadline: string;
   requirements: string | null;
+  description?: string;
   brand_id: string;
   is_active: boolean;
   total_view_count: number;
@@ -114,6 +115,7 @@ export interface Campaign {
   rejection_reason?: string;
   asset_link: string;
   image_url: string;
+  follower_range?: string;
   submitted_clips?: SubmittedClipData[]; // Changed from ClipData[]
   accepted_clips?: Array<{
     id: number;
@@ -264,6 +266,7 @@ export interface CreatorProfile {
   instagram_verified?: boolean;
   instagram_account_id?: string;
   instagram_account_type?: string;
+  instagram_follower_count?: number;
   msg?: string;
 }
 
@@ -475,6 +478,16 @@ export async function updateCampaignRequirements(id: number, payload: { requirem
   });
   const data: UpdateClipResponse = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to update campaign requirements');
+  return data;
+}
+
+export async function updateCampaignDescription(id: number, payload: { description: string }): Promise<UpdateClipResponse> {
+  const res = await apiFetch(`${API_BASE}/api/brand/campaigns/${id}/description`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+  const data: UpdateClipResponse = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to update campaign description');
   return data;
 }
 
@@ -1640,3 +1653,268 @@ export async function rejectCampaign(campaignId: number, reason: string): Promis
   if (!res.ok) throw new Error(data.msg || 'Failed to reject campaign');
   return data;
 }
+
+// --- NEW: Affiliate Space API functions ---
+
+export interface AffiliateStatus {
+  status: 'not_started' | 'completed';
+  shopify_shop: string | null;
+  has_shopify_token: boolean;
+  custom_api_key: string | null;
+  has_cashfree_connected: boolean;
+}
+
+export async function getAffiliateStatus(): Promise<AffiliateStatus> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/status`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch affiliate status');
+  return data;
+}
+
+export async function connectShopify(shopName: string): Promise<{ url: string }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/shopify/connect`, {
+    method: 'POST',
+    body: JSON.stringify({ shop_name: shopName })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to connect Shopify');
+  return data;
+}
+
+export async function connectCustom(): Promise<{
+  api_key: string;
+  webhook_url: string;
+  webhook_secret: string;
+  msg: string;
+}> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/custom/connect`, {
+    method: 'POST'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to activate custom API key');
+  return data;
+}
+
+export async function connectCashfreeAffiliate(appId: string, secretKey: string): Promise<{
+  msg: string;
+  webhook_url: string;
+  webhook_secret: string;
+}> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/cashfree/connect`, {
+    method: 'POST',
+    body: JSON.stringify({ cashfree_app_id: appId, cashfree_client_secret: secretKey })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to connect Cashfree credentials');
+  return data;
+}
+
+export interface AffiliateProduct {
+  id: number;
+  brand_id: number;
+  name: string;
+  description: string | null;
+  images: string[] | null;
+  product_url: string | null;
+  price: number;
+  variants: any[] | null;
+  category: string | null;
+  status: string;
+  sync_source: 'shopify' | 'manual';
+  external_product_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getBrandProducts(): Promise<AffiliateProduct[]> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/products`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch catalog products');
+  return data;
+}
+
+export async function createManualProduct(product: {
+  name: string;
+  description?: string;
+  price: number;
+  product_url?: string;
+  images?: string[];
+  variants?: any[];
+  category?: string;
+}): Promise<AffiliateProduct> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/products`, {
+    method: 'POST',
+    body: JSON.stringify(product)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to add product manually');
+  return data;
+}
+
+export async function updateManualProduct(id: number, product: {
+  name: string;
+  description?: string;
+  price: number;
+  product_url?: string;
+  images?: string[];
+  variants?: any[];
+  category?: string;
+}): Promise<AffiliateProduct> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/products/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(product)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to edit product');
+  return data;
+}
+
+export async function deleteProduct(id: number): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/products/${id}`, {
+    method: 'DELETE'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to delete product');
+  return data;
+}
+
+export async function triggerShopifySync(): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/shopify/sync`, {
+    method: 'POST'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to sync Shopify products');
+  return data;
+}
+
+export interface AffiliateCampaign {
+  id: number;
+  brand_id: number;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  start_date: string;
+  deadline: string;
+  budget: number;
+  funds_allocated: number;
+  funds_distributed: number;
+  commission_type: 'percentage' | 'fixed';
+  commission_value: number;
+  creator_requirements: any;
+  status: 'draft' | 'active' | 'paused' | 'ended';
+  campaign_approval: 'pending_approval' | 'approved' | 'rejected';
+  is_active: boolean;
+  created_at: string;
+  products?: AffiliateProduct[];
+  partners?: Array<{
+    id: number;
+    creator_id: number;
+    username: string;
+    code: string;
+    status: string;
+    created_at: string;
+  }>;
+}
+
+export async function createAffiliateCampaign(campaign: {
+  name: string;
+  description?: string;
+  image_url?: string;
+  start_date: string;
+  deadline: string;
+  commission_type: 'percentage' | 'fixed';
+  commission_value: number;
+  creator_requirements?: any;
+  product_ids: number[];
+}): Promise<{ msg: string; campaign_id: number }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/campaigns`, {
+    method: 'POST',
+    body: JSON.stringify(campaign)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to create affiliate campaign');
+  return data;
+}
+
+export async function getBrandAffiliateCampaigns(): Promise<AffiliateCampaign[]> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/campaigns`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch brand affiliate campaigns');
+  return data;
+}
+
+export async function getAffiliateCampaignDetails(id: number): Promise<AffiliateCampaign> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/campaigns/${id}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch affiliate campaign details');
+  return data;
+}
+
+export interface CreatorAffiliateCampaign {
+  id: number;
+  brand_id: number;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  deadline: string;
+  commission_type: 'percentage' | 'fixed';
+  commission_value: number;
+  creator_requirements: any;
+  joined: boolean;
+  affiliate_code: string | null;
+  products: Array<{
+    id: number;
+    name: string;
+    price: number;
+    images: string[] | null;
+  }>;
+}
+
+export async function getCreatorAffiliateCampaigns(): Promise<CreatorAffiliateCampaign[]> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/creator/campaigns`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch creator affiliate campaigns');
+  return data;
+}
+
+export async function joinAffiliateCampaign(campaignId: number): Promise<{
+  msg: string;
+  affiliate_code: string;
+  referral_url: string;
+}> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/creator/join-campaign`, {
+    method: 'POST',
+    body: JSON.stringify({ campaign_id: campaignId })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to join affiliate campaign');
+  return data;
+}
+
+export async function allocateAffiliateBudget(campaignId: number, amount: number): Promise<any> {
+  const res = await apiFetch(`${API_BASE}/api/payments/affiliate/allocate-budget`, {
+    method: 'POST',
+    body: JSON.stringify({ campaign_id: campaignId, amount })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to allocate budget');
+  return data;
+}
+
+export async function reclaimAffiliateBudget(campaignId: number, amount: number): Promise<any> {
+  const res = await apiFetch(`${API_BASE}/api/payments/affiliate/reclaim-budget`, {
+    method: 'POST',
+    body: JSON.stringify({ campaign_id: campaignId, amount })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to reclaim budget');
+  return data;
+}
+
+export async function getBrandConversions(): Promise<any[]> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/conversions`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch conversion events');
+  return data;
+}
+

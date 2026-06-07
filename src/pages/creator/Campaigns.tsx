@@ -5,12 +5,15 @@ import { fetchAllCampaigns, Campaign } from "@/lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Card, Skeleton } from "@heroui/react";
+import { SlidersHorizontal } from "lucide-react";
+import { CategoryFilter } from "@/components/ui/CategoryFilter";
 
 const CampaignsPage = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const campaignType = searchParams.get("type"); // "influencer" | "clipping" | null
@@ -18,7 +21,7 @@ const CampaignsPage = () => {
 
   const categoriesList = [
     { value: "all", label: "All Categories" },
-    { value: "youtube_promotional", label: "YouTube Promotional" },
+    { value: "promotional", label: "Promotional (YouTube, Gaming, Business)" },
     { value: "fashion", label: "Fashion" },
     { value: "beauty", label: "Beauty" },
     { value: "electronics", label: "Electronics" },
@@ -63,45 +66,51 @@ const CampaignsPage = () => {
   return (
     <CreatorLayout>
       <div className="space-y-8">
-        <header>
-          <h1 className="font-display text-4xl font-bold text-white">
-            {campaignType === "influencer"
-              ? "Influencer Campaigns"
-              : campaignType === "clipping"
-              ? "Clipping Campaigns"
-              : "Campaign Marketplace"}
-          </h1>
-          <p className="text-gray-400 mt-2">
-            {campaignType === "influencer"
-              ? "Collaborate with brands on customized content creation."
-              : campaignType === "clipping"
-              ? "Clip long form videos and earn based on performance views."
-              : "Discover new campaigns and start earning."}
-          </p>
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="font-display text-4xl font-bold text-white">
+              {campaignType === "influencer"
+                ? "Influencer Campaigns"
+                : campaignType === "clipping"
+                ? "Clipping Campaigns"
+                : "Campaign Marketplace"}
+            </h1>
+            <p className="text-gray-400 mt-2">
+              {campaignType === "influencer"
+                ? "Collaborate with brands on customized content creation."
+                : campaignType === "clipping"
+                ? "Clip long form videos and earn based on performance views."
+                : "Discover new campaigns and start earning."}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 h-10 px-4 rounded-xl border font-semibold text-xs transition-all duration-300 active:scale-95 cursor-pointer shrink-0 w-fit ${
+              showFilters 
+                ? "bg-primary text-black border-primary/20 shadow-lg shadow-primary/20" 
+                : "bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20"
+            }`}
+          >
+            <SlidersHorizontal size={14} />
+            <span>Filters</span>
+            {selectedCategory !== "all" && (
+              <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${
+                showFilters ? "bg-black/20 text-black" : "bg-primary text-black"
+              }`}>
+                1
+              </span>
+            )}
+          </button>
         </header>
 
-        {/* Filter categories bar */}
-        <div 
-          className="flex gap-3 overflow-x-auto pb-2 -mx-6 md:-mx-10 px-6 md:px-10" 
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {categoriesList.map((cat) => {
-            const isSelected = selectedCategory === cat.value;
-            return (
-              <button
-                key={cat.value}
-                onClick={() => setSelectedCategory(cat.value)}
-                className={`flex h-9 shrink-0 items-center justify-center rounded-full px-4 transition-all duration-200 ${
-                  isSelected 
-                    ? "bg-primary text-black font-bold shadow-md shadow-primary/20 scale-105" 
-                    : "bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/20"
-                }`}
-              >
-                <p className="font-body text-xs font-semibold leading-normal">{cat.label}</p>
-              </button>
-            );
-          })}
-        </div>
+        {/* Modular Category Filter Panel */}
+        <CategoryFilter
+          categories={categoriesList}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          isOpen={showFilters}
+          theme="dark"
+        />
 
         {loading ? (
           <Card className="w-[200px] space-y-5 p-4" radius="lg">

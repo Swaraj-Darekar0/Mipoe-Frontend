@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload, ImageOff, Undo, Wallet, BarChart2, ShieldCheck } from "lucide-react";
+import { ImageCropInput } from "../../components/ui/ImageCropInput";
 
 // Update import paths to point to frontend/src
 import BrandLayout from "../../layouts/BrandLayout";
@@ -26,6 +27,7 @@ import {
   fetchCampaignById,
   updateCampaignBudget,
   updateCampaignRequirements,
+  updateCampaignDescription,
   updateCampaignStatus,
   updateCampaignViewThreshold,
   updateCampaignDeadline,
@@ -56,12 +58,15 @@ const CampaignAnalytics = () => {
   const [isProcessingFund, setIsProcessingFund] = useState(false);
   const [budget, setBudget] = useState<number>(0);
   const [requirements, setRequirements] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
   const [viewThresholdInput, setViewThresholdInput] = useState<number>(0);
   const [deadlineInput, setDeadlineInput] = useState<string>("");
   const [showAllCreators, setShowAllCreators] = useState<boolean>(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+
 
   // Content Verification Dashboard states
   const [activeTab, setActiveTab] = useState<"statistics" | "verification">("statistics");
@@ -91,6 +96,7 @@ const CampaignAnalytics = () => {
       setIsActive(data.is_active);
       setBudget(data.budget);
       setRequirements(data.requirements || "");
+      setDescription(data.description || "");
       setViewThresholdInput(data.view_threshold ?? 0);
       setDeadlineInput(data.deadline ? data.deadline.split("T")[0] : "");
 
@@ -260,14 +266,6 @@ const handleReclaim = async () => {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
-
   const handleUpdateImage = async () => {
     if (!campaign || !imageFile) return;
     setIsUploadingImage(true);
@@ -350,6 +348,21 @@ const handleReclaim = async () => {
         alert(`Failed to update requirements: ${err.message}`);
       } else {
         alert("Failed to update requirements: An unknown error occurred");
+      }
+    }
+  };
+
+  const handleUpdateDescription = async () => {
+    if (!campaign) return;
+    try {
+      await updateCampaignDescription(campaign.id, { description });
+      alert("Description updated successfully!");
+      // fetchCampaignData();
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        alert(`Failed to update description: ${err.message}`);
+      } else {
+        alert("Failed to update description: An unknown error occurred");
       }
     }
   };
@@ -620,6 +633,11 @@ const handleReclaim = async () => {
                     {campaign.campaign_type === 'clipping' ? 'Clipping' : 'Influencer'}
                   </span>
                 )}
+                {campaign.campaign_type === 'influencer' && campaign.follower_range && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-blue-500 text-blue-600 bg-blue-50 rounded">
+                    Req: {campaign.follower_range} followers
+                  </span>
+                )}
                 {campaign.category && (
                   <span className="text-sm text-gray-500">
                     {campaign.category.replace('_', ' / ')}
@@ -823,80 +841,49 @@ const handleReclaim = async () => {
                       )}
                     </div>
 
-                    <div className="w-full aspect-video bg-gray-100 rounded-lg overflow-hidden relative border border-gray-200 group">
-                      {imagePreview && !imgError ? (
-                        <>
-                          <img
-                            src={imagePreview}
-                            alt="Campaign Preview"
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                            onError={() => setImgError(true)}
-                            className="w-full h-full object-cover object-top transition-transform group-hover:scale-105 duration-500"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                            <p className="text-white text-sm font-medium">
-                              This is how your card will appear to creators
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                          <ImageOff size={48} className="mb-3 opacity-50" />
-                          <span className="text-xs font-medium uppercase tracking-wider">
-                            No Image Available
-                          </span>
-                          <span className="text-[10px] text-gray-400 mt-1">
-                            Upload a 16:9 image for best results
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    <ImageCropInput
+                      value={imagePreview || ""}
+                      onChange={(file, previewUrl) => {
+                        setImagePreview(previewUrl);
+                        setImageFile(file);
+                        if (!file && !previewUrl) {
+                          setImagePreview(null);
+                          setImageFile(null);
+                        }
+                      }}
+                      aspectRatio="16:9"
+                      disabled={isUploadingImage || campaign.campaign_approval !== "approved"}
+                      placeholder="Drag and drop or click to upload campaign cover banner"
+                    />
 
-                    <div className="flex items-center gap-3 pt-2">
-                      <div className="flex-1">
-                        <Input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="text-sm cursor-pointer"
-                          disabled={campaign.campaign_approval !== "approved"}
-                        />
-                        <p className="text-[10px] text-gray-400 mt-1 pl-1">
-                          Recommended: 1280x720 (WebP/JPG)
-                        </p>
+                    {imageFile && (
+                      <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleRevertImage}
+                          className="px-3 text-gray-600 border-gray-300 hover:bg-gray-100"
+                          title="Discard changes"
+                        >
+                          <Undo size={14} className="mr-1" /> Revert
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          onClick={handleUpdateImage}
+                          disabled={isUploadingImage}
+                          className="px-4"
+                        >
+                          {isUploadingImage ? (
+                            <span className="flex items-center gap-2">
+                              <Upload size={14} className="animate-bounce" /> Saving...
+                            </span>
+                          ) : (
+                            "Save & Publish"
+                          )}
+                        </Button>
                       </div>
-
-                      {imageFile && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleRevertImage}
-                            className="px-3 text-gray-600 border-gray-300 hover:bg-gray-100"
-                            title="Discard changes"
-                          >
-                            <Undo size={14} className="mr-1" /> Revert
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            onClick={handleUpdateImage}
-                            disabled={isUploadingImage}
-                            className="px-4"
-                          >
-                            {isUploadingImage ? (
-                              <span className="flex items-center gap-2">
-                                <Upload size={14} className="animate-bounce" /> Saving...
-                              </span>
-                            ) : (
-                              "Save & Publish"
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
 
                   {/* 6. Requirements */}
@@ -911,6 +898,22 @@ const handleReclaim = async () => {
                     />
                     <Button className="mt-2 w-fit self-end" size="sm" onClick={handleUpdateRequirements} disabled={campaign.campaign_approval !== "approved"}>
                       Update Requirements
+                    </Button>
+                  </div>
+
+                  {/* 7. Description */}
+                  <div className="bg-white rounded shadow p-6 flex flex-col gap-3 md:col-span-3">
+                    <label className="font-medium mb-2">Update Campaign Description</label>
+                    <Textarea
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      rows={4}
+                      className="resize-y"
+                      disabled={campaign.campaign_approval !== "approved"}
+                      placeholder="Enter campaign description..."
+                    />
+                    <Button className="mt-2 w-fit self-end" size="sm" onClick={handleUpdateDescription} disabled={campaign.campaign_approval !== "approved"}>
+                      Update Description
                     </Button>
                   </div>
                 </div>
@@ -1136,6 +1139,7 @@ const handleReclaim = async () => {
           </div>
         </div>
       </div>
+
     </BrandLayout>
   );
 };

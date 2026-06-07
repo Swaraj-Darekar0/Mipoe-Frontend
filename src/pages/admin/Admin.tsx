@@ -771,6 +771,7 @@ const AdminPage = () => {
 
   const renderCampaignsTab = () => {
     const formatCategory = (category: string): string => {
+      if (category === "promotional") return "Promotional (YouTube, Gaming, Business)";
       if (!category) return "General";
       return category
         .split("_")
@@ -910,6 +911,17 @@ const AdminPage = () => {
                           </a>
                         ) : null}
                       </div>
+
+                      {selectedCampaign.description && (
+                        <div className="flex flex-col gap-3 border-t border-zinc-800/80 pt-6">
+                          <h4 className="text-sm font-semibold text-zinc-200 uppercase tracking-wider">
+                            Campaign Description
+                          </h4>
+                          <p className="text-xs sm:text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed">
+                            {selectedCampaign.description}
+                          </p>
+                        </div>
+                      )}
 
                       {/* Requirements */}
                       <div className="flex flex-col gap-3 border-t border-zinc-800/80 pt-6">

@@ -13,11 +13,13 @@ interface CampaignCardProps {
   audio?: string;
   deadline: string;
   brand_id?: string;
+  campaign_category?: string;
   submitted?: boolean;
   hideStatusActions?: boolean;
   image_url?: string; // Added image support
   funds_distributed?: number; // New prop for distributed funds
   campaign_type?: 'influencer' | 'clipping';
+  follower_range?: string;
 }
 
 const CampaignCard: React.FC<CampaignCardProps> = ({
@@ -31,8 +33,10 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   submitted = false,
   hideStatusActions = false,
   image_url,
+  campaign_category,
   funds_distributed = 0, // Default to 0 if not provided
   campaign_type = 'influencer',
+  follower_range,
 }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -96,13 +100,18 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
               Applied
             </Badge>
           )}
-          <Badge className={`${
+          {/* <Badge className={`${
             campaign_type === 'clipping' 
               ? 'bg-purple-600/95 hover:bg-purple-600 text-purple-100' 
               : 'bg-pink-600/95 hover:bg-pink-600 text-pink-100'
           } border-none shadow-md backdrop-blur-sm text-[9px] px-2 py-0.5 uppercase font-bold tracking-wider`}>
             {campaign_type === 'clipping' ? 'Clipping' : 'Influencer'}
-          </Badge>
+          </Badge> */}
+          {campaign_type === 'influencer' && follower_range && (
+            <Badge className="bg-blue-600/90 hover:bg-blue-600 text-white border-none shadow-md backdrop-blur-sm text-[9px] px-2 py-0.5 font-bold tracking-wide">
+              {follower_range} followers 
+            </Badge>
+          )}
         </div>
         
         {/* 4. Gradient protection for text legibility (bottom) */}
@@ -136,7 +145,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
             />
           </div>
         </div>
-
+            
         {/* Row 3: Key Logistics (Grid) */}
         <div className="grid grid-cols-3 gap-2 pt-2 mt-1 border-t border-zinc-800/50">
           

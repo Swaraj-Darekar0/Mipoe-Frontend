@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import BrandLayout from "@/layouts/BrandLayout";
+import { ImageCropInput } from "@/components/ui/ImageCropInput";
 import { createCampaign, uploadCampaignImage, Campaign, getBrandProfile } from "@/lib/api";
 import { compressImage } from "@/utils/imageCompression"; // Assumes utils file exists
 import { useNavigate } from "react-router-dom";
@@ -35,7 +36,7 @@ const CreateCampaign = () => {
 
   const getAvailableCampaignCategories = () => {
     if (businessCategory === "Personal Agency") {
-      return [{ value: "youtube_promotional", label: "YouTube Promotional" }];
+      return [{ value: "promotional", label: "Promotional (YouTube, Gaming, Business)" }];
     } else if (businessCategory === "Product Based") {
       return [
         { value: "fashion", label: "Fashion" },
@@ -57,12 +58,13 @@ const CreateCampaign = () => {
   const [platform, setPlatform] = useState("");
 
   const [cpv, setCpv] = useState<number>(0);
-  const [displayCpv, setDisplayCpv] = useState<string>("0");
+  const [displayCpv, setDisplayCpv] = useState<string>("100");
   const [hashtag, setHashtag] = useState("");
   const [audio, setAudio] = useState("");
   const [deadline, setDeadline] = useState("");
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<Campaign['category']>("youtube_promotional");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<Campaign['category']>("promotional");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -74,10 +76,12 @@ const CreateCampaign = () => {
       setCategory(cats[0].value);
     }
   }, [businessCategory]);
+
   const [viewThreshold, setViewThreshold] = useState<number>(1000);
   const [displayViewThreshold, setDisplayViewThreshold] = useState<string>("1000");
   const [requirements, setRequirements] = useState("");
   const [campaignType, setCampaignType] = useState<'influencer' | 'clipping'>('influencer');
+  const [followerRange, setFollowerRange] = useState<string>("0 - 1,000");
   const [manualInstructions, setManualInstructions] = useState<string[]>([
     "Don't use bots",
     "Don't portray bad the brand image",
@@ -89,6 +93,20 @@ const CreateCampaign = () => {
   // Image State
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Sync initial and minimum CPV on campaign type or follower range selection change
+  useEffect(() => {
+    if (campaignType === "influencer") {
+      const isBelow5k = followerRange === "0 - 1,000" || followerRange === "1,000 - 5,000";
+      const minCpv = isBelow5k ? 100 : 200;
+      if (cpv < minCpv) {
+        setCpv(minCpv);
+        setDisplayCpv(String(minCpv));
+      }
+    }
+  }, [campaignType, followerRange]);
+
+
 
   // TODO: Replace with actual brand_id from auth context or localStorage
   const brand_id = Number(localStorage.getItem("brand_id")) || 1;
@@ -109,9 +127,31 @@ const CreateCampaign = () => {
   const handleCpvBlur = () => {
     const value = parseFloat(displayCpv);
     if (!isNaN(value)) {
-      const roundedCpv = Math.round(value / 100) * 100;
+      let roundedCpv = Math.round(value / 100) * 100;
+      
+      // Enforce minimum CPV based on follower range
+      if (campaignType === "influencer") {
+        const isBelow5k = followerRange === "0 - 1,000" || followerRange === "1,000 - 5,000";
+        const minCpv = isBelow5k ? 100 : 200;
+        if (roundedCpv < minCpv) {
+          roundedCpv = minCpv;
+        }
+      } else {
+        if (roundedCpv < 0) roundedCpv = 0;
+      }
+      
       setCpv(roundedCpv);
       setDisplayCpv(String(roundedCpv));
+    } else {
+      if (campaignType === "influencer") {
+        const isBelow5k = followerRange === "0 - 1,000" || followerRange === "1,000 - 5,000";
+        const minCpv = isBelow5k ? 100 : 200;
+        setCpv(minCpv);
+        setDisplayCpv(String(minCpv));
+      } else {
+        setCpv(0);
+        setDisplayCpv("0");
+      }
     }
   };
 
@@ -128,15 +168,6 @@ const CreateCampaign = () => {
       setDisplayViewThreshold(String(roundedThreshold));
     }
   };
-  
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      // Create a local preview URL
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -145,6 +176,19 @@ const CreateCampaign = () => {
     setSuccess("");
     setLoading(true);
     try {
+      // Form Validation
+      if (!name.trim()) throw new Error("Campaign Name is required.");
+      if (!platform) throw new Error("Platform selection is required.");
+      if (!deadline) throw new Error("Deadline date is required.");
+
+      if (campaignType === "influencer") {
+        const isBelow5k = followerRange === "0 - 1,000" || followerRange === "1,000 - 5,000";
+        const minCpv = isBelow5k ? 100 : 200;
+        if (cpv < minCpv) {
+          throw new Error(`Minimum CPV for range "${followerRange}" is ${minCpv} ₹.`);
+        }
+      }
+
       let imageUrl = "";
       
       // 1. Handle Image Upload
@@ -159,25 +203,29 @@ const CreateCampaign = () => {
 
       // 2. Create Campaign
       await createCampaign({
-        brand_id,
+        brand_id: String(brand_id),
         platform,
         budget: 0,        // Target Budget (Starts at 0, implies "Not Set")
         funds_allocated: 0,
+        funds_distributed: 0,
         cpv,
         hashtag,
         audio,
         deadline,
         name,
+        description,
         view_threshold: Number(viewThreshold),
         requirements: requirements,
         asset_link: assetLink,
         category,
         image_url: imageUrl,
-        campaign_type: campaignType
+        campaign_type: campaignType,
+        follower_range: campaignType === "influencer" ? followerRange : undefined
       });
       
       setSuccess("Campaign created successfully!");
       setName("");
+      setDescription("");
       setPlatform("");
       setDisplayCpv("0");
       setCpv(0);
@@ -186,6 +234,7 @@ const CreateCampaign = () => {
       setDeadline("");
       setImageFile(null);
       setImagePreview(null);
+      setFollowerRange("0 - 1,000");
       setManualInstructions([
         "Don't use bots",
         "Don't portray bad the brand image",
@@ -235,27 +284,17 @@ const CreateCampaign = () => {
 
         <div className="space-y-4">
           {/* Image Upload Section */}
-          <div>
-            <label htmlFor="1" className="block text-gray-700 mb-1">Campaign Cover Image</label>
-            <div className="flex items-center gap-4">
-              <div className="w-24 h-24 bg-gray-100 border rounded flex items-center justify-center overflow-hidden">
-                {imagePreview ? (
-                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-gray-400 text-xs">No Image</span>
-                )}
-              </div>
-              <div className="flex-1">
-                <input
-                id="1"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-                <p className="text-xs text-gray-400 mt-1">Recommended: 1280x720 (16:9)</p>
-              </div>
-            </div>
+          <div className="space-y-1">
+            <ImageCropInput
+              value={imagePreview || ""}
+              onChange={(file, previewUrl) => {
+                setImagePreview(previewUrl);
+                setImageFile(file);
+              }}
+              aspectRatio="16:9"
+              label="Campaign Cover Image"
+              placeholder="Upload a high-quality campaign cover image"
+            />
           </div>
 
           <div>
@@ -265,6 +304,16 @@ const CreateCampaign = () => {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Campaign Name"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 mb-1">Campaign Description</label>
+            <textarea
+              className="w-full border rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="What's the campaign about ..."
+              rows={3}
             />
           </div>
           <div>
@@ -282,6 +331,25 @@ const CreateCampaign = () => {
               ))}
             </select>
           </div>
+
+          {campaignType === 'influencer' && (
+            <div>
+              <label htmlFor="follower-range" className="block text-gray-700 mb-1">Target Creator Follower Range</label>
+              <select
+                id="follower-range"
+                className="w-full border rounded px-3 py-2 bg-white"
+                value={followerRange}
+                onChange={e => setFollowerRange(e.target.value)}
+              >
+                <option value="0 - 1k">0 - 1K followers</option>
+                <option value="1k - 5k">1K - 5K followers</option>
+                <option value="5k - 10k">5K - 10K followers</option>
+                <option value="10k - 50k">10K - 50K followers</option>
+                <option value="50k - 100k">50K - 100K followers</option>
+                <option value="100k+">100K+ followers</option>
+              </select>
+            </div>
+          )}
           <div>
             <label htmlFor="3" className="block text-gray-700 mb-1">Platform</label>
             <select
@@ -322,13 +390,21 @@ const CreateCampaign = () => {
             />
           </div>
           <div>
-            <label className="block text-gray-700 mb-1">
-              CPV (Cost per {viewThreshold || 'N'} views) ₹
-              <span className="text-gray-400 text-sm ml-2 font-normal">Multiples of ₹100</span>
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-gray-700 text-sm font-medium">
+                CPV (Cost per {viewThreshold || 'N'} views) ₹
+                <span className="text-gray-400 text-xs ml-2 font-normal">Multiples of ₹100</span>
+              </label>
+              {campaignType === 'influencer' && (
+                <span className="text-xs font-semibold text-indigo-600">
+                  Min CPV: {followerRange === "0 - 1,000" || followerRange === "1,000 - 5,000" ? "100" : "200"} ₹
+                </span>
+              )}
+            </div>
             <input
               type="number"
               step={100}
+              min={campaignType === 'influencer' ? (followerRange === "0 - 1,000" || followerRange === "1,000 - 5,000" ? 100 : 200) : 0}
               className="w-full border rounded px-3 py-2"
               value={displayCpv}
               onChange={handleCpvChange}
@@ -444,6 +520,7 @@ const CreateCampaign = () => {
           </button>
         </div>
       </div>
+
     </BrandLayout>
   );
 };

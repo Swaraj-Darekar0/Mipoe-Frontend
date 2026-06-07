@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { ImageCropInput } from "@/components/ui/ImageCropInput";
 import { 
   verifyBrandPan, 
   submitBrandProfile, 
@@ -65,6 +66,11 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
   const [oauthModalOpen, setOauthModalOpen] = useState(false);
   const [oauthProvider, setOauthProvider] = useState<"instagram" | "youtube" | null>(null);
   const [mockInputName, setMockInputName] = useState("");
+
+  // Interactive Cropper States
+  const [showCropper, setShowCropper] = useState(false);
+  const [cropperImageSrc, setCropperImageSrc] = useState("");
+  const [croppingFileName, setCroppingFileName] = useState("");
 
   const getInstagramHandle = (url: string) => {
     if (!url) return "";
@@ -145,96 +151,6 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
     } finally {
       setVerifyingPan(false);
     }
-  };
-
-  const handleLogoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // 1. File size check (25MB)
-    const maxBytes = 25 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      setLogoValidationError("File size exceeds 25MB. Please choose a smaller file.");
-      setShowLogoErrorModal(true);
-      return;
-    }
-
-    // 2. Format validation
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
-    if (!allowedTypes.includes(file.type)) {
-      setLogoValidationError("Invalid format. Only JPG, PNG, and WebP images are allowed.");
-      setShowLogoErrorModal(true);
-      return;
-    }
-
-    // 3. Canvas crop and compress browser-side
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-          if (!ctx) {
-            setLogoValidationError("Browser canvas is not supported.");
-            setShowLogoErrorModal(true);
-            return;
-          }
-
-          // Force output to a standard 480x480 pixel square
-          canvas.width = 480;
-          canvas.height = 480;
-
-          // Determine square cropping coordinates from source
-          const minDim = Math.min(img.width, img.height);
-          const sx = (img.width - minDim) / 2;
-          const sy = (img.height - minDim) / 2;
-
-          // Draw center-cropped portion onto 480x480 canvas
-          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, 480, 480);
-
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) {
-                setLogoValidationError("Failed to compress image.");
-                setShowLogoErrorModal(true);
-                return;
-              }
-
-              // Create local preview immediately
-              const previewUrl = URL.createObjectURL(blob);
-              setLogoPreviewUrl(previewUrl);
-
-              // Convert blob to File object (usually ~50KB)
-              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
-                type: "image/webp",
-                lastModified: Date.now()
-              });
-              setLogoFileToUpload(compressedFile);
-
-              toast({
-                title: "Logo Optimized",
-              });
-            },
-            "image/webp",
-            0.85
-          );
-        } catch (canvasErr: any) {
-          setLogoValidationError("Error processing image on client side: " + canvasErr.message);
-          setShowLogoErrorModal(true);
-        }
-      };
-      img.onerror = () => {
-        setLogoValidationError("Could not load image file.");
-        setShowLogoErrorModal(true);
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.onerror = () => {
-      setLogoValidationError("Failed to read image file.");
-      setShowLogoErrorModal(true);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleProfileSetupSubmit = async (e: React.FormEvent) => {
@@ -623,91 +539,20 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
                 />
               </div>
 
-              <div className="space-y-4">
-                <label className="block text-sm font-semibold text-gray-700">Brand Logo (Mandatory)</label>
-                
-                {logoUrl || logoPreviewUrl ? (
-                  <div className="flex items-center gap-6 p-2">
-                    {/* Circular Logo Preview */}
-                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-indigo-500 shadow-md bg-white flex items-center justify-center flex-shrink-0">
-                      <img 
-                        src={logoPreviewUrl || logoUrl} 
-                        alt="Brand Logo" 
-                        className="w-full h-full object-cover"
-                      />
-                      {uploadingLogo && (
-                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center">
-                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      {logoFileToUpload ? (
-                        <p className="text-xs font-semibold text-amber-600">New logo staged</p>
-                      ) : (
-                        <p className="text-xs font-semibold text-green-600">Brand Logo verified and uploaded</p>
-                      )}
-                      
-                      <div className="flex gap-2">
-                        {/* Replace Button */}
-                        <label className="relative cursor-pointer bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 shadow-sm px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition active:scale-95">
-                          <span>Replace Logo</span>
-                          <input 
-                            type="file" 
-                            accept="image/png, image/jpeg, image/jpg, image/webp"
-                            onChange={handleLogoFileChange}
-                            disabled={uploadingLogo || onboardingStatus === "pending_verification"}
-                            className="sr-only" 
-                          />
-                        </label>
-
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
-                            setLogoUrl("");
-                            setLogoPreviewUrl("");
-                            setLogoFileToUpload(null);
-                          }}
-                          disabled={uploadingLogo || onboardingStatus === "pending_verification"}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 px-2.5 h-8 font-semibold text-xs"
-                        >
-                          Remove Logo
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-8 hover:bg-gray-50 transition duration-150">
-                    <div className="text-center space-y-2">
-                      <div className="mx-auto w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-                        {uploadingLogo ? (
-                          <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                          <Building2 className="w-6 h-6" />
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <label className="relative cursor-pointer bg-white rounded-md font-semibold text-indigo-600 hover:text-indigo-500 focus-within:outline-none">
-                          <span>{uploadingLogo ? "Uploading logo..." : "Upload Logo Image"}</span>
-                          <input 
-                            type="file" 
-                            accept="image/png, image/jpeg, image/jpg, image/webp"
-                            onChange={handleLogoFileChange}
-                            disabled={uploadingLogo || onboardingStatus === "pending_verification"}
-                            className="sr-only" 
-                          />
-                        </label>
-                      </div>
-                      <p className="text-xs text-gray-400">
-                        JPG, PNG, or WebP (Max size 25MB)
-                      </p>
-                    </div>
-                  </div>
-                )}
+              <div className="space-y-2">
+                <ImageCropInput
+                  value={logoPreviewUrl || logoUrl}
+                  onChange={(file, previewUrl) => {
+                    setLogoPreviewUrl(previewUrl);
+                    setLogoFileToUpload(file);
+                    if (!file && !previewUrl) {
+                      setLogoUrl("");
+                    }
+                  }}
+                  aspectRatio="1:1"
+                  disabled={uploadingLogo || onboardingStatus === "pending_verification"}
+                  label="Brand Logo (Mandatory)"
+                />
               </div>
 
               <div className="border-t border-gray-100 pt-6">
@@ -1007,31 +852,7 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
           </div>
         </div>
       )}
-      {/* Logo Validation Error Modal */}
-      {showLogoErrorModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 text-red-600 mb-4">
-              <ShieldAlert className="w-7 h-7" />
-              <h4 className="text-lg font-bold text-gray-900">Upload Validation Error</h4>
-            </div>
-            
-            <p className="text-sm text-gray-600 leading-relaxed mb-6">
-              {logoValidationError}
-            </p>
 
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                onClick={() => setShowLogoErrorModal(false)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
-              >
-                Close & Try Again
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
