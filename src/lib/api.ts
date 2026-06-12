@@ -33,6 +33,7 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
   
   const headers: Record<string, string> = {
     'Accept': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
     ...options.headers as any
   };
 
