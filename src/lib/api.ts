@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 
-const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'http://127.0.0.1:5000';
+const API_BASE = localStorage.getItem('API_BASE_OVERRIDE') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000' : 'https://enrich-prominent-backspace.ngrok-free.dev');
 
 // --- NEW: Token Management ---
 export const setAuthTokens = (userId: string, role: string) => {
@@ -1402,6 +1402,7 @@ export async function deleteCreatorNotification(notificationId: string): Promise
   return data;
 }
 
+// Note: the function `deleteCreatorNotification` is exported above as a named export.
 // --- PHASE 6: COMPREHENSIVE REFUND FLOW ---
 
 export interface RefundRequest {
