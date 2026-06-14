@@ -781,7 +781,7 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
             </div>
 
           </div>
-        )}}
+        )}
 
         {/* Conversions Tab */}
         {activeTab === "conversions" && (
