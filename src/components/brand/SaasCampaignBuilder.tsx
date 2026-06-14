@@ -183,7 +183,7 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
       commission_type: monthlyActive ? monthlyCommType : Object.values(commissionSchedule)[0].type, // Fallback
       commission_value: monthlyActive ? parseFloat(monthlyCommValue) : Object.values(commissionSchedule)[0].value, // Fallback
       campaign_type: "saas_subscription",
-      commission_schedule,
+      commissionSchedule,
       recurring_commission: recurringCommission,
       recurring_commission_limit: recurringCommission && recurringLimit ? parseInt(recurringLimit) : null,
       creator_requirements: {
@@ -211,7 +211,7 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
           <Sparkles className="w-48 h-48" />
         </div>
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-white/10 backdrop-blur-md rounded-xl">
+          <div className="p-2.5 bg-black/10 backdrop-blur-md rounded-xl">
             <Megaphone className="w-6 h-6 text-white" />
           </div>
           <div>
