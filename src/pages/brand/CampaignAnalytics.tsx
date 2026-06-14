@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, ImageOff, Undo, Wallet, BarChart2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Upload, ImageOff, Undo, Wallet, BarChart2, ShieldCheck, Clock, XCircle } from "lucide-react";
 import { ImageCropInput } from "../../components/ui/ImageCropInput";
 
 // Update import paths to point to frontend/src

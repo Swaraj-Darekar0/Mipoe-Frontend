@@ -159,7 +159,8 @@ if (sessionId && storedAffiliate) {
       gateway: 'stripe',
       transaction_id: sessionId,
       affiliate_code: storedAffiliate,
-      plan_id: 'default' // optional subscription tier identifier
+      plan_id: 'default', // optional subscription tier identifier
+      interval: 'monthly' // billing interval: 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
     })
   })
   .then(res => res.json())
@@ -193,7 +194,8 @@ const handleRazorpayPaymentSuccess = (response) => {
         gateway: 'razorpay',
         transaction_id: paymentId,
         affiliate_code: storedAffiliate,
-        plan_id: 'premium' // optional
+        plan_id: 'premium', // optional
+        interval: 'monthly' // billing interval: 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
       })
     })
     .then(res => res.json())

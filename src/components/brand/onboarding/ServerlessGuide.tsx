@@ -129,6 +129,7 @@ serve(async (req) => {
           amount: session.amount_total / 100,
           currency: session.currency.toUpperCase(),
           plan_id: session.metadata?.plan_id || 'default',
+          interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
           affiliate_code: session.metadata?.ref
         })
       })
@@ -174,6 +175,7 @@ exports.handler = async (event) => {
         amount: session.amount_total / 100,
         currency: session.currency.toUpperCase(),
         plan_id: session.metadata.plan_id || 'default',
+        interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
         affiliate_code: session.metadata.ref
       })
     });
@@ -216,6 +218,7 @@ serve(async (req) => {
           amount: payment.amount / 100,
           currency: payment.currency,
           plan_id: subscription.plan_id,
+          interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
           affiliate_code: payment.notes?.ref
         })
       })
@@ -263,6 +266,7 @@ exports.handler = async (event) => {
         amount: payment.amount / 100,
         currency: payment.currency,
         plan_id: subscription.plan_id,
+        interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
         affiliate_code: payment.notes.ref
       })
     });

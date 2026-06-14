@@ -202,11 +202,12 @@ Requirements:
    - JSON Payload:
      {
        "event": "subscription.created",
-       "transaction_id": "[extracted_transaction_id]",
+       "subscription_id": "[extracted_subscription_id]",
        "customer_email": "[extracted_email]",
        "amount": [extracted_amount_in_base_units],
        "currency": "[extracted_currency_uppercase]",
        "plan_id": "[extracted_plan_id_or_default]",
+       "interval": "[billing_interval_weekly_monthly_yearly]",
        "affiliate_code": "[extracted_affiliate_code]"
      }
 4. Return a 200 OK status to the payment gateway. Include robust error handling and log any validation failures.
@@ -287,11 +288,12 @@ Requirements:
    - JSON Payload:
      {
        "event": "subscription.created",
-       "transaction_id": "[extracted_transaction_id]",
+       "subscription_id": "[extracted_subscription_id]",
        "customer_email": "[extracted_email]",
        "amount": [extracted_amount_in_base_units],
        "currency": "[extracted_currency_uppercase]",
        "plan_id": "[extracted_plan_id_or_default]",
+       "interval": "[billing_interval_weekly_monthly_yearly]",
        "affiliate_code": "[extracted_affiliate_code]"
      }
 4. Return a 200 OK status to the payment gateway. Include robust error handling and log any validation failures.`;
@@ -346,6 +348,7 @@ async function handleStripeWebhook(headers, rawBody) {
         amount: session.amount_total ? Number(session.amount_total) / 100 : 0,
         currency: (session.currency || 'USD').toUpperCase(),
         plan_id: (session.metadata && session.metadata.plan_id) || 'default',
+        interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
         affiliate_code: affiliateCode
       })
     });
@@ -399,6 +402,7 @@ async def handle_stripe_webhook(headers: dict, body_bytes: bytes) -> dict:
                     "amount": session.get("amount_total") / 100,
                     "currency": session.get("currency", "usd").upper(),
                     "plan_id": session.get("metadata", {}).get("plan_id", "default"),
+                    "interval": "monthly", # 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
                     "affiliate_code": affiliate_code
                 }
             )
@@ -443,6 +447,7 @@ if ($event->type === 'checkout.session.completed') {
         'amount' => $session->amount_total / 100,
         'currency' => strtoupper($session->currency),
         'plan_id' => $session->metadata->plan_id ?? 'default',
+        'interval' => 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
         'affiliate_code' => $session->metadata->ref ?? null
     ]));
     curl_exec($ch);
@@ -488,6 +493,7 @@ func stripeWebhookHandler(w http.ResponseWriter, req *http.Request) {
 				"amount":          float64(session.AmountTotal) / 100.0,
 				"currency":        string(session.Currency),
 				"plan_id":         session.Metadata["plan_id"],
+				"interval":        "monthly", // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
 				"affiliate_code":  session.Metadata["ref"],
 			}
 			jsonBody, _ := json.Marshal(mipoePayload)
@@ -561,6 +567,7 @@ async function handleRazorpayWebhook(headers, rawBody) {
         amount: payment.amount ? Number(payment.amount) / 100 : 0,
         currency: (payment.currency || 'INR').toUpperCase(),
         plan_id: subscription.plan_id,
+        interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
         affiliate_code: affiliateCode
       })
     });
@@ -618,6 +625,7 @@ async def handle_razorpay_webhook(headers: dict, body_bytes: bytes) -> dict:
                     "amount": payment.get("amount") / 100,
                     "currency": payment.get("currency", "INR"),
                     "plan_id": sub.get("plan_id"),
+                    "interval": "monthly", # 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
                     "affiliate_code": affiliate_code
                 }
             )
@@ -657,6 +665,7 @@ if ($data->event === 'subscription.charged') {
         'amount' => $payment->amount / 100,
         'currency' => $payment->currency,
         'plan_id' => $sub->plan_id,
+        'interval' => 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
         'affiliate_code' => $payment->notes->ref ?? null
     ]));
     curl_exec($ch);
@@ -705,6 +714,7 @@ func razorpayWebhook(w http.ResponseWriter, r *http.Request) {
 			"amount":          payment["amount"].(float64) / 100.0,
 			"currency":        payment["currency"],
 			"plan_id":         subscription["plan_id"],
+			"interval":        "monthly", // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
 			"affiliate_code":  notes["ref"],
 		}
 		// Dispatch API post request to Mipoe
@@ -733,6 +743,7 @@ async function handleCashfreeWebhook(headers, rawBody) {
         amount: data.orderAmount,
         currency: 'INR',
         plan_id: data.planId,
+        interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
         affiliate_code: data.affiliateCode // passed in metadata
       })
     });
@@ -764,6 +775,7 @@ async def handle_cashfree_webhook(headers: dict, body_bytes: bytes) -> dict:
                     "amount": data.get("orderAmount"),
                     "currency": "INR",
                     "plan_id": data.get("planId"),
+                    "interval": "monthly", # 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
                     "affiliate_code": data.get("affiliateCode")
                 }
             )
@@ -788,6 +800,7 @@ if ($data->event === 'SUBSCRIPTION_NEW_ORDER') {
         'amount' => $data->orderAmount,
         'currency' => 'INR',
         'plan_id' => $data->planId,
+        'interval' => 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
         'affiliate_code' => $data->affiliateCode ?? null
     ]));
     curl_exec($ch);
@@ -819,6 +832,7 @@ async function handlePayuWebhook(headers, urlEncodedBodyString) {
         amount: Number(params.get('amount')),
         currency: 'INR',
         plan_id: params.get('productinfo'),
+        interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
         affiliate_code: params.get('udf1') // User Defined Field 1 used for affiliate code
       })
     });
@@ -851,6 +865,7 @@ async def handle_payu_webhook(headers: dict, body_bytes: bytes) -> dict:
                     "amount": float(params.get("amount", 0)),
                     "currency": "INR",
                     "plan_id": params.get("productinfo"),
+                    "interval": "monthly", # 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
                     "affiliate_code": params.get("udf1")
                 }
             )
@@ -874,6 +889,7 @@ if ($_POST['status'] === 'success') {
         'amount' => $_POST['amount'],
         'currency' => 'INR',
         'plan_id' => $_POST['productinfo'],
+        'interval' => 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
         'affiliate_code' => $_POST['udf1'] ?? null
     ]));
     curl_exec($ch);

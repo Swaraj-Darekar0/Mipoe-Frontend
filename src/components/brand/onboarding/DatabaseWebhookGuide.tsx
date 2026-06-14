@@ -112,6 +112,7 @@ BEGIN
     'amount', NEW.price_amount,
     'currency', UPPER(NEW.currency),
     'plan_id', NEW.plan_name,
+    'interval', NEW.billing_interval, -- 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
     'affiliate_code', NEW.referral_code -- Ensure you saved referral code in DB row
   );
 
@@ -162,6 +163,7 @@ CREATE TRIGGER after_subscription_insert
         "price": 39.00,
         "currency": "USD",
         "plan_type": "enterprise",
+        "interval": "monthly",
         "affiliate_code": "CREATOR_CODE" 
       }
     }

@@ -406,22 +406,24 @@ const BrandDashboard = () => {
                       <Lock className="w-3.5 h-3.5 text-gray-400" />
                     )}
                   </button>
-                  <button
-                    onClick={() => handleAffiliateSubTabClick("product_catalog")}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left ${
-                      activeTab === "product_catalog"
-                        ? "bg-indigo-50 text-indigo-700 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <ShoppingBag className="w-4 h-4" />
-                      Product Catalog
-                    </div>
-                    {affiliateStatus !== "completed" && (
-                      <Lock className="w-3.5 h-3.5 text-gray-400" />
-                    )}
-                  </button>
+                  {profile?.category !== "SaaS Based" && (
+                    <button
+                      onClick={() => handleAffiliateSubTabClick("product_catalog")}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left ${
+                        activeTab === "product_catalog"
+                          ? "bg-indigo-50 text-indigo-700 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <ShoppingBag className="w-4 h-4" />
+                        Product Catalog
+                      </div>
+                      {affiliateStatus !== "completed" && (
+                        <Lock className="w-3.5 h-3.5 text-gray-400" />
+                      )}
+                    </button>
+                  )}
                   <button
                     onClick={() => handleAffiliateSubTabClick("affiliate_crm")}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left ${
@@ -613,7 +615,7 @@ const BrandDashboard = () => {
                 brandWebsiteUrl={profile?.website_url || ""}
               />
             )}
-            {activeTab === "product_catalog" && (
+            {activeTab === "product_catalog" && profile?.category !== "SaaS Based" && (
               <ProductCatalog integrationType={integrationType} />
             )}
             {activeTab === "affiliate_crm" && (

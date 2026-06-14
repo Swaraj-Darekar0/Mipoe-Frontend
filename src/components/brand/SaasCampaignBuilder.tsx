@@ -531,7 +531,9 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
               <Info className="w-3 h-3 text-gray-400" title="Only conversions corresponding to these plans will map to this campaign." />
             </label>
             {products.length === 0 ? (
-              <p className="text-xs text-gray-400 italic bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200">No SaaS Plans linked to catalog. Set up your plans in the catalog list first.</p>
+              <p className="text-xs text-gray-405 italic bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200">
+                Optional: No specific subscription plans mapped. The campaign will track and apply commission rates to all subscription events received from your verified domain.
+              </p>
             ) : (
               <div className="border border-gray-200 rounded-xl p-3 max-h-[150px] overflow-y-auto space-y-2 bg-gray-50/50">
                 {products.map(p => (
