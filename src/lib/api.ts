@@ -1663,7 +1663,8 @@ export interface AffiliateStatus {
   shopify_shop: string | null;
   has_shopify_token: boolean;
   custom_api_key: string | null;
-  has_cashfree_connected: boolean;
+  is_affiliate_verified: boolean;
+  onboarding_gateway: string | null;
 }
 
 export async function getAffiliateStatus(): Promise<AffiliateStatus> {
@@ -1697,17 +1698,22 @@ export async function connectCustom(): Promise<{
   return data;
 }
 
-export async function connectCashfreeAffiliate(appId: string, secretKey: string): Promise<{
-  msg: string;
+export async function initializeSaasIntegration(
+  gateway: string,
+  merchant_read_key?: string | null,
+  merchant_client_id?: string | null
+): Promise<{
+  api_key: string;
   webhook_url: string;
   webhook_secret: string;
+  msg: string;
 }> {
-  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/cashfree/connect`, {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/saas/initialize`, {
     method: 'POST',
-    body: JSON.stringify({ cashfree_app_id: appId, cashfree_client_secret: secretKey })
+    body: JSON.stringify({ gateway, merchant_read_key, merchant_client_id })
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.msg || 'Failed to connect Cashfree credentials');
+  if (!res.ok) throw new Error(data.msg || 'Failed to initialize SaaS integration');
   return data;
 }
 
