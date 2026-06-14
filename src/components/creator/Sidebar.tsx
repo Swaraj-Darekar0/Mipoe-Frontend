@@ -69,6 +69,13 @@ const Sidebar = () => {
           <NavLink to="/creator/campaigns?type=influencer" icon={<Flame className="w-4 h-4 text-pink-500" />}>Influencer</NavLink>
           <NavLink to="/creator/campaigns?type=clipping" icon={<Flame className="w-4 h-4 text-purple-500" />}>Clipping</NavLink>
         </div>
+        <div className="mt-4 mb-1 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          Affiliate
+        </div>
+        <div className="flex flex-col gap-1 pl-2 mb-2">
+          <NavLink to="/creator/affiliate-campaigns" icon={<Flame className="w-4 h-4 text-orange-500" />}>Campaigns</NavLink>
+          <NavLink to="/creator/affiliate-analytics" icon={<LayoutGrid className="w-4 h-4 text-orange-500" />}>Analytics</NavLink>
+        </div>
         <NavLink to="/creator/submissions" icon={<Send className="w-5 h-5" />}>Submissions</NavLink>
         <NavLink to="/creator/wallet" icon={<Wallet className="w-5 h-5" />}>Earnings</NavLink>
       </nav>

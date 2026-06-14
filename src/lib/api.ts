@@ -1868,7 +1868,13 @@ export interface CreatorAffiliateCampaign {
   commission_type: 'percentage' | 'fixed';
   commission_value: number;
   creator_requirements: any;
+  campaign_type?: string;
+  commission_schedule?: any;
+  recurring_commission?: boolean;
+  recurring_commission_limit?: number | null;
+  subscription_details?: any;
   joined: boolean;
+  application_status?: string;
   affiliate_code: string | null;
   products: Array<{
     id: number;
@@ -1923,6 +1929,53 @@ export async function getBrandConversions(): Promise<any[]> {
   const res = await apiFetch(`${API_BASE}/api/brand/affiliate/conversions`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch conversion events');
+  return data;
+}
+
+export async function getCreatorConversions(): Promise<any[]> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/creator/conversions`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch creator conversion events');
+  return data;
+}
+
+export async function reviewCreatorAffiliateApplication(
+  campaignId: number,
+  creatorId: number,
+  action: "approve" | "reject"
+): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/campaigns/${campaignId}/review-creator`, {
+    method: 'POST',
+    body: JSON.stringify({ creator_id: creatorId, action })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to review creator application');
+  return data;
+}
+
+export async function fetchAdminAffiliateCampaigns(): Promise<any[]> {
+  const res = await apiFetch(`${API_BASE}/api/admin/affiliate/campaigns`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch admin affiliate campaigns');
+  return data;
+}
+
+export async function approveAffiliateCampaign(campaignId: number): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/admin/affiliate/campaigns/${campaignId}/approve`, {
+    method: 'POST'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to approve affiliate campaign');
+  return data;
+}
+
+export async function rejectAffiliateCampaign(campaignId: number, reason: string): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/admin/affiliate/campaigns/${campaignId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to reject affiliate campaign');
   return data;
 }
 

@@ -29,6 +29,10 @@ const BrandTransactions = React.lazy(() => import("./pages/brand/Transactions"))
 const CampaignsPage = React.lazy(() => import("./pages/creator/Campaigns"));
 const SubmissionsPage = React.lazy(() => import("./pages/creator/Submissions"));
 const AuthCallback = React.lazy(() => import("./pages/creator/AuthCallback"));
+const CreatorAffiliateCampaignsPage = React.lazy(() => import("./pages/creator/AffiliateCampaigns"));
+const AffiliateCampaignView = React.lazy(() => import("./pages/creator/AffiliateCampaignView"));
+const BrandAffiliateCampaignAnalytics = React.lazy(() => import("./pages/brand/BrandAffiliateCampaignAnalytics").then(m => ({ default: m.BrandAffiliateCampaignAnalytics })));
+const CreatorAffiliateAnalyticsPage = React.lazy(() => import("./pages/creator/AffiliateAnalytics"));
 
 const queryClient = new QueryClient();
 
@@ -56,8 +60,12 @@ const App = () => (
             <Route path="/creator/submit/:campaignId" element={<SubmitClip />} />
             <Route path="/brand/dashboard" element={<BrandDashboard />} />
             <Route path="/brand/dashboard/:campaignId" element={<CampaignAnalytics />} />
+            <Route path="/brand/affiliate-dashboard/:campaignId" element={<BrandAffiliateCampaignAnalytics />} />
             <Route path="/brand/create" element={<CreateCampaign />} />
             <Route path="/creator/dashboard/:campaign_id" element={<CampaignView />} />
+            <Route path="/creator/affiliate-campaigns" element={<CreatorAffiliateCampaignsPage />} />
+            <Route path="/creator/affiliate-campaigns/:campaign_id" element={<AffiliateCampaignView />} />
+            <Route path="/creator/affiliate-analytics" element={<CreatorAffiliateAnalyticsPage />} />
             <Route path="/creator/profile" element={<CreatorProfile />} />
             <Route path="/creator/complete-profile" element={<CompleteProfile />} />
             <Route path="/creator/wallet" element={<Wallet />} />

@@ -10,7 +10,10 @@ import {
   verifyBrandCompliance,
   AdminOnboardingBrand,
   approveCampaign,
-  rejectCampaign
+  rejectCampaign,
+  fetchAdminAffiliateCampaigns,
+  approveAffiliateCampaign,
+  rejectAffiliateCampaign
 } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -45,7 +48,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 const AdminPage = () => {
-  const [activeTab, setActiveTab] = useState<"clips" | "brands" | "campaigns">("clips");
+  const [activeTab, setActiveTab] = useState<"clips" | "brands" | "campaigns" | "affiliates">("clips");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -68,6 +71,15 @@ const AdminPage = () => {
   const [showCampaignRejectModal, setShowCampaignRejectModal] = useState(false);
   const [campaignRejectionReason, setCampaignRejectionReason] = useState("");
   const [processingCampaignApproval, setProcessingCampaignApproval] = useState(false);
+
+  // Affiliate Campaign States
+  const [affiliateCampaigns, setAffiliateCampaigns] = useState<any[]>([]);
+  const [selectedAffiliateCampaign, setSelectedAffiliateCampaign] = useState<any | null>(null);
+  const [showAffiliateRejectModal, setShowAffiliateRejectModal] = useState(false);
+  const [affiliateRejectionReason, setAffiliateRejectionReason] = useState("");
+  const [processingAffiliateCampaignApproval, setProcessingAffiliateCampaignApproval] = useState(false);
+  const [affiliatesLoading, setAffiliatesLoading] = useState(false);
+  const [affiliatesError, setAffiliatesError] = useState("");
 
   // Load clips data
   const loadClips = () => {
@@ -107,18 +119,44 @@ const AdminPage = () => {
     }
   };
 
+  // Load pending affiliate campaigns
+  const loadAffiliateCampaigns = async (silent = false) => {
+    if (!silent) setAffiliatesLoading(true);
+    setAffiliatesError("");
+    try {
+      const data = await fetchAdminAffiliateCampaigns();
+      setAffiliateCampaigns(data);
+
+      // Sync selected affiliate campaign details
+      if (selectedAffiliateCampaign) {
+        const updated = data.find(c => c.id === selectedAffiliateCampaign.id);
+        if (updated) {
+          setSelectedAffiliateCampaign(updated);
+        } else {
+          setSelectedAffiliateCampaign(null);
+        }
+      }
+    } catch (err: any) {
+      setAffiliatesError(err.message || "Failed to fetch affiliate campaigns");
+    } finally {
+      if (!silent) setAffiliatesLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadClips();
     loadBrands();
+    loadAffiliateCampaigns();
   }, []);
 
   // Poll brands list
   useEffect(() => {
     const interval = setInterval(() => {
       loadBrands(true);
+      loadAffiliateCampaigns(true);
     }, 15000);
     return () => clearInterval(interval);
-  }, [selectedBrand]);
+  }, [selectedBrand, selectedAffiliateCampaign]);
 
   const toggle = (id: number) => {
     setExpandedId(prev => (prev === id ? null : id));
@@ -247,6 +285,49 @@ const AdminPage = () => {
     }
   };
 
+  const handleAffiliateApproval = async (campaignId: number) => {
+    if (!window.confirm("Approve this affiliate campaign? It will be made available in the marketplace for creators to view and apply.")) return;
+    setProcessingAffiliateCampaignApproval(true);
+    try {
+      await approveAffiliateCampaign(campaignId);
+      toast({
+        title: "Affiliate Campaign Approved",
+        description: "The campaign was approved successfully.",
+      });
+      setSelectedAffiliateCampaign(null);
+      await loadAffiliateCampaigns();
+    } catch (err: any) {
+      toast({ title: "Approval Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setProcessingAffiliateCampaignApproval(false);
+    }
+  };
+
+  const handleAffiliateRejection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAffiliateCampaign) return;
+    if (!affiliateRejectionReason.trim()) {
+      alert("Please specify a rejection reason.");
+      return;
+    }
+    setProcessingAffiliateCampaignApproval(true);
+    try {
+      await rejectAffiliateCampaign(selectedAffiliateCampaign.id, affiliateRejectionReason);
+      toast({
+        title: "Affiliate Campaign Rejected",
+        description: "The campaign has been rejected.",
+      });
+      setShowAffiliateRejectModal(false);
+      setAffiliateRejectionReason("");
+      setSelectedAffiliateCampaign(null);
+      await loadAffiliateCampaigns();
+    } catch (err: any) {
+      toast({ title: "Rejection Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setProcessingAffiliateCampaignApproval(false);
+    }
+  };
+
   const formatUrl = (url: string) => {
     if (url.length > 50) {
       return url.substring(0, 30) + '...' + url.substring(url.length - 15);
@@ -265,6 +346,8 @@ const AdminPage = () => {
   const pendingBrandsCount = brands.length;
   const pendingCampaigns = campaigns.filter(c => c.campaign_approval === "pending_approval");
   const pendingCampaignsCount = pendingCampaigns.length;
+  const pendingAffiliateCampaigns = affiliateCampaigns.filter(c => c.campaign_approval === "pending_approval");
+  const pendingAffiliateCampaignsCount = pendingAffiliateCampaigns.length;
 
   const renderClipsTab = () => (
     <div className="space-y-6">
@@ -1089,6 +1172,351 @@ const AdminPage = () => {
     );
   };
 
+  const renderAffiliatesTab = () => {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Left Side: Campaigns List */}
+          <div className="lg:col-span-1 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm h-[600px] overflow-y-auto">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 px-2">Affiliate Campaigns ({pendingAffiliateCampaigns.length})</h2>
+            
+            {pendingAffiliateCampaigns.length === 0 ? (
+              <div className="text-center py-20 text-gray-400">No affiliate campaigns pending approval.</div>
+            ) : (
+              <div className="space-y-2">
+                {pendingAffiliateCampaigns.map(camp => (
+                  <button
+                    key={camp.id}
+                    onClick={() => {
+                      setSelectedAffiliateCampaign(camp);
+                      setShowAffiliateRejectModal(false);
+                    }}
+                    className={`w-full text-left p-4 rounded-xl border transition-all duration-150 ${
+                      selectedAffiliateCampaign?.id === camp.id
+                        ? "border-indigo-600 bg-indigo-50/50 shadow-sm"
+                        : "border-gray-150 bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-bold text-gray-900 truncate">{camp.name}</span>
+                      <span className="text-xs text-gray-400">#{camp.id}</span>
+                    </div>
+                    <div className="flex gap-1.5 flex-wrap my-2">
+                      <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded ${
+                        camp.campaign_type === 'saas_subscription' 
+                          ? 'bg-violet-100 text-violet-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {camp.campaign_type === 'saas_subscription' ? 'SaaS / Subscription' : 'Product Catalog'}
+                      </span>
+                      {camp.brand_category && (
+                        <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-800 text-[10px] font-semibold uppercase tracking-wider rounded">
+                          {camp.brand_category}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
+                      <span>Brand: {camp.brand_name || "Unknown"}</span>
+                      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                        Pending
+                      </Badge>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right Side: Detail & Creator Dashboard Preview (Dark Theme Container) */}
+          <div className="lg:col-span-2">
+            {selectedAffiliateCampaign ? (
+              <div className="bg-[#0A0A0B] border border-zinc-800 text-zinc-100 rounded-2xl shadow-2xl overflow-hidden h-[600px] overflow-y-auto flex flex-col">
+                {/* Visual Header / Banner */}
+                <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/40">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-indigo-400" />
+                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Creator Dashboard Preview</span>
+                  </div>
+                  <Badge className="bg-amber-500/20 border border-amber-500/30 text-amber-400 uppercase text-[10px] font-bold tracking-wider px-2.5 py-0.5">
+                    Pending Approval
+                  </Badge>
+                </div>
+
+                <div className="p-6 md:p-8 flex-1">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch">
+                    
+                    {/* Main Preview Content */}
+                    <div className="md:col-span-2 flex flex-col gap-6">
+                      
+                      {/* Image Preview */}
+                      <div className="w-full aspect-video bg-zinc-950 border border-zinc-800 overflow-hidden relative rounded-xl flex items-center justify-center">
+                        {selectedAffiliateCampaign.image_url ? (
+                          <img
+                            src={selectedAffiliateCampaign.image_url}
+                            alt={selectedAffiliateCampaign.name}
+                            className="w-full h-full object-cover object-top"
+                          />
+                        ) : (
+                          <div className="text-zinc-650 flex flex-col items-center gap-2 text-xs uppercase tracking-wider">
+                            <AlertCircle size={32} className="opacity-40" />
+                            No Preview Image Added
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Header Title */}
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div>
+                            <h3 className="text-xl sm:text-2xl font-bold text-white leading-tight">
+                              {selectedAffiliateCampaign.name}
+                            </h3>
+                            <span className="text-xs text-zinc-500 mt-1 block">Brand: {selectedAffiliateCampaign.brand_name} (ID: {selectedAffiliateCampaign.brand_id})</span>
+                          </div>
+                          
+                          <div className="flex gap-2 flex-wrap items-center">
+                            <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest border rounded ${
+                              selectedAffiliateCampaign.campaign_type === 'saas_subscription' 
+                                ? 'border-violet-500/40 text-violet-400 bg-violet-500/10' 
+                                : 'border-blue-500/40 text-blue-400 bg-blue-50/10'
+                            }`}>
+                              {selectedAffiliateCampaign.campaign_type === 'saas_subscription' ? 'SaaS / Subscription' : 'Product Catalog'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {selectedAffiliateCampaign.landing_page_url ? (
+                          <a
+                            href={selectedAffiliateCampaign.landing_page_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-400 hover:text-indigo-300 text-[11px] sm:text-xs underline font-medium flex items-center gap-1 w-fit mt-1 animate-pulse"
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                            Landing Page: {formatUrl(selectedAffiliateCampaign.landing_page_url)}
+                          </a>
+                        ) : selectedAffiliateCampaign.brand_website ? (
+                          <a
+                            href={selectedAffiliateCampaign.brand_website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-400 hover:text-indigo-300 text-[11px] sm:text-xs underline font-medium flex items-center gap-1 w-fit mt-1"
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                            Brand Website: {formatUrl(selectedAffiliateCampaign.brand_website)}
+                          </a>
+                        ) : null}
+                      </div>
+
+                      {selectedAffiliateCampaign.description && (
+                        <div className="flex flex-col gap-3 border-t border-zinc-800/80 pt-6">
+                          <h4 className="text-sm font-semibold text-zinc-200 uppercase tracking-wider">
+                            Campaign Description
+                          </h4>
+                          <p className="text-xs sm:text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed">
+                            {selectedAffiliateCampaign.description}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Associated Products/Plans */}
+                      <div className="flex flex-col gap-3 border-t border-zinc-800/80 pt-6">
+                        <h4 className="text-sm font-semibold text-zinc-200 uppercase tracking-wider">
+                          Associated Products / Subscription Plans
+                        </h4>
+                        {selectedAffiliateCampaign.products && selectedAffiliateCampaign.products.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {selectedAffiliateCampaign.products.map((p: any) => (
+                              <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-lg flex flex-col justify-between gap-1">
+                                <span className="font-semibold text-xs text-white truncate">{p.name}</span>
+                                <div className="flex justify-between items-center mt-1 text-[11px]">
+                                  <span className="text-indigo-400 font-bold">₹{p.price}</span>
+                                  {p.product_url && (
+                                    <a
+                                      href={p.product_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-zinc-400 hover:text-white flex items-center gap-0.5 underline"
+                                    >
+                                      Link <ExternalLink className="w-2.5 h-2.5" />
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-zinc-500 italic">No products mapped to this campaign.</span>
+                        )}
+                      </div>
+
+                    </div>
+
+                    {/* Financials & Action Panel */}
+                    <div className="flex flex-col gap-6 justify-between h-full">
+                      <div className="bg-zinc-900/40 border border-zinc-800 p-5 rounded-xl flex flex-col gap-4">
+                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest font-mono">Commission Details</h4>
+                        <div className="h-px bg-zinc-800" />
+                        
+                        {selectedAffiliateCampaign.campaign_type === 'saas_subscription' ? (
+                          <div className="space-y-4 text-xs">
+                            {selectedAffiliateCampaign.commission_schedule && (
+                              <div>
+                                <span className="text-zinc-500 text-[10px] uppercase tracking-wider block font-semibold">Commission Rates</span>
+                                <div className="space-y-1.5 mt-1">
+                                  {Object.entries(selectedAffiliateCampaign.commission_schedule).map(([interval, details]: [string, any]) => (
+                                    <div key={interval} className="flex justify-between items-center bg-zinc-950 px-2 py-1 rounded border border-zinc-800/40">
+                                      <span className="capitalize text-zinc-400">{interval}:</span>
+                                      <span className="font-bold text-white">
+                                        {details.type === 'percentage' ? `${details.value}%` : `₹${details.value}`}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div>
+                              <span className="text-zinc-500 text-[10px] uppercase tracking-wider block font-semibold">Recurring Commission</span>
+                              <span className="font-bold text-white text-sm">
+                                {selectedAffiliateCampaign.recurring_commission ? "Enabled" : "Disabled"}
+                              </span>
+                            </div>
+
+                            {selectedAffiliateCampaign.recurring_commission && (
+                              <div>
+                                <span className="text-zinc-500 text-[10px] uppercase tracking-wider block font-semibold">Renewal Limit</span>
+                                <span className="font-bold text-white text-sm">
+                                  {selectedAffiliateCampaign.recurring_commission_limit ? `${selectedAffiliateCampaign.recurring_commission_limit} payments` : "Unlimited Lifetime"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div>
+                              <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Commission Model</span>
+                              <span className="font-semibold text-white capitalize">{selectedAffiliateCampaign.commission_type}</span>
+                            </div>
+                            <div>
+                              <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Commission Value</span>
+                              <span className="font-bold text-lg text-white">
+                                {selectedAffiliateCampaign.commission_type === 'percentage' 
+                                  ? `${selectedAffiliateCampaign.commission_value}%` 
+                                  : `₹${selectedAffiliateCampaign.commission_value}`}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="h-px bg-zinc-800" />
+                        
+                        <div className="space-y-2 text-xs">
+                          <div>
+                            <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Start Date</span>
+                            <span className="font-medium text-zinc-300">
+                              {selectedAffiliateCampaign.start_date ? formatDate(selectedAffiliateCampaign.start_date) : "—"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Deadline Date</span>
+                            <span className="font-medium text-zinc-300">
+                              {selectedAffiliateCampaign.deadline ? formatDate(selectedAffiliateCampaign.deadline) : "—"}
+                            </span>
+                          </div>
+                        </div>
+
+                      </div>
+
+                      <div className="space-y-3 pt-6 border-t border-zinc-800/80 mt-auto">
+                        <Button
+                          onClick={() => handleAffiliateApproval(selectedAffiliateCampaign.id)}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 animate-pulse"
+                          disabled={processingAffiliateCampaignApproval}
+                        >
+                          Approve Campaign
+                        </Button>
+                        <Button
+                          onClick={() => setShowAffiliateRejectModal(true)}
+                          variant="outline"
+                          className="w-full border-red-800 text-red-400 hover:bg-red-955/30 hover:text-red-300 font-semibold py-3"
+                          disabled={processingAffiliateCampaignApproval}
+                        >
+                          Reject Campaign
+                        </Button>
+                      </div>
+
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            ) : (
+              <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center text-gray-500 h-[600px] flex flex-col justify-center items-center">
+                <ShieldCheck className="w-16 h-16 text-indigo-200 mb-4" />
+                <h3 className="text-xl font-bold text-gray-700 mb-2">Affiliate Campaigns Approval Panel</h3>
+                <p className="text-gray-400 text-sm max-w-sm">
+                  Select a pending affiliate campaign from the list on the left to preview its commission details, landing page, and associated catalog items.
+                </p>
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* Affiliate Campaign Reject Modal dialog form */}
+        {showAffiliateRejectModal && selectedAffiliateCampaign && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <form 
+              onSubmit={handleAffiliateRejection}
+              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300"
+            >
+              <div className="flex items-center gap-3 text-red-600 mb-4">
+                <AlertTriangle className="w-7 h-7" />
+                <h4 className="text-lg font-bold text-gray-900">Reject Affiliate Campaign</h4>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                Specify the reason for rejecting <strong>{selectedAffiliateCampaign.name}</strong>. This message will be shown on the brand's dashboard.
+              </p>
+
+              <div className="mb-6">
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Rejection Reason</label>
+                <Textarea
+                  placeholder="e.g. Unmatched domain name, description is incomplete, or product pricing is incorrect. Please revise."
+                  value={affiliateRejectionReason}
+                  onChange={(e) => setAffiliateRejectionReason(e.target.value)}
+                  rows={4}
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowAffiliateRejectModal(false)}
+                  disabled={processingAffiliateCampaignApproval}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  disabled={processingAffiliateCampaignApproval}
+                >
+                  {processingAffiliateCampaignApproval ? "Processing..." : "Reject Campaign"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
       
@@ -1148,6 +1576,23 @@ const AdminPage = () => {
               </span>
             )}
           </button>
+
+          <button
+            onClick={() => setActiveTab("affiliates")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition ${
+              activeTab === "affiliates"
+                ? "bg-indigo-600 text-white shadow-lg"
+                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5 text-indigo-400" />
+            Affiliate Approvals
+            {pendingAffiliateCampaignsCount > 0 && (
+              <span className="ml-auto bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold animate-pulse">
+                {pendingAffiliateCampaignsCount}
+              </span>
+            )}
+          </button>
         </nav>
 
         <div className="p-4 border-t border-slate-800 text-xs text-slate-500">
@@ -1163,7 +1608,9 @@ const AdminPage = () => {
               ? "Clips Moderation & Review" 
               : activeTab === "brands" 
               ? "Brand Compliance Verification" 
-              : "Campaigns Approval"}
+              : activeTab === "campaigns"
+              ? "Campaigns Approval"
+              : "Affiliate Campaigns Approval"}
           </h1>
           <button 
             onClick={() => navigate("/")} 
@@ -1178,7 +1625,9 @@ const AdminPage = () => {
             ? renderClipsTab() 
             : activeTab === "brands" 
             ? renderBrandsTab() 
-            : renderCampaignsTab()}
+            : activeTab === "campaigns"
+            ? renderCampaignsTab()
+            : renderAffiliatesTab()}
         </main>
       </div>
 

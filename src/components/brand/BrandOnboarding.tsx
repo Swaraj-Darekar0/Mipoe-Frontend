@@ -168,6 +168,11 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
       setSubmittingProfile(false);
       return;
     }
+    if (category === "SaaS Based" && (!websiteUrl || !websiteUrl.trim())) {
+      setProfileError("Website URL is required for SaaS Based brands.");
+      setSubmittingProfile(false);
+      return;
+    }
 
     try {
       let finalLogoUrl = logoUrl;

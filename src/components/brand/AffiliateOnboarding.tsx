@@ -778,7 +778,7 @@ if ($_POST['status'] === 'success') {
                     </div>
 
                     <div className="flex justify-end pt-2">
-                      <Button onClick={onOnboardingCompleted} className="bg-green-650 hover:bg-green-700 text-white font-semibold">
+                      <Button onClick={onOnboardingCompleted} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
                         Go to Catalog Workspace
                       </Button>
                     </div>
@@ -1190,7 +1190,7 @@ if ($_POST['status'] === 'success') {
                 </p>
 
                 <div className="pt-4">
-                  <Button onClick={onOnboardingCompleted} className="bg-green-650 hover:bg-green-700 text-white font-semibold">
+                  <Button onClick={onOnboardingCompleted} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
                     Go to Campaigns Workspace
                   </Button>
                 </div>

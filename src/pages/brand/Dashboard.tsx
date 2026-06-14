@@ -608,7 +608,10 @@ const BrandDashboard = () => {
               />
             )}
             {activeTab === "affiliate_campaigns" && (
-              <AffiliateCampaigns />
+              <AffiliateCampaigns 
+                brandCategory={profile?.category || "Product Based"} 
+                brandWebsiteUrl={profile?.website_url || ""}
+              />
             )}
             {activeTab === "product_catalog" && (
               <ProductCatalog integrationType={integrationType} />
