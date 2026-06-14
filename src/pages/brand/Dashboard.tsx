@@ -92,7 +92,7 @@ const BrandDashboard = () => {
         setIntegrationType("shopify");
       } else if (statusData.custom_api_key) {
         setIntegrationType("custom");
-      } else if (statusData.has_cashfree_connected) {
+      } else if (statusData.onboarding_gateway) {
         setIntegrationType("cashfree");
       }
     } catch (err) {
@@ -365,7 +365,7 @@ const BrandDashboard = () => {
       <BrandLayout fullWidth={true}>
         <div className="flex flex-col md:flex-row gap-8 min-h-[calc(100vh-10rem)] w-full">
           {/* Sidebar */}
-          <aside className="w-full md:w-64 flex-shrink-0 bg-white border border-gray-150 rounded-2xl p-4 shadow-sm h-fit md:sticky md:top-6">
+          <aside className="w-full md:w-64 shrink-0 bg-white border border-gray-150 rounded-2xl p-4 shadow-sm h-fit md:sticky md:top-6">
             <div className="space-y-6">
               <div>
                 <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">Campaigns</span>
