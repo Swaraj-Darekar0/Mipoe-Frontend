@@ -182,7 +182,7 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
         
         <Button 
           onClick={() => {
-            if (products.length === 0) {
+            if (brandCategory !== "SaaS Based" && products.length === 0) {
               toast({ title: "Products Needed", description: "Please add products to your catalog first.", variant: "destructive" });
               return;
             }
