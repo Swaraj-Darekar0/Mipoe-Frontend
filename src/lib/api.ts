@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 
-const API_BASE = localStorage.getItem('API_BASE_OVERRIDE') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000' : 'https://enrich-prominent-backspace.ngrok-free.dev');
+export const API_BASE = localStorage.getItem('API_BASE_OVERRIDE') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000' : 'https://enrich-prominent-backspace.ngrok-free.dev');
 
 // --- NEW: Token Management ---
 export const setAuthTokens = (userId: string, role: string) => {

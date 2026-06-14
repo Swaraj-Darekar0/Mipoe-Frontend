@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { connectShopify, connectCustom, initializeSaasIntegration, getAffiliateStatus, getUserId } from "@/lib/api";
+import { connectShopify, connectCustom, initializeSaasIntegration, getAffiliateStatus, getUserId, API_BASE } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +37,16 @@ export const AffiliateOnboarding: React.FC<AffiliateOnboardingProps> = ({
   onOnboardingCompleted 
 }) => {
   const { toast } = useToast();
+
+  const getRealWebhookUrl = (rawUrl: string) => {
+    if (!rawUrl) return "";
+    const idx = rawUrl.indexOf("/api/webhooks/");
+    if (idx !== -1) {
+      return `${API_BASE}${rawUrl.substring(idx)}`;
+    }
+    return rawUrl;
+  };
+
   const [activeMethod, setActiveMethod] = useState<"shopify" | "custom" | "saas" | null>(
     businessCategory === "Product Based" ? "custom" : "saas"
   );
@@ -102,7 +112,7 @@ export const AffiliateOnboarding: React.FC<AffiliateOnboardingProps> = ({
       const res = await connectCustom();
       setCustomCredentials({
         api_key: res.api_key,
-        webhook_url: res.webhook_url,
+        webhook_url: getRealWebhookUrl(res.webhook_url),
         webhook_secret: res.webhook_secret
       });
       toast({ title: "API Activated", description: "Your custom API key has been generated." });
@@ -120,7 +130,7 @@ export const AffiliateOnboarding: React.FC<AffiliateOnboardingProps> = ({
       const res = await initializeSaasIntegration(selectedGateway);
       setSaasCredentials({
         api_key: res.api_key,
-        webhook_url: res.webhook_url,
+        webhook_url: getRealWebhookUrl(res.webhook_url),
         webhook_secret: res.webhook_secret
       });
       setSaasStep(2);
@@ -256,7 +266,7 @@ export const AffiliateOnboarding: React.FC<AffiliateOnboardingProps> = ({
       const res = await initializeSaasIntegration(selectedGateway, readKey, clientId);
       setSaasCredentials({
         api_key: res.api_key,
-        webhook_url: res.webhook_url,
+        webhook_url: getRealWebhookUrl(res.webhook_url),
         webhook_secret: res.webhook_secret
       });
       toast({ title: "Credentials Linked", description: "Restricted API keys saved and encrypted successfully!" });
