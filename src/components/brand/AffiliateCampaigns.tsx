@@ -6,8 +6,12 @@ import {
   allocateAffiliateBudget, 
   reclaimAffiliateBudget, 
   getBrandProducts,
-  getWalletBalance 
+  getWalletBalance,
+  uploadCampaignImage,
+  deleteAffiliateCampaign
 } from "@/lib/api";
+import { compressImage } from "@/utils/imageCompression";
+import { ImageCropInput } from "@/components/ui/ImageCropInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +27,8 @@ import {
   ArrowLeftRight,
   ShieldCheck,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  Trash2
 } from "lucide-react";
 
 import { SaasCampaignBuilder } from "./SaasCampaignBuilder";
@@ -51,6 +56,8 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [deadline, setDeadline] = useState("");
   const [commType, setCommType] = useState<"percentage" | "fixed">("percentage");
@@ -94,10 +101,20 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
 
     setSubmittingCampaign(true);
     try {
+      let finalImageUrl = imageUrl;
+      if (imageFile) {
+        try {
+          const compressed = await compressImage(imageFile);
+          finalImageUrl = await uploadCampaignImage(compressed);
+        } catch (uploadErr) {
+          throw new Error("Failed to compress or upload cover image");
+        }
+      }
+
       await createAffiliateCampaign({
         name,
         description: desc,
-        image_url: imageUrl || undefined,
+        image_url: finalImageUrl || undefined,
         start_date: startDate,
         deadline,
         commission_type: commType,
@@ -110,6 +127,8 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
       setName("");
       setDesc("");
       setImageUrl("");
+      setImageFile(null);
+      setImagePreview("");
       setDeadline("");
       setCommValue("");
       setSelectedProductIds([]);
@@ -159,6 +178,20 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
       toast({ title: "Error", description: err.message || "Budget transaction failed.", variant: "destructive" });
     } finally {
       setSubmittingBudget(false);
+    }
+  };
+
+  const handleDeleteCampaign = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this campaign? Any remaining allocated budget will be refunded to your brand wallet.")) {
+      return;
+    }
+
+    try {
+      await deleteAffiliateCampaign(id);
+      toast({ title: "Campaign Deleted", description: "Your campaign has been deleted successfully." });
+      await loadData(true);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to delete campaign", variant: "destructive" });
     }
   };
 
@@ -218,26 +251,37 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
                   <div className="space-y-4 flex-1">
                     
                     {/* Header */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-bold text-gray-900">{c.name}</h3>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-bold text-gray-900">{c.name}</h3>
+                        
+                        {c.campaign_approval === "pending_approval" ? (
+                          <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                            Pending Approval
+                          </span>
+                        ) : c.campaign_approval === "rejected" ? (
+                          <span className="bg-red-50 border border-red-200 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                            Rejected
+                          </span>
+                        ) : c.is_active ? (
+                          <span className="bg-green-50 border border-green-200 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="bg-gray-50 border border-gray-200 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                            Draft (Fund to activate)
+                          </span>
+                        )}
+                      </div>
                       
-                      {c.campaign_approval === "pending_approval" ? (
-                        <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                          Pending Approval
-                        </span>
-                      ) : c.campaign_approval === "rejected" ? (
-                        <span className="bg-red-50 border border-red-200 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                          Rejected
-                        </span>
-                      ) : c.is_active ? (
-                        <span className="bg-green-50 border border-green-200 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="bg-gray-50 border border-gray-200 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                          Draft (Fund to activate)
-                        </span>
-                      )}
+                      <button
+                        title="Delete Campaign"
+                        onClick={() => handleDeleteCampaign(c.id)}
+                        className="text-red-500 hover:text-red-750 hover:bg-red-50 p-1.5 rounded-xl transition-colors flex items-center gap-1 text-xs font-bold"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
                     </div>
 
                     <p className="text-xs text-gray-550 leading-relaxed">{c.description || "No description provided."}</p>
@@ -347,6 +391,19 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
               </h3>
 
               <form onSubmit={handleCreateSubmit} className="space-y-4">
+                <div className="space-y-1">
+                  <ImageCropInput
+                    value={imagePreview || ""}
+                    onChange={(file, previewUrl) => {
+                      setImagePreview(previewUrl);
+                      setImageFile(file);
+                    }}
+                    aspectRatio="16:9"
+                    label="Campaign Cover Image"
+                    placeholder="Upload a campaign cover image"
+                  />
+                </div>
+
                 <div className="space-y-1">
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Campaign Name</label>
                   <Input

@@ -1,6 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <script>
+      (function() {
+        var RELOAD_KEY = "mipoe-chunk-reload-timestamp";
+        function handleChunkError(error) {
+          var message = (error && (error.message || error.toString())) || "";
+          if (message.indexOf("Failed to fetch dynamically imported module") !== -1 || 
+              message.indexOf("import(...) failed") !== -1) {
+            var now = Date.now();
+            var lastReload = sessionStorage.getItem(RELOAD_KEY);
+            if (!lastReload || (now - parseInt(lastReload, 10)) > 10000) {
+              sessionStorage.setItem(RELOAD_KEY, now);
+              console.warn("Dynamic import failed. Reloading page to fetch the latest assets...", error);
+              window.location.reload();
+            } else {
+              console.error("Dynamic import failed repeatedly. Skipping reload to prevent infinite loop.", error);
+            }
+          }
+        }
+        window.addEventListener("unhandledrejection", function(event) {
+          handleChunkError(event.reason);
+        });
+        window.addEventListener("error", function(event) {
+          handleChunkError(event.error || event.message);
+        }, true);
+      })();
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/play-symbol.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

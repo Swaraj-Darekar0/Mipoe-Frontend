@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { uploadCampaignImage } from "@/lib/api";
+import { compressImage } from "@/utils/imageCompression";
+import { ImageCropInput } from "@/components/ui/ImageCropInput";
 import { 
   Megaphone, 
   Calendar, 
@@ -36,6 +39,8 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
   const [landingPageUrl, setLandingPageUrl] = useState(brandWebsiteUrl);
 
   useEffect(() => {
@@ -68,6 +73,7 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [deadline, setDeadline] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,27 +179,48 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
       return;
     }
 
-    const campaignData = {
-      name,
-      description: desc,
-      image_url: imageUrl || undefined,
-      landing_page_url: landingPageUrl,
-      start_date: startDate,
-      deadline,
-      commission_type: monthlyActive ? monthlyCommType : Object.values(commissionSchedule)[0].type, // Fallback
-      commission_value: monthlyActive ? parseFloat(monthlyCommValue) : Object.values(commissionSchedule)[0].value, // Fallback
-      campaign_type: "saas_subscription",
-      commission_schedule: commissionSchedule,
-      recurring_commission: recurringCommission,
-      recurring_commission_limit: recurringCommission && recurringLimit ? parseInt(recurringLimit) : null,
-      creator_requirements: {
-        min_followers: minFollowers ? parseInt(minFollowers) : 0,
-        platform: platformFocus
-      },
-      product_ids: selectedProductIds
-    };
+    setUploading(true);
+    try {
+      let finalImageUrl = imageUrl;
+      if (imageFile) {
+        try {
+          const compressed = await compressImage(imageFile);
+          finalImageUrl = await uploadCampaignImage(compressed);
+        } catch (uploadErr) {
+          toast({ 
+            title: "Upload Error", 
+            description: "Failed to compress or upload cover image.", 
+            variant: "destructive" 
+          });
+          setUploading(false);
+          return;
+        }
+      }
 
-    await onSubmit(campaignData);
+      const campaignData = {
+        name,
+        description: desc,
+        image_url: finalImageUrl || undefined,
+        landing_page_url: landingPageUrl,
+        start_date: startDate,
+        deadline,
+        commission_type: monthlyActive ? monthlyCommType : Object.values(commissionSchedule)[0].type, // Fallback
+        commission_value: monthlyActive ? parseFloat(monthlyCommValue) : Object.values(commissionSchedule)[0].value, // Fallback
+        campaign_type: "saas_subscription",
+        commission_schedule: commissionSchedule,
+        recurring_commission: recurringCommission,
+        recurring_commission_limit: recurringCommission && recurringLimit ? parseInt(recurringLimit) : null,
+        creator_requirements: {
+          min_followers: minFollowers ? parseInt(minFollowers) : 0,
+          platform: platformFocus
+        },
+        product_ids: selectedProductIds
+      };
+
+      await onSubmit(campaignData);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const toggleProductSelect = (id: number) => {
@@ -230,7 +257,7 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
             <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wide">1. Campaign Name & Cover</h4>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Campaign Name</label>
               <Input
@@ -244,17 +271,17 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
             </div>
             
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Cover Image URL</label>
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="https://example.com/banner.jpg"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  className="rounded-xl border-gray-200 pl-8"
-                />
-                <ImageIcon className="w-4 h-4 text-gray-400 absolute left-2.5 top-3" />
-              </div>
+              <ImageCropInput
+                value={imagePreview || ""}
+                onChange={(file, previewUrl) => {
+                  setImagePreview(previewUrl);
+                  setImageFile(file);
+                }}
+                disabled={submitting || uploading}
+                aspectRatio="16:9"
+                label="Campaign Cover Image"
+                placeholder="Upload a high-quality campaign cover image"
+              />
             </div>
           </div>
 
@@ -561,17 +588,17 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
             type="button"
             variant="outline"
             onClick={onCancel}
-            disabled={submitting}
+            disabled={submitting || uploading}
             className="rounded-xl"
           >
             Cancel
           </Button>
           <Button 
             type="submit"
-            disabled={submitting}
+            disabled={submitting || uploading}
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl"
           >
-            {submitting ? "Launching..." : "Launch SaaS Campaign"}
+            {uploading ? "Uploading Cover..." : submitting ? "Launching..." : "Launch SaaS Campaign"}
           </Button>
         </div>
       </form>

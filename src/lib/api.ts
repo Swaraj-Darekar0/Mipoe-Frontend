@@ -1,6 +1,11 @@
 import { supabase } from './supabaseClient';
 
-export const API_BASE = localStorage.getItem('API_BASE_OVERRIDE') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000' : 'https://enrich-prominent-backspace.ngrok-free.dev');
+export const API_BASE = 
+  localStorage.getItem('API_BASE_OVERRIDE') || 
+  import.meta.env.VITE_API_BASE_URL || 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:5000' 
+    : 'https://enrich-prominent-backspace.ngrok-free.dev');
 
 // --- NEW: Token Management ---
 export const setAuthTokens = (userId: string, role: string) => {
@@ -1866,6 +1871,15 @@ export async function getAffiliateCampaignDetails(id: number): Promise<Affiliate
   const res = await apiFetch(`${API_BASE}/api/brand/affiliate/campaigns/${id}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch affiliate campaign details');
+  return data;
+}
+
+export async function deleteAffiliateCampaign(id: number): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/campaigns/${id}`, {
+    method: 'DELETE'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to delete affiliate campaign');
   return data;
 }
 
