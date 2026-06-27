@@ -48,7 +48,7 @@ const AddFunds: React.FC = () => {
       // C. Redirect to Checkout
       cashfree.checkout({
         paymentSessionId: orderData.payment_session_id,
-        returnUrl: `http://localhost:8080/brand/dashboard?order_id={order_id}`, // Ensure this matches your route
+        returnUrl: `https://mipoe.vercel.app/brand/dashboard?order_id={order_id}`, // Ensure this matches your route
         redirectTarget: "_self" // Redirects current tab
       });
 

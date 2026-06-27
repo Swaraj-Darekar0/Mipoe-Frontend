@@ -20,9 +20,12 @@
 - **ClipsListTable (`ClipsListTable.tsx`)**: Top-row tabular view displaying all submitted, pending, and accepted clips for a selected campaign, with a compact popover filter for approval state and view-count ordering; by default it prioritizes non-approved clips before approved reels, then ranks by highest views.
 - **ReelPlayFrame (`ReelPlayFrame.tsx`)**: Bottom-left player preview displaying cached video thumbnails (with og:image S3 bucket url) and center play overlays.
 - **ReelMetricsPanel (`ReelMetricsPanel.tsx`)**: Bottom-right panel showing backend-supplied `view_count`, `like_count`, and `comment_count` metrics, dynamic outperforming/on-track/underperforming performance indicators, and composed charts mapping view growth against engagement rates over custom intervals.
+- **SaasCampaignBuilder (`SaasCampaignBuilder.tsx`)**: Form builder for launching SaaS-specific affiliate campaigns, supporting recurring payout rates mapped to interval schedules (weekly, monthly, yearly), product selection, and landing page domain restrictions.
+- **AffiliateCRM (`AffiliateCRM.tsx`)**: Rebuilt aggregated partner dashboard listing all affiliate creators, mapped campaigns, and code performance. Features a slide-in sub-panel with individual profile details, click stream telemetry log tables, and referred conversion events.
 
 ## Page-Level Notes
 - **Brand Campaign Analytics (`/src/pages/brand/CampaignAnalytics.tsx`)**: The statistics tab includes a "Top Performing Clips" section that ranks accepted reels by live engagement rate (`(likes + comments) / views`) and exposes a popover breakdown for each reel’s views, likes, and comments.
+- **Brand Affiliate Campaign Analytics (`/src/pages/brand/BrandAffiliateCampaignAnalytics.tsx`)**: Supports inline configuration editing under the "Overview & Campaign Rules" tab, allowing immediate updates of targets, commission values/intervals, follower criteria, and product associations with domain-matching validation. Also manages creator join applications.
 - **Creator Submissions (`/src/pages/creator/Submissions.tsx`)**: The submissions list now uses a dark, responsive table/card hybrid with filter controls for approval state and view-count ordering; accepted clips are pinned to the top by default and mobile users get stacked cards instead of a cramped table.
 
 ## Usage

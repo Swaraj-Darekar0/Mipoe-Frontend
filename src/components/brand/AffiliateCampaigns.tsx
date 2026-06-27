@@ -182,7 +182,8 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
         
         <Button 
           onClick={() => {
-            if (brandCategory !== "SaaS Based" && products.length === 0) {
+            const isSaas = brandCategory?.toLowerCase().includes("saas");
+            if (!isSaas && products.length === 0) {
               toast({ title: "Products Needed", description: "Please add products to your catalog first.", variant: "destructive" });
               return;
             }
@@ -318,7 +319,7 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
       {/* CREATE CAMPAIGN MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          {brandCategory === "SaaS Based" ? (
+          {brandCategory?.toLowerCase().includes("saas") ? (
             <SaasCampaignBuilder
               products={products}
               brandWebsiteUrl={brandWebsiteUrl}
@@ -392,6 +393,7 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
                   <div className="space-y-1">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Commission Type</label>
                     <select
+                    title="adsa"
                       className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm"
                       value={commType}
                       onChange={(e) => setCommType(e.target.value as any)}

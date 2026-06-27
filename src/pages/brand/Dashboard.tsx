@@ -406,7 +406,7 @@ const BrandDashboard = () => {
                       <Lock className="w-3.5 h-3.5 text-gray-400" />
                     )}
                   </button>
-                  {profile?.category !== "SaaS Based" && (
+                  {!profile?.category?.toLowerCase().includes("saas") && (
                     <button
                       onClick={() => handleAffiliateSubTabClick("product_catalog")}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left ${
@@ -615,7 +615,7 @@ const BrandDashboard = () => {
                 brandWebsiteUrl={profile?.website_url || ""}
               />
             )}
-            {activeTab === "product_catalog" && profile?.category !== "SaaS Based" && (
+            {activeTab === "product_catalog" && !profile?.category?.toLowerCase().includes("saas") && (
               <ProductCatalog integrationType={integrationType} />
             )}
             {activeTab === "affiliate_crm" && (

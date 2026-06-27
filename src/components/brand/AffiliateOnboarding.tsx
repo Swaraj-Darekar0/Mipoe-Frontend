@@ -790,7 +790,7 @@ if ($_POST['status'] === 'success') {
         )}
 
         {/* CATEGORY 2: SaaS Subscription Brands */}
-        {businessCategory === "SaaS Based" && (
+        {businessCategory?.toLowerCase().includes("saas") && (
           <div className="space-y-6">
             
             {/* Step indicator */}

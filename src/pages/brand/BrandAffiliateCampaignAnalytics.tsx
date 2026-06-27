@@ -7,7 +7,10 @@ import {
   reviewCreatorAffiliateApplication,
   allocateAffiliateBudget,
   reclaimAffiliateBudget,
-  getWalletBalance
+  getWalletBalance,
+  getBrandProducts,
+  getBrandProfile,
+  updateAffiliateCampaign
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -53,7 +56,43 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
   const [submittingBudget, setSubmittingBudget] = useState(false);
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<"overview" | "partners" | "conversions">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "partners">("overview");
+
+  // Brand and Catalog data
+  const [brandProfile, setBrandProfile] = useState<any | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
+
+  // Editing States
+  const [isEditing, setIsEditing] = useState(false);
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+  
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editLandingPageUrl, setEditLandingPageUrl] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editDeadline, setEditDeadline] = useState("");
+  const [editMinFollowers, setEditMinFollowers] = useState("");
+  const [editCommissionType, setEditCommissionType] = useState<'percentage' | 'fixed'>('percentage');
+  const [editCommissionValue, setEditCommissionValue] = useState("");
+  
+  // SaaS commission schedule rates
+  const [weeklyCommType, setWeeklyCommType] = useState<'percentage' | 'fixed'>('percentage');
+  const [weeklyCommValue, setWeeklyCommValue] = useState("");
+  const [weeklyActive, setWeeklyActive] = useState(false);
+
+  const [monthlyCommType, setMonthlyCommType] = useState<'percentage' | 'fixed'>('percentage');
+  const [monthlyCommValue, setMonthlyCommValue] = useState("");
+  const [monthlyActive, setMonthlyActive] = useState(false);
+
+  const [yearlyCommType, setYearlyCommType] = useState<'percentage' | 'fixed'>('percentage');
+  const [yearlyCommValue, setYearlyCommValue] = useState("");
+  const [yearlyActive, setYearlyActive] = useState(false);
+
+  const [editRecurringCommission, setEditRecurringCommission] = useState(false);
+  const [editRecurringLimit, setEditRecurringLimit] = useState("");
+
+  const [editSelectedProductIds, setEditSelectedProductIds] = useState<number[]>([]);
 
   // Sync selected partner on campaign update
   useEffect(() => {
@@ -83,14 +122,18 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
     if (!silent) setLoading(true);
     try {
       const id = Number(campaignId);
-      const [campDetails, brandConversions, walletData] = await Promise.all([
+      const [campDetails, brandConversions, walletData, prodData, brandProf] = await Promise.all([
         getAffiliateCampaignDetails(id),
         getBrandConversions(),
-        getWalletBalance()
+        getWalletBalance(),
+        getBrandProducts(),
+        getBrandProfile()
       ]);
 
       setCampaign(campDetails);
       setWalletBalance(walletData.balance);
+      setProducts(prodData);
+      setBrandProfile(brandProf);
 
       // Filter conversions for this campaign
       const campaignConversions = brandConversions.filter(c => c.campaign_id === id);
@@ -111,6 +154,217 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const startEditing = () => {
+    if (!campaign) return;
+    setEditName(campaign.name || "");
+    setEditDesc(campaign.description || "");
+    setEditImageUrl(campaign.image_url || "");
+    setEditLandingPageUrl(campaign.landing_page_url || "");
+    
+    // Dates format for input date type is YYYY-MM-DD
+    setEditStartDate(campaign.start_date ? campaign.start_date.split("T")[0] : "");
+    setEditDeadline(campaign.deadline ? campaign.deadline.split("T")[0] : "");
+    
+    setEditMinFollowers(campaign.creator_requirements?.min_followers?.toString() || "0");
+    setEditCommissionType(campaign.commission_type || "percentage");
+    setEditCommissionValue(campaign.commission_value?.toString() || "");
+
+    // SaaS Schedule
+    const sched = campaign.commission_schedule || {};
+    if (sched.weekly) {
+      setWeeklyActive(true);
+      setWeeklyCommType(sched.weekly.type);
+      setWeeklyCommValue(sched.weekly.value.toString());
+    } else {
+      setWeeklyActive(false);
+      setWeeklyCommType("percentage");
+      setWeeklyCommValue("");
+    }
+
+    if (sched.monthly) {
+      setMonthlyActive(true);
+      setMonthlyCommType(sched.monthly.type);
+      setMonthlyCommValue(sched.monthly.value.toString());
+    } else {
+      setMonthlyActive(false);
+      setMonthlyCommType("percentage");
+      setMonthlyCommValue("");
+    }
+
+    if (sched.yearly) {
+      setYearlyActive(true);
+      setYearlyCommType(sched.yearly.type);
+      setYearlyCommValue(sched.yearly.value.toString());
+    } else {
+      setYearlyActive(false);
+      setYearlyCommType("percentage");
+      setYearlyCommValue("");
+    }
+
+    setEditRecurringCommission(campaign.recurring_commission || false);
+    setEditRecurringLimit(campaign.recurring_commission_limit?.toString() || "");
+
+    const mappedProdIds = campaign.products ? campaign.products.map((p: any) => p.id) : [];
+    setEditSelectedProductIds(mappedProdIds);
+
+    setIsEditing(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campaign) return;
+
+    if (!editName.trim()) {
+      toast({ title: "Validation Error", description: "Campaign name is required.", variant: "destructive" });
+      return;
+    }
+
+    if (!editStartDate || !editDeadline) {
+      toast({ title: "Validation Error", description: "Start and end dates are required.", variant: "destructive" });
+      return;
+    }
+
+    if (new Date(editDeadline) <= new Date(editStartDate)) {
+      toast({ title: "Validation Error", description: "End date must be after start date.", variant: "destructive" });
+      return;
+    }
+
+    // Build SaaS schedule payload
+    const commission_schedule: any = {};
+    if (isSaas) {
+      if (weeklyActive && weeklyCommValue) {
+        commission_schedule["weekly"] = {
+          type: weeklyCommType,
+          value: parseFloat(weeklyCommValue)
+        };
+      }
+      if (monthlyActive && monthlyCommValue) {
+        commission_schedule["monthly"] = {
+          type: monthlyCommType,
+          value: parseFloat(monthlyCommValue)
+        };
+      }
+      if (yearlyActive && yearlyCommValue) {
+        commission_schedule["yearly"] = {
+          type: yearlyCommType,
+          value: parseFloat(yearlyCommValue)
+        };
+      }
+
+      if (Object.keys(commission_schedule).length === 0) {
+        toast({ 
+          title: "Validation Error", 
+          description: "Please specify at least one commission rate for Weekly, Monthly, or Yearly billing intervals.", 
+          variant: "destructive" 
+        });
+        return;
+      }
+    }
+
+    // Domain validation helper
+    const getDomain = (urlStr: string): string => {
+      if (!urlStr) return "";
+      let temp = urlStr;
+      if (!temp.startsWith("http://") && !temp.startsWith("https://")) {
+        temp = "https://" + temp;
+      }
+      try {
+        const parsed = new URL(temp);
+        let hostname = parsed.hostname;
+        if (hostname.startsWith("www.")) {
+          hostname = hostname.substring(4);
+        }
+        return hostname.toLowerCase();
+      } catch (err) {
+        return "";
+      }
+    };
+
+    // Domain validation for SaaS brands
+    if (isSaas) {
+      if (!editLandingPageUrl.trim()) {
+        toast({ title: "Validation Error", description: "Landing page URL is required for SaaS campaigns.", variant: "destructive" });
+        return;
+      }
+
+      const brandDomain = getDomain(brandProfile?.website_url || "");
+      const campaignDomain = getDomain(editLandingPageUrl);
+
+      if (!brandDomain || !campaignDomain) {
+        toast({ title: "Validation Error", description: "Invalid website or landing page URL format.", variant: "destructive" });
+        return;
+      }
+
+      if (campaignDomain !== brandDomain && !campaignDomain.endsWith("." + brandDomain)) {
+        toast({
+          title: "Validation Error",
+          description: `Campaign landing page URL domain (${campaignDomain}) must match or be a subdomain of your verified website domain (${brandDomain}).`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate products domain
+      for (const pId of editSelectedProductIds) {
+        const prod = products.find(p => p.id === pId);
+        if (prod && prod.product_url) {
+          const prodDomain = getDomain(prod.product_url);
+          if (prodDomain !== brandDomain && !prodDomain.endsWith("." + brandDomain)) {
+            toast({
+              title: "Validation Error",
+              description: `Product plan URL domain (${prodDomain}) for product '${prod.name}' must match your verified website domain (${brandDomain}).`,
+              variant: "destructive"
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    setSubmittingEdit(true);
+    try {
+      const payload: any = {
+        name: editName,
+        description: editDesc,
+        image_url: editImageUrl || undefined,
+        start_date: editStartDate,
+        deadline: editDeadline,
+        creator_requirements: {
+          min_followers: editMinFollowers ? parseInt(editMinFollowers) : 0,
+          platform: campaign.creator_requirements?.platform || "instagram"
+        },
+        product_ids: editSelectedProductIds
+      };
+
+      if (isSaas) {
+        payload.landing_page_url = editLandingPageUrl;
+        payload.commission_schedule = commission_schedule;
+        payload.recurring_commission = editRecurringCommission;
+        payload.recurring_commission_limit = editRecurringCommission && editRecurringLimit ? parseInt(editRecurringLimit) : null;
+        payload.commission_type = monthlyActive ? monthlyCommType : Object.values(commission_schedule)[0].type;
+        payload.commission_value = monthlyActive ? parseFloat(monthlyCommValue) : Object.values(commission_schedule)[0].value;
+      } else {
+        payload.commission_type = editCommissionType;
+        payload.commission_value = parseFloat(editCommissionValue) || 0;
+      }
+
+      await updateAffiliateCampaign(campaign.id, payload);
+      toast({ title: "Changes Saved", description: "Your campaign changes have been updated successfully." });
+      setIsEditing(false);
+      await loadData(true);
+    } catch (err: any) {
+      toast({ title: "Update Failed", description: err.message || "Failed to update campaign", variant: "destructive" });
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
+
+  const toggleProductSelect = (id: number) => {
+    setEditSelectedProductIds(prev => 
+      prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
+    );
+  };
 
   const handleReviewCreator = async (creatorId: number, action: "approve" | "reject") => {
     setReviewingId(creatorId);
@@ -345,143 +599,484 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                 </span>
               )}
             </button>
-            <button
-              onClick={() => setActiveTab("conversions")}
-              className={`pb-3 font-bold text-xs border-b-2 uppercase tracking-wide transition-all ${
-                activeTab === "conversions" 
-                  ? "border-indigo-600 text-indigo-600" 
-                  : "border-transparent text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              Referred Sales Logs ({conversions.length})
-            </button>
           </div>
         </div>
 
         {/* Tab Contents */}
         {activeTab === "overview" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Left Column: Commission Rules */}
-            <div className="lg:col-span-2 space-y-6">
-              
-              <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-4 shadow-sm">
-                <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-indigo-500" />
-                  Commission Payout Structure
-                </h3>
+          isEditing ? (
+            <form onSubmit={handleEditSubmit} className="bg-white border border-gray-150 rounded-2xl p-6 shadow-sm space-y-6">
+              <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">Edit Campaign Settings</h3>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Modify campaign rules, criteria, mapping, and timelines.</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(false)}
+                    className="text-xs h-8 rounded-xl"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={submittingEdit}
+                    size="sm"
+                    className="text-xs h-8 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl"
+                  >
+                    {submittingEdit ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </div>
 
-                {isSaas && campaign.commission_schedule ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      {Object.keys(campaign.commission_schedule).map(interval => {
-                        const data = campaign.commission_schedule[interval];
-                        const valStr = data.type === "percentage" ? `${data.value}%` : `₹${data.value}`;
-                        return (
-                          <div key={interval} className="bg-gray-50 border border-gray-150 p-4 rounded-xl">
-                            <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">{interval} Plan</span>
-                            <span className="font-extrabold text-base text-gray-800 block mt-1">{valStr}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+              {/* General Info */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">General Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Campaign Name</label>
+                    <Input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      required
+                      className="rounded-xl border-gray-200"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Cover Image URL</label>
+                    <Input
+                      type="text"
+                      placeholder="https://example.com/banner.jpg"
+                      value={editImageUrl}
+                      onChange={(e) => setEditImageUrl(e.target.value)}
+                      className="rounded-xl border-gray-200"
+                    />
+                  </div>
+                </div>
 
-                    {campaign.recurring_commission ? (
-                      <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl flex gap-3 text-xs leading-relaxed text-gray-650">
-                        <Info className="w-4.5 h-4.5 text-indigo-500 shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-bold text-indigo-900 block">Recurring Commission Enabled</span>
-                          <span className="block mt-0.5">
-                            Creators receive commissions on every renewal checkout
-                            {campaign.recurring_commission_limit ? ` (capped up to ${campaign.recurring_commission_limit} payments).` : "."}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-4 bg-gray-50 border border-gray-150 rounded-xl flex gap-3 text-xs leading-relaxed text-gray-500">
-                        <Info className="w-4.5 h-4.5 text-gray-400 shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-bold text-gray-700 block">One-time Commission Payout</span>
-                          <span className="block mt-0.5">Commissions are calculated and paid out only on the subscriber's initial sign-up checkout event.</span>
-                        </div>
-                      </div>
+                {isSaas && (
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Landing Page URL</label>
+                    <Input
+                      type="text"
+                      value={editLandingPageUrl}
+                      onChange={(e) => setEditLandingPageUrl(e.target.value)}
+                      required
+                      className="rounded-xl border-gray-200"
+                    />
+                    {brandProfile?.website_url && (
+                      <p className="text-[9px] text-gray-400 italic">
+                        Must match or be a subdomain of your verified website: <span className="font-semibold text-indigo-650">{brandProfile.website_url}</span>
+                      </p>
                     )}
                   </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Campaign Description & Guidelines</label>
+                  <textarea
+                    value={editDesc}
+                    onChange={(e) => setEditDesc(e.target.value)}
+                    className="w-full min-h-[100px] text-xs p-3 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition"
+                  />
+                </div>
+              </div>
+
+              {/* Commission Rules */}
+              <div className="space-y-4 pt-4 border-t border-gray-100">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Commission Rules</h4>
+                {isSaas ? (
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <label className="block text-[10px] font-bold text-gray-550 uppercase tracking-wider">Billing Interval Payouts</label>
+                      
+                      {/* Weekly active check */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-150 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="edit-weekly-active"
+                            checked={weeklyActive}
+                            onChange={(e) => setWeeklyActive(e.target.checked)}
+                            className="rounded border-gray-300 text-indigo-650 focus:ring-indigo-500"
+                          />
+                          <label htmlFor="edit-weekly-active" className="text-xs font-bold text-gray-700">Weekly Plan</label>
+                        </div>
+                        {weeklyActive && (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={weeklyCommType}
+                              onChange={(e: any) => setWeeklyCommType(e.target.value)}
+                              className="text-xs p-1.5 border border-gray-200 rounded-lg bg-white"
+                            >
+                              <option value="percentage">Percentage (%)</option>
+                              <option value="fixed">Fixed Flat (₹)</option>
+                            </select>
+                            <Input
+                              type="number"
+                              step="any"
+                              value={weeklyCommValue}
+                              onChange={(e) => setWeeklyCommValue(e.target.value)}
+                              placeholder="Rate"
+                              className="w-24 h-8 text-xs rounded-lg border-gray-200"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Monthly active check */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-150 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="edit-monthly-active"
+                            checked={monthlyActive}
+                            onChange={(e) => setMonthlyActive(e.target.checked)}
+                            className="rounded border-gray-300 text-indigo-650 focus:ring-indigo-500"
+                          />
+                          <label htmlFor="edit-monthly-active" className="text-xs font-bold text-gray-700">Monthly Plan</label>
+                        </div>
+                        {monthlyActive && (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={monthlyCommType}
+                              onChange={(e: any) => setMonthlyCommType(e.target.value)}
+                              className="text-xs p-1.5 border border-gray-200 rounded-lg bg-white"
+                            >
+                              <option value="percentage">Percentage (%)</option>
+                              <option value="fixed">Fixed Flat (₹)</option>
+                            </select>
+                            <Input
+                              type="number"
+                              step="any"
+                              value={monthlyCommValue}
+                              onChange={(e) => setMonthlyCommValue(e.target.value)}
+                              placeholder="Rate"
+                              className="w-24 h-8 text-xs rounded-lg border-gray-200"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Yearly active check */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-150 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="edit-yearly-active"
+                            checked={yearlyActive}
+                            onChange={(e) => setYearlyActive(e.target.checked)}
+                            className="rounded border-gray-300 text-indigo-650 focus:ring-indigo-500"
+                          />
+                          <label htmlFor="edit-yearly-active" className="text-xs font-bold text-gray-700">Yearly Plan</label>
+                        </div>
+                        {yearlyActive && (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={yearlyCommType}
+                              onChange={(e: any) => setYearlyCommType(e.target.value)}
+                              className="text-xs p-1.5 border border-gray-200 rounded-lg bg-white"
+                            >
+                              <option value="percentage">Percentage (%)</option>
+                              <option value="fixed">Fixed Flat (₹)</option>
+                            </select>
+                            <Input
+                              type="number"
+                              step="any"
+                              value={yearlyCommValue}
+                              onChange={(e) => setYearlyCommValue(e.target.value)}
+                              placeholder="Rate"
+                              className="w-24 h-8 text-xs rounded-lg border-gray-200"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-indigo-50/30 border border-indigo-100 rounded-xl space-y-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="edit-recurring-comm"
+                          checked={editRecurringCommission}
+                          onChange={(e) => setEditRecurringCommission(e.target.checked)}
+                          className="rounded border-gray-300 text-indigo-650 focus:ring-indigo-500"
+                        />
+                        <label htmlFor="edit-recurring-comm" className="text-xs font-bold text-gray-700">Enable Recurring Commissions</label>
+                      </div>
+                      
+                      {editRecurringCommission && (
+                        <div className="space-y-1.5 max-w-xs pl-6">
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Payment Cap Limit (Optional)</label>
+                          <Input
+                            type="number"
+                            placeholder="Unlimited"
+                            value={editRecurringLimit}
+                            onChange={(e) => setEditRecurringLimit(e.target.value)}
+                            className="h-8 text-xs rounded-lg border-gray-200"
+                          />
+                          <p className="text-[9px] text-gray-400">Leave blank for unlimited payouts per subscription lifetime.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ) : (
-                  <div className="bg-gray-50 border border-gray-150 p-4 rounded-xl text-xs">
-                    <span className="text-gray-500 font-medium">Flat rate conversion payout:</span>
-                    <span className="font-bold text-indigo-600 block text-base mt-1.5">
-                      {campaign.commission_type === "percentage" 
-                        ? `${campaign.commission_value}% per sale` 
-                        : `₹${campaign.commission_value} flat per sale`}
-                    </span>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="space-y-1.5 flex-1">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Commission Type</label>
+                      <select
+                        value={editCommissionType}
+                        onChange={(e: any) => setEditCommissionType(e.target.value)}
+                        className="text-xs p-2 border border-gray-200 rounded-xl bg-white w-full h-10 focus:outline-none"
+                      >
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed">Fixed Flat (₹)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5 flex-1">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Commission Value</label>
+                      <Input
+                        type="number"
+                        step="any"
+                        value={editCommissionValue}
+                        onChange={(e) => setEditCommissionValue(e.target.value)}
+                        required
+                        className="rounded-xl border-gray-200 h-10"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Description guidelines */}
-              <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-3 shadow-sm">
-                <h3 className="font-bold text-gray-900 text-sm">Campaign Terms & Instructions</h3>
-                <div className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">
-                  {campaign.description || "No custom instructions supplied."}
+              {/* Requirements & Products */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-150">
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Target & Criteria</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Start Date</label>
+                      <Input
+                        type="date"
+                        value={editStartDate}
+                        onChange={(e) => setEditStartDate(e.target.value)}
+                        required
+                        className="rounded-xl border-gray-200"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">End Date (Deadline)</label>
+                      <Input
+                        type="date"
+                        value={editDeadline}
+                        onChange={(e) => setEditDeadline(e.target.value)}
+                        required
+                        className="rounded-xl border-gray-200"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Min Follower Criteria</label>
+                      <Input
+                        type="number"
+                        value={editMinFollowers}
+                        onChange={(e) => setEditMinFollowers(e.target.value)}
+                        className="rounded-xl border-gray-200"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-            </div>
-
-            {/* Right Column: Plans & Criteria info */}
-            <div className="space-y-6">
-              
-              <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-4 shadow-sm">
-                <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-indigo-500" />
-                  Mapped Plans / Products
-                </h3>
-
-                <div className="space-y-2">
-                  {campaign.products && campaign.products.length > 0 ? (
-                    campaign.products.map((p: any) => (
-                      <div key={p.id} className="p-3 bg-gray-50 border border-gray-150 rounded-xl flex justify-between items-center text-xs">
-                        <span className="font-bold text-gray-700">{p.name}</span>
-                        <span className="font-bold text-indigo-650">₹{p.price}</span>
-                      </div>
-                    ))
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Mapped Store Products / Plans</h4>
+                  <p className="text-[10px] text-gray-400">Select which products/plans this campaign applies to. If none are selected, all sales qualify.</p>
+                  
+                  {products.length === 0 ? (
+                    <div className="p-4 bg-gray-50 border border-gray-150 rounded-xl text-center text-xs text-gray-400 italic">
+                      No products/plans found in your catalog. Please add products first.
+                    </div>
                   ) : (
-                    <p className="text-xs text-gray-400 italic">No plan mapping restrictions. All sales conversion events qualify.</p>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto border border-gray-200 p-2.5 rounded-xl bg-white">
+                      {products.map(p => {
+                        const isChecked = editSelectedProductIds.includes(p.id);
+                        return (
+                          <div key={p.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg text-xs">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id={`edit-prod-${p.id}`}
+                                checked={isChecked}
+                                onChange={() => toggleProductSelect(p.id)}
+                                className="rounded border-gray-300 text-indigo-650 focus:ring-indigo-500"
+                              />
+                              <label htmlFor={`edit-prod-${p.id}`} className="font-medium text-gray-700 cursor-pointer">{p.name}</label>
+                            </div>
+                            <span className="font-bold text-indigo-650">₹{p.price}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Requirements & dates */}
-              <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-4 shadow-sm">
-                <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-indigo-500" />
-                  Timeline & Target
-                </h3>
+              {/* Form Actions Footer */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(false)}
+                  className="text-xs h-9 px-4 rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submittingEdit}
+                  size="sm"
+                  className="text-xs h-9 px-4 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl"
+                >
+                  {submittingEdit ? "Saving Changes..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Left Column: Commission Rules */}
+              <div className="lg:col-span-2 space-y-6">
+                
+                <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-4 shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                      <Coins className="w-4 h-4 text-indigo-500" />
+                      Commission Payout Structure
+                    </h3>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={startEditing}
+                      className="text-xs h-8 border-indigo-200 text-indigo-650 hover:bg-indigo-50 rounded-xl"
+                    >
+                      Edit Campaign Rules
+                    </Button>
+                  </div>
 
-                <div className="space-y-3 text-xs">
-                  <div className="flex justify-between py-1.5 border-b border-gray-100">
-                    <span className="text-gray-400">Start Date</span>
-                    <span className="font-bold text-gray-700">{new Date(campaign.start_date).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-gray-100">
-                    <span className="text-gray-400">End Date</span>
-                    <span className="font-bold text-gray-700">{new Date(campaign.deadline).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-gray-100">
-                    <span className="text-gray-400">Min Follower Criteria</span>
-                    <span className="font-bold text-gray-700">
-                      {campaign.creator_requirements?.min_followers 
-                        ? `${campaign.creator_requirements.min_followers.toLocaleString()}+ followers`
-                        : "None"}
-                    </span>
+                  {isSaas && campaign.commission_schedule ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {Object.keys(campaign.commission_schedule).map(interval => {
+                          const data = campaign.commission_schedule[interval];
+                          const valStr = data.type === "percentage" ? `${data.value}%` : `₹${data.value}`;
+                          return (
+                            <div key={interval} className="bg-gray-50 border border-gray-150 p-4 rounded-xl">
+                              <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">{interval} Plan</span>
+                              <span className="font-extrabold text-base text-gray-800 block mt-1">{valStr}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {campaign.recurring_commission ? (
+                        <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl flex gap-3 text-xs leading-relaxed text-gray-650">
+                          <Info className="w-4.5 h-4.5 text-indigo-500 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-indigo-900 block">Recurring Commission Enabled</span>
+                            <span className="block mt-0.5">
+                              Creators receive commissions on every renewal checkout
+                              {campaign.recurring_commission_limit ? ` (capped up to ${campaign.recurring_commission_limit} payments).` : "."}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-gray-50 border border-gray-150 rounded-xl flex gap-3 text-xs leading-relaxed text-gray-500">
+                          <Info className="w-4.5 h-4.5 text-gray-400 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-gray-700 block">One-time Commission Payout</span>
+                            <span className="block mt-0.5">Commissions are calculated and paid out only on the subscriber's initial sign-up checkout event.</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 border border-gray-150 p-4 rounded-xl text-xs">
+                      <span className="text-gray-500 font-medium">Flat rate conversion payout:</span>
+                      <span className="font-bold text-indigo-600 block text-base mt-1.5">
+                        {campaign.commission_type === "percentage" 
+                          ? `${campaign.commission_value}% per sale` 
+                          : `₹${campaign.commission_value} flat per sale`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Description guidelines */}
+                <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-3 shadow-sm">
+                  <h3 className="font-bold text-gray-900 text-sm">Campaign Terms & Instructions</h3>
+                  <div className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">
+                    {campaign.description || "No custom instructions supplied."}
                   </div>
                 </div>
+
+              </div>
+
+              {/* Right Column: Plans & Criteria info */}
+              <div className="space-y-6">
+                
+                <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-4 shadow-sm">
+                  <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-indigo-500" />
+                    Mapped Plans / Products
+                  </h3>
+
+                  <div className="space-y-2">
+                    {campaign.products && campaign.products.length > 0 ? (
+                      campaign.products.map((p: any) => (
+                        <div key={p.id} className="p-3 bg-gray-50 border border-gray-150 rounded-xl flex justify-between items-center text-xs">
+                          <span className="font-bold text-gray-700">{p.name}</span>
+                          <span className="font-bold text-indigo-650">₹{p.price}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-400 italic">No plan mapping restrictions. All sales conversion events qualify.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Requirements & dates */}
+                <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-4 shadow-sm">
+                  <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-indigo-500" />
+                    Timeline & Target
+                  </h3>
+
+                  <div className="space-y-3 text-xs">
+                    <div className="flex justify-between py-1.5 border-b border-gray-100">
+                      <span className="text-gray-400">Start Date</span>
+                      <span className="font-bold text-gray-700">{new Date(campaign.start_date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-gray-100">
+                      <span className="text-gray-400">End Date</span>
+                      <span className="font-bold text-gray-700">{new Date(campaign.deadline).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-gray-100">
+                      <span className="text-gray-400">Min Follower Criteria</span>
+                      <span className="font-bold text-gray-700">
+                        {campaign.creator_requirements?.min_followers 
+                          ? `${campaign.creator_requirements.min_followers.toLocaleString()}+ followers`
+                          : "None"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
             </div>
-
-          </div>
+          )
         )}
 
         {/* Partners Tab */}

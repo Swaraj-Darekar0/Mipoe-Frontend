@@ -183,7 +183,7 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
       commission_type: monthlyActive ? monthlyCommType : Object.values(commissionSchedule)[0].type, // Fallback
       commission_value: monthlyActive ? parseFloat(monthlyCommValue) : Object.values(commissionSchedule)[0].value, // Fallback
       campaign_type: "saas_subscription",
-      commissionSchedule,
+      commission_schedule: commissionSchedule,
       recurring_commission: recurringCommission,
       recurring_commission_limit: recurringCommission && recurringLimit ? parseInt(recurringLimit) : null,
       creator_requirements: {

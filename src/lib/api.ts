@@ -1813,6 +1813,12 @@ export interface AffiliateCampaign {
   campaign_approval: 'pending_approval' | 'approved' | 'rejected';
   is_active: boolean;
   created_at: string;
+  campaign_type?: string;
+  commission_schedule?: any;
+  recurring_commission?: boolean;
+  recurring_commission_limit?: number | null;
+  landing_page_url?: string | null;
+  subscription_details?: any;
   products?: AffiliateProduct[];
   partners?: Array<{
     id: number;
@@ -1834,6 +1840,11 @@ export async function createAffiliateCampaign(campaign: {
   commission_value: number;
   creator_requirements?: any;
   product_ids: number[];
+  campaign_type?: string;
+  commission_schedule?: any;
+  recurring_commission?: boolean;
+  recurring_commission_limit?: number | null;
+  landing_page_url?: string;
 }): Promise<{ msg: string; campaign_id: number }> {
   const res = await apiFetch(`${API_BASE}/api/brand/affiliate/campaigns`, {
     method: 'POST',
@@ -1978,4 +1989,54 @@ export async function rejectAffiliateCampaign(campaignId: number, reason: string
   if (!res.ok) throw new Error(data.msg || 'Failed to reject affiliate campaign');
   return data;
 }
+
+export async function updateAffiliateCampaign(
+  id: number,
+  campaign: {
+    name?: string;
+    description?: string;
+    image_url?: string;
+    start_date?: string;
+    deadline?: string;
+    commission_type?: 'percentage' | 'fixed';
+    commission_value?: number;
+    creator_requirements?: any;
+    product_ids?: number[];
+    campaign_type?: string;
+    commission_schedule?: any;
+    recurring_commission?: boolean;
+    recurring_commission_limit?: number | null;
+    landing_page_url?: string;
+  }
+): Promise<{ msg: string; campaign_id: number }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/campaigns/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(campaign)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to update affiliate campaign');
+  return data;
+}
+
+export async function getCRMPartners(): Promise<any[]> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/crm/partners`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch CRM partners');
+  return data;
+}
+
+export async function getMappingClicks(mappingId: number): Promise<any[]> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/mappings/${mappingId}/clicks`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch mapping click logs');
+  return data;
+}
+
+export async function getMappingConversions(mappingId: number): Promise<any[]> {
+  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/mappings/${mappingId}/conversions`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch mapping conversion logs');
+  return data;
+}
+
 
