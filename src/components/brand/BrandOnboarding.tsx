@@ -550,7 +550,9 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
                   onChange={(file, previewUrl) => {
                     setLogoPreviewUrl(previewUrl);
                     setLogoFileToUpload(file);
-                    if (!file && !previewUrl) {
+                    if (file || previewUrl) {
+                      setProfileError("");
+                    } else {
                       setLogoUrl("");
                     }
                   }}

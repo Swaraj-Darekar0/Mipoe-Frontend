@@ -183,68 +183,182 @@ Route::post('/webhook', function (Request $request) {
       }
     }
 
-    const vibePrompt = `I need to integrate Mipoe's conversion tracking webhook into my backend server.
-Please write a secure webhook endpoint for my project.
+    const gatewayName = isStripe ? "Stripe" : isRazorpay ? "Razorpay" : isPayu ? "PayU" : isCashfree ? "Cashfree" : gateway;
+    const langName = lang === "node" ? "Node.js" : lang === "python" ? "Python" : lang.toUpperCase();
+    const frameworkName = framework === "express" ? "Express" : framework === "fastapi" ? "FastAPI" : framework === "laravel" ? "Laravel" : framework === "gin" ? "Gin" : framework.toUpperCase();
 
-Context:
-- Language & Framework: ${lang === "node" ? "Node.js" : lang === "python" ? "Python" : lang.toUpperCase()} (${framework.toUpperCase()})
-- Payment Gateway: ${gateway.toUpperCase()}
-- Webhook Event to listen for: ${eventName}
-- Webhook Secret Env Var: GATEWAY_WEBHOOK_SECRET
-- Mipoe Webhook URL: ${webhookUrl}
-- Mipoe API Key Env Var: MIPOE_API_KEY
+    const vibePrompt = `# Mipoe Integration Prompt (${langName} + ${frameworkName} + ${gatewayName})
 
-Requirements:
-1. Verify the incoming request signature from ${gateway.toUpperCase()} using the secret key (GATEWAY_WEBHOOK_SECRET).
-2. Parse the request body and extract the transaction ID, email, amount, currency, and the affiliate referral code from the metadata (usually ${refMetaPath}).
-3. Dispatch a secure server-to-server POST request to Mipoe's webhook URL:
-   - Header: Authorization: Bearer [MIPOE_API_KEY]
-   - JSON Payload:
-     {
-       "event": "subscription.created",
-       "subscription_id": "[extracted_subscription_id]",
-       "customer_email": "[extracted_email]",
-       "amount": [extracted_amount_in_base_units],
-       "currency": "[extracted_currency_uppercase]",
-       "plan_id": "[extracted_plan_id_or_default]",
-       "interval": "[billing_interval_weekly_monthly_yearly]",
-       "affiliate_code": "[extracted_affiliate_code]"
-     }
-4. Return a 200 OK status to the payment gateway. Include robust error handling and log any validation failures.
-5. Provide instructions on where to paste this code inside my ${framework.toUpperCase()} application structure.`;
+I want to integrate **Mipoe Affiliate Conversion Tracking** into my existing ${langName} (${frameworkName}) application.
+
+## Step 1: Analyze my existing project
+
+Before writing any code, inspect my codebase to understand how ${gatewayName} transactions/subscriptions are currently handled.
+
+Specifically:
+* Locate the existing ${gatewayName} webhook or payment callback endpoint.
+* Identify where ${gatewayName} webhook signatures/hashes are verified.
+* Identify which webhook event represents a successful payment or subscription (typically \`${eventName}\`).
+* Find where my application activates a subscription or processes a sale after successful payment.
+* Inspect the existing ${gatewayName} webhook payload and determine where the following values are available:
+  * Subscription ID or Transaction ID
+  * Customer Email
+  * Amount
+  * Currency
+  * Plan ID / Product ID
+  * Billing Interval (if subscription)
+  * Metadata / Custom Fields
+
+If an existing ${gatewayName} webhook or payment processing flow already exists, **integrate into it instead of creating a new webhook endpoint.**
+
+Only generate a new webhook endpoint if the project does not already process ${gatewayName} webhook events.
+
+---
+
+## Step 2: Add Mipoe Conversion Tracking
+
+After the payment has been:
+* successfully verified,
+* the ${gatewayName} signature/hash has been validated,
+* and the order/subscription has been processed,
+
+check whether the ${gatewayName} metadata contains an affiliate referral code.
+
+The referral code is typically stored in:
+\`\`\`text
+${refMetaPath}
+\`\`\`
+
+If no referral code exists:
+* Continue the existing payment flow normally.
+* Do **not** send any request to Mipoe.
+
+If a referral code exists:
+Send a secure server-to-server POST request to the following endpoint.
+
+### Mipoe Endpoint
+\`\`\`text
+${webhookUrl}
+\`\`\`
+
+### Headers
+\`\`\`http
+Authorization: Bearer [Your MIPOE_API_KEY]
+Content-Type: application/json
+\`\`\`
+
+### JSON Payload
+\`\`\`json
+{
+  "event": "subscription.created",
+  "subscription_id": "<subscription_id_or_transaction_id>",
+  "transaction_id": "<payment_id>",
+  "customer_email": "<customer_email>",
+  "amount": "<amount_in_base_units>",
+  "currency": "<currency_uppercase>",
+  "plan_id": "<plan_id_or_product_id>",
+  "interval": "<billing_interval_weekly_monthly_yearly>",
+  "affiliate_code": "<affiliate_code>"
+}
+\`\`\`
+
+Populate every field using values extracted from the existing ${gatewayName} webhook payload.
+
+---
+
+## Step 3: Implementation Requirements
+
+* Reuse the existing ${gatewayName} webhook verification logic.
+* Do not duplicate existing payment handling code.
+* Do not modify or break the current payment/subscription flow.
+* Only notify Mipoe after the payment has been successfully verified and processed.
+* If the request to Mipoe fails, log the error without interrupting the payment flow.
+* Use async/await or standard conventions for ${langName}.
+* Add appropriate error handling.
+* Follow the project's existing code style and folder structure.
+
+---
+
+## Step 4: Output Requirements
+
+Generate production-ready code that:
+1. Identifies the existing file(s) that need modification.
+2. Clearly marks the newly added Mipoe integration code.
+3. Tell the user to place the api key in an environment variable named \`MIPOE_API_KEY\`.
+3. Explains why each change is being made.
+4. Avoids creating duplicate webhook endpoints or duplicate payment processing logic.
+5. Preserves all existing functionality.`;
 
     return { stepText, mountSnippet, vibePrompt };
   };
 
-  const steps = [
-    {
-      step: 1,
-      title: "Pass Affiliate Reference in Checkout Metadata",
-      description: "Ensure that your payment flow saves the customer's affiliate code inside the gateway's checkout metadata or custom fields so it is present in the webhook payload.",
-      label: "Metadata fields to set:",
-      info: "• Stripe: metadata.ref = referral_code\n• Razorpay: notes.ref = referral_code\n• PayU: udf1 = referral_code\n• Cashfree: customerDetails.affiliateCode = referral_code"
-    },
-    {
-      step: 2,
-      title: "Set up Webhook Endpoint on Your Server",
-      description: "Register a secure public POST route in your backend server dashboard. Set your server to listen for checkout session completed or successful payment webhook triggers.",
-      label: "Webhook Event Types:",
-      info: "• Stripe: checkout.session.completed\n• Razorpay: subscription.charged or payment.captured\n• Cashfree: SUBSCRIPTION_NEW_ORDER"
-    },
-    {
-      step: 3,
-      title: "Verify Signature & Security Handshake",
-      description: "Verify that incoming requests actually originate from your payment gateway. Extract the raw request body and compare signatures.",
-      label: "Signature Header Names:",
-      info: "• Stripe: Stripe-Signature\n• Razorpay: X-Razorpay-Signature\n• Cashfree: x-cf-signature"
-    },
-    {
-      step: 4,
-      title: "Forward Verified Transactions to Mipoe",
-      description: "Extract the details (transaction ID, plan, email, currency, and affiliate code) and send a server-to-server POST request to Mipoe.",
-      label: "Mipoe Target Endpoint details:",
-      info: `• Webhook URL: ${webhookUrl}\n• Header: Authorization: Bearer [Your Mipoe API Key]`
+  const getDynamicStep = (stepNum: number) => {
+    const isStripe = gateway === "stripe";
+    const isRazorpay = gateway === "razorpay";
+    const isCashfree = gateway === "cashfree";
+    const isPayu = gateway === "payu";
+    const gatewayName = isStripe ? "Stripe" : isRazorpay ? "Razorpay" : isPayu ? "PayU" : isCashfree ? "Cashfree" : gateway;
+
+    switch (stepNum) {
+      case 1:
+        let fieldInfo = "";
+        if (isStripe) fieldInfo = "Set metadata.ref = [referral_code] inside the Stripe Checkout session creation payload.";
+        else if (isRazorpay) fieldInfo = "Set notes.ref = [referral_code] inside your Razorpay Order/Subscription options.";
+        else if (isPayu) fieldInfo = "Set udf1 = [referral_code] inside your PayU payment payload parameters.";
+        else if (isCashfree) fieldInfo = "Set customerDetails.affiliateCode = [referral_code] (or metadata.affiliateCode) inside your Cashfree Order request.";
+        else fieldInfo = `Set metadata fields to include referral_code for ${gatewayName}.`;
+
+        return {
+          title: `Pass Affiliate Reference in ${gatewayName} Metadata`,
+          description: `Ensure that your payment flow saves the customer's affiliate code inside ${gatewayName}'s metadata or custom field parameters so it is present in the webhook payload.`,
+          label: "Metadata field to set:",
+          info: fieldInfo
+        };
+      case 2:
+        let eventInfo = "";
+        if (isStripe) eventInfo = "Listen for checkout.session.completed webhook events.";
+        else if (isRazorpay) eventInfo = "Listen for subscription.charged or payment.captured webhook events.";
+        else if (isPayu) eventInfo = "Configure Webhook URL in PayU merchant panel for successful transactions.";
+        else if (isCashfree) eventInfo = "Listen for SUBSCRIPTION_NEW_ORDER or PAYMENT_SUCCESS webhook events.";
+        else eventInfo = `Configure webhook event listeners in your ${gatewayName} dashboard.`;
+
+        return {
+          title: `Set up Webhook Endpoint for ${gatewayName}`,
+          description: `Register a secure public POST route in your backend server dashboard. Set your server to listen for successful payment webhook triggers from ${gatewayName}.`,
+          label: "Webhook Event to listen for:",
+          info: eventInfo
+        };
+      case 3:
+        let sigInfo = "";
+        if (isStripe) sigInfo = "Verify signature using header: Stripe-Signature";
+        else if (isRazorpay) sigInfo = "Verify signature using header: X-Razorpay-Signature";
+        else if (isPayu) sigInfo = "Verify hash signature using: sha512(key|txnid|amount|productinfo|firstname|email|udf1|...|salt)";
+        else if (isCashfree) sigInfo = "Verify signature using header: x-cf-signature";
+        else sigInfo = `Validate request authenticity using ${gatewayName} headers/keys.`;
+
+        return {
+          title: "Verify Signature & Security Handshake",
+          description: `Verify that incoming requests actually originate from ${gatewayName}. Extract the raw request body and compare signatures.`,
+          label: "Signature Validation Details:",
+          info: sigInfo
+        };
+      case 4:
+        return {
+          title: "Forward Referrals to Mipoe",
+          description: "Extract transaction details. If (and only if) an affiliate referral code is present in the metadata, forward the payload to Mipoe's webhook URL. If no code is present, ignore it and return 200 OK immediately (ensuring you only send referral conversions).",
+          label: "Mipoe Target Endpoint & Payload details:",
+          info: `• Webhook URL: ${webhookUrl}\n• Header: Authorization: Bearer [Your Mipoe API Key]\n\n• JSON Payload Format:\n{\n  "event": "subscription.created",\n  "subscription_id": "<subscription_id_or_transaction_id>",\n  "transaction_id": "<payment_id>",\n  "customer_email": "<customer_email>",\n  "amount": "<amount_in_base_units>",\n  "currency": "<currency_uppercase>",\n  "plan_id": "<plan_id_or_product_id>",\n  "interval": "<billing_interval_weekly_monthly_yearly>",\n  "affiliate_code": "<affiliate_code>"\n}`
+        };
+      default:
+        return { title: "", description: "", label: "", info: "" };
     }
+  };
+
+  const steps = [
+    { step: 1, ...getDynamicStep(1) },
+    { step: 2, ...getDynamicStep(2) },
+    { step: 3, ...getDynamicStep(3) },
+    { step: 4, ...getDynamicStep(4) }
   ];
 
   const getSnippets = () => {
@@ -764,6 +878,10 @@ async def handle_cashfree_webhook(headers: dict, body_bytes: bytes) -> dict:
     
     data = json.loads(body_bytes.decode("utf-8"))
     if data.get("event") == "SUBSCRIPTION_NEW_ORDER":
+        affiliate_code = data.get("affiliateCode")
+        if not affiliate_code:
+            return {"status": "ignored", "reason": "No affiliate referral code found"}
+            
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 MIPOE_WEBHOOK_URL,
@@ -776,7 +894,7 @@ async def handle_cashfree_webhook(headers: dict, body_bytes: bytes) -> dict:
                     "currency": "INR",
                     "plan_id": data.get("planId"),
                     "interval": "monthly", # 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
-                    "affiliate_code": data.get("affiliateCode")
+                    "affiliate_code": affiliate_code
                 }
             )
             return {"status": "success", "mipoe_status": response.status_code}
@@ -786,6 +904,9 @@ async def handle_cashfree_webhook(headers: dict, body_bytes: bytes) -> dict:
 // PHP (Cashfree Webhook)
 $data = json_decode(@file_get_contents('php://input'));
 if ($data->event === 'SUBSCRIPTION_NEW_ORDER') {
+    if (empty($data->affiliateCode)) {
+        return json_encode(['status' => 'ignored']);
+    }
     $ch = curl_init('${webhookUrl}');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
@@ -801,15 +922,15 @@ if ($data->event === 'SUBSCRIPTION_NEW_ORDER') {
         'currency' => 'INR',
         'plan_id' => $data->planId,
         'interval' => 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
-        'affiliate_code' => $data->affiliateCode ?? null
+        'affiliate_code' => $data->affiliateCode
     ]));
     curl_exec($ch);
     curl_close($ch);
 }`;
 
       snippets.go = `// Go (Cashfree Webhook)
-// Parse JSON body, check data.event == "SUBSCRIPTION_NEW_ORDER"
-// Post JSON payload back to Mipoe at ${webhookUrl}`;
+// Parse JSON body, verify event == "SUBSCRIPTION_NEW_ORDER"
+// If affiliateCode is present in metadata, post JSON payload to Mipoe at ${webhookUrl} else ignore.`;
     } else if (isPayu) {
       snippets.node = `// Node.js (Framework-Agnostic Webhook Handler Function)
 // Works with Express, Fastify, Next.js API Routes, or native Node.js http
@@ -819,6 +940,11 @@ async function handlePayuWebhook(headers, urlEncodedBodyString) {
   
   const params = new URLSearchParams(urlEncodedBodyString);
   if (params.get('status') === 'success') {
+    const affiliateCode = params.get('udf1');
+    if (!affiliateCode) {
+      console.log('Skipping: No affiliate referral code found.');
+      return { status: 'ignored' };
+    }
     const response = await fetch(MIPOE_WEBHOOK_URL, {
       method: 'POST',
       headers: {
@@ -833,7 +959,7 @@ async function handlePayuWebhook(headers, urlEncodedBodyString) {
         currency: 'INR',
         plan_id: params.get('productinfo'),
         interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
-        affiliate_code: params.get('udf1') // User Defined Field 1 used for affiliate code
+        affiliate_code: affiliateCode // User Defined Field 1 used for affiliate code
       })
     });
     return { status: 'success', mipoeStatus: response.status };
@@ -854,6 +980,10 @@ async def handle_payu_webhook(headers: dict, body_bytes: bytes) -> dict:
     # PayU webhook sends URL-encoded form data
     params = {k: v[0] for k, v in parse_qs(body_bytes.decode("utf-8")).items()}
     if params.get("status") == "success":
+        affiliate_code = params.get("udf1")
+        if not affiliate_code:
+            return {"status": "ignored", "reason": "No affiliate referral code found"}
+            
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 MIPOE_WEBHOOK_URL,
@@ -866,7 +996,7 @@ async def handle_payu_webhook(headers: dict, body_bytes: bytes) -> dict:
                     "currency": "INR",
                     "plan_id": params.get("productinfo"),
                     "interval": "monthly", # 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
-                    "affiliate_code": params.get("udf1")
+                    "affiliate_code": affiliate_code
                 }
             )
             return {"status": "success", "mipoe_status": response.status_code}
@@ -875,6 +1005,9 @@ async def handle_payu_webhook(headers: dict, body_bytes: bytes) -> dict:
       snippets.php = `<?php
 // PHP (PayU Success callback)
 if ($_POST['status'] === 'success') {
+    if (empty($_POST['udf1'])) {
+        return;
+    }
     $ch = curl_init('${webhookUrl}');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
@@ -890,7 +1023,7 @@ if ($_POST['status'] === 'success') {
         'currency' => 'INR',
         'plan_id' => $_POST['productinfo'],
         'interval' => 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
-        'affiliate_code' => $_POST['udf1'] ?? null
+        'affiliate_code' => $_POST['udf1']
     ]));
     curl_exec($ch);
     curl_close($ch);
@@ -898,7 +1031,7 @@ if ($_POST['status'] === 'success') {
 
       snippets.go = `// Go (PayU Success callback)
 // Extract txnid, amount, email, productinfo, and udf1 (containing affiliate code)
-// Post JSON payload back to Mipoe at ${webhookUrl}`;
+// If udf1 (affiliateCode) is present, post JSON payload to Mipoe at ${webhookUrl} else ignore.`;
     }
 
     return snippets;

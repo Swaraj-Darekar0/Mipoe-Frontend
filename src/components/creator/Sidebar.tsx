@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutGrid, Flame, Send, Wallet, User, LogOut } from 'lucide-react';
+import { LayoutGrid, Flame, Send, Wallet, User, LogOut, Store } from 'lucide-react';
 import { fetchCreatorProfile, CreatorProfile as ApiCreatorProfile } from '@/lib/api';
 import { logout as logoutApi } from "@/lib/api";
 
@@ -75,6 +75,7 @@ const Sidebar = () => {
         <div className="flex flex-col gap-1 pl-2 mb-2">
           <NavLink to="/creator/affiliate-campaigns" icon={<Flame className="w-4 h-4 text-orange-500" />}>Campaigns</NavLink>
           <NavLink to="/creator/affiliate-analytics" icon={<LayoutGrid className="w-4 h-4 text-orange-500" />}>Analytics</NavLink>
+          <NavLink to="/creator/store" icon={<Store className="w-4 h-4 text-orange-500" />}>My Store</NavLink>
         </div>
         <NavLink to="/creator/submissions" icon={<Send className="w-5 h-5" />}>Submissions</NavLink>
         <NavLink to="/creator/wallet" icon={<Wallet className="w-5 h-5" />}>Earnings</NavLink>

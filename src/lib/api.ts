@@ -152,6 +152,12 @@ export interface WalletBalanceResponse {
 }
 
 export async function uploadCampaignImage(file: File): Promise<string> {
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("File size exceeds the 5MB limit. Please upload a smaller image.");
+  }
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Only image file formats (PNG, JPG, WebP) are allowed.");
+  }
   try {
     // 1. Generate a unique file path (prevent overwrites)
     // Structure: brand_id_timestamp_filename
@@ -172,6 +178,38 @@ export async function uploadCampaignImage(file: File): Promise<string> {
 
     // 3. Get the Public URL
     // This is the string we will send to your Flask Backend
+    const { data } = supabase.storage
+      .from('campaign-images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+    
+  } catch (error: any) {
+    console.error('Upload error:', error);
+    throw new Error(error.message || 'Failed to upload image');
+  }
+}
+
+export async function uploadStoreImage(file: File): Promise<string> {
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("File size exceeds the 5MB limit. Please upload a smaller image.");
+  }
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Only image file formats (PNG, JPG, WebP) are allowed.");
+  }
+  try {
+    const fileExt = file.name.split('.').pop() || 'webp';
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `creator_store/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('campaign-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw new Error(`Image upload failed: ${uploadError.message}`);
+    }
+
     const { data } = supabase.storage
       .from('campaign-images')
       .getPublicUrl(filePath);
@@ -732,6 +770,12 @@ export async function submitBrandProfile(payload: SubmitBrandProfileRequest): Pr
 }
 
 export async function uploadBrandLogo(file: File): Promise<{ logo_url: string; msg: string }> {
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("File size exceeds the 5MB limit. Please upload a smaller image.");
+  }
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Only image file formats (PNG, JPG, WebP) are allowed.");
+  }
   const formData = new FormData();
   formData.append('file', file);
   
@@ -2050,6 +2094,152 @@ export async function getMappingConversions(mappingId: number): Promise<any[]> {
   const res = await apiFetch(`${API_BASE}/api/brand/affiliate/mappings/${mappingId}/conversions`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch mapping conversion logs');
+  return data;
+}
+
+
+// --- Creator Storefront API Types & Functions ---
+
+export interface CreatorStoreConfig {
+  banner_url: string | null;
+  bio: string | null;
+}
+
+export interface PromotedProduct {
+  id: number;
+  product_id: number;
+  affiliate_mapping_id: number;
+  affiliate_code: string;
+  total_clicks: number;
+  name: string;
+  price: number;
+  image_url: string | null;
+  description: string | null;
+}
+
+export interface PromotedSaaS {
+  id: number;
+  affiliate_mapping_id: number;
+  custom_banner_url: string | null;
+  custom_description: string | null;
+  campaign_name: string;
+  campaign_description: string | null;
+  campaign_image_url: string | null;
+  affiliate_code: string;
+}
+
+export interface CreatorStoreData {
+  store: CreatorStoreConfig;
+  promoted_products: PromotedProduct[];
+  promoted_saas: PromotedSaaS[];
+}
+
+export interface EligibleProduct {
+  product_id: number;
+  name: string;
+  price: number;
+  image_url: string | null;
+  description: string | null;
+  campaign_name: string;
+  affiliate_mapping_id: number;
+  is_promoted: boolean;
+  affiliate_code: string | null;
+}
+
+export interface EligibleSaaS {
+  affiliate_mapping_id: number;
+  campaign_name: string;
+  campaign_description: string | null;
+  campaign_image_url: string | null;
+  is_promoted: boolean;
+  custom_banner_url: string | null;
+  custom_description: string | null;
+  affiliate_code: string;
+}
+
+export interface PublicStoreData {
+  creator: {
+    username: string;
+    nickname: string;
+  };
+  store: CreatorStoreConfig;
+  promoted_products: Omit<PromotedProduct, 'id' | 'affiliate_mapping_id' | 'total_clicks'>[];
+  promoted_saas: Omit<PromotedSaaS, 'id'>[];
+}
+
+export async function getCreatorStore(): Promise<CreatorStoreData> {
+  const res = await apiFetch(`${API_BASE}/api/creator/store`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch creator storefront');
+  return data;
+}
+
+export async function updateCreatorStore(payload: { banner_url?: string | null; bio?: string | null }): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/creator/store`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to update creator storefront');
+  return data;
+}
+
+export async function getEligibleProducts(): Promise<EligibleProduct[]> {
+  const res = await apiFetch(`${API_BASE}/api/creator/store/eligible-products`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch eligible products');
+  return data;
+}
+
+export async function promoteProduct(productId: number, affiliateMappingId: number): Promise<{ msg: string; affiliate_code: string }> {
+  const res = await apiFetch(`${API_BASE}/api/creator/store/products`, {
+    method: 'POST',
+    body: JSON.stringify({ product_id: productId, affiliate_mapping_id: affiliateMappingId })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to promote product');
+  return data;
+}
+
+export async function unpromoteProduct(productId: number): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/creator/store/products/${productId}`, {
+    method: 'DELETE'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to unpromote product');
+  return data;
+}
+
+export async function getEligibleSaaS(): Promise<EligibleSaaS[]> {
+  const res = await apiFetch(`${API_BASE}/api/creator/store/eligible-saas`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch eligible SaaS campaigns');
+  return data;
+}
+
+export async function promoteSaaS(payload: { affiliate_mapping_id: number; custom_banner_url?: string | null; custom_description?: string | null }): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/creator/store/saas`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to promote SaaS campaign');
+  return data;
+}
+
+export async function unpromoteSaaS(mappingId: number): Promise<{ msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/creator/store/saas/${mappingId}`, {
+    method: 'DELETE'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to unpromote SaaS campaign');
+  return data;
+}
+
+export async function getPublicStore(username: string): Promise<PublicStoreData> {
+  const res = await apiFetch(`${API_BASE}/api/public/store/${username}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch public storefront');
   return data;
 }
 

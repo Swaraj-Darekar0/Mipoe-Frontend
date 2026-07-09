@@ -47,8 +47,8 @@ export const ServerlessGuide: React.FC<ServerlessGuideProps> = ({
     },
     {
       step: 4,
-      title: "Forward Verified conversion payloads to Mipoe",
-      description: "Deploy the function. Once signature validation succeeds, fetch transaction metadata and forward it server-to-server.",
+      title: "Forward Referrals to Mipoe",
+      description: "Deploy the function. Once signature validation succeeds, retrieve metadata. If (and only if) the affiliate referral code is present, forward DPD details server-to-server; otherwise, ignore it.",
       label: "Mipoe Verification URL:",
       info: `Webhook Endpoint: ${webhookUrl}`
     }
@@ -74,8 +74,8 @@ export const ServerlessGuide: React.FC<ServerlessGuideProps> = ({
     },
     {
       step: 4,
-      title: "Forward Tracking Data to Mipoe",
-      description: "Invoke fetch POST request inside AWS Lambda to report payment details and referral code to Mipoe.",
+      title: "Forward Referrals to Mipoe",
+      description: "Invoke a fetch POST request inside AWS Lambda to report details and referral code to Mipoe only when a valid affiliate code is present.",
       label: "Payload details:",
       info: `Post URL: ${webhookUrl}\nAuthorization: Bearer [Your Mipoe API Key]`
     }
@@ -114,8 +114,15 @@ serve(async (req) => {
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as any
+      const affiliateCode = session.metadata?.ref
+
+      // Only forward to Mipoe if referral code is present
+      if (!affiliateCode) {
+        return new Response(JSON.stringify({ ignored: true, reason: 'No affiliate code' }), { 
+          headers: { 'Content-Type': 'application/json' } 
+        })
+      }
       
-      // Post conversion event to Mipoe
       const res = await fetch('${webhookUrl}', {
         method: 'POST',
         headers: {
@@ -130,7 +137,7 @@ serve(async (req) => {
           currency: session.currency.toUpperCase(),
           plan_id: session.metadata?.plan_id || 'default',
           interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
-          affiliate_code: session.metadata?.ref
+          affiliate_code: affiliateCode
         })
       })
       console.log('Mipoe verification responded:', res.status)
@@ -160,8 +167,16 @@ exports.handler = async (event) => {
 
   if (stripeEvent.type === 'checkout.session.completed') {
     const session = stripeEvent.data.object;
+    const affiliateCode = session.metadata?.ref;
+
+    // Only forward to Mipoe if referral code is present
+    if (!affiliateCode) {
+      return { 
+        statusCode: 200, 
+        body: JSON.stringify({ ignored: true, reason: 'No affiliate code' }) 
+      };
+    }
     
-    // Call Mipoe conversion endpoint
     await fetch('${webhookUrl}', {
       method: 'POST',
       headers: {
@@ -176,7 +191,7 @@ exports.handler = async (event) => {
         currency: session.currency.toUpperCase(),
         plan_id: session.metadata.plan_id || 'default',
         interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
-        affiliate_code: session.metadata.ref
+        affiliate_code: affiliateCode
       })
     });
   }
@@ -204,6 +219,14 @@ serve(async (req) => {
     if (data.event === 'subscription.charged') {
       const payment = data.payload.payment.entity
       const subscription = data.payload.subscription.entity
+      const affiliateCode = payment.notes?.ref
+
+      // Only forward to Mipoe if referral code is present
+      if (!affiliateCode) {
+        return new Response(JSON.stringify({ ignored: true, reason: 'No affiliate code' }), { 
+          headers: { 'Content-Type': 'application/json' } 
+        })
+      }
 
       const res = await fetch('${webhookUrl}', {
         method: 'POST',
@@ -219,7 +242,7 @@ serve(async (req) => {
           currency: payment.currency,
           plan_id: subscription.plan_id,
           interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
-          affiliate_code: payment.notes?.ref
+          affiliate_code: affiliateCode
         })
       })
       console.log('Mipoe verification responded:', res.status)
@@ -252,6 +275,15 @@ exports.handler = async (event) => {
   if (data.event === 'subscription.charged') {
     const payment = data.payload.payment.entity;
     const subscription = data.payload.subscription.entity;
+    const affiliateCode = payment.notes?.ref;
+
+    // Only forward to Mipoe if referral code is present
+    if (!affiliateCode) {
+      return { 
+        statusCode: 200, 
+        body: JSON.stringify({ ignored: true, reason: 'No affiliate code' }) 
+      };
+    }
 
     await fetch('${webhookUrl}', {
       method: 'POST',
@@ -267,7 +299,7 @@ exports.handler = async (event) => {
         currency: payment.currency,
         plan_id: subscription.plan_id,
         interval: 'monthly', // 'weekly', 'monthly', or 'yearly' (maps to campaign schedule)
-        affiliate_code: payment.notes.ref
+        affiliate_code: affiliateCode
       })
     });
   }

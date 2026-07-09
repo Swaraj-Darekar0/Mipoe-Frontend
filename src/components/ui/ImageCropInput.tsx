@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 interface ImageCropInputProps {
   value: string; // The image preview URL or existing database URL
   onChange: (file: File | null, previewUrl: string) => void;
-  aspectRatio: "1:1" | "16:9";
+  aspectRatio: "1:1" | "16:9" | "3:1";
   disabled?: boolean;
   maxSizeMB?: number; // default: 25
   label?: string;
@@ -19,7 +19,7 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
   onChange,
   aspectRatio,
   disabled = false,
-  maxSizeMB = 25,
+  maxSizeMB = 5,
   label,
   placeholder,
 }) => {
@@ -174,7 +174,10 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
         // 16:9 Rectangle Layout
         <div className="space-y-3">
           {value ? (
-            <div className="relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50 max-w-lg aspect-video shadow-sm">
+            <div className={cn(
+              "relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50 max-w-lg shadow-sm",
+              aspectRatio === "3:1" ? "aspect-[3/1]" : "aspect-video"
+            )}>
               <img src={value} alt="Campaign cover preview" className="w-full h-full object-cover" />
               <div className="absolute top-3 right-3 flex gap-2">
                 <Button
@@ -202,7 +205,8 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
           ) : (
             <div
               className={cn(
-                "border-2 border-dashed border-gray-300 rounded-xl p-8 max-w-lg aspect-video flex flex-col items-center justify-center text-center transition duration-200 bg-gray-50",
+                "border-2 border-dashed border-gray-300 rounded-xl p-4 max-w-lg flex flex-col items-center justify-center text-center transition duration-200 bg-gray-50",
+                aspectRatio === "3:1" ? "aspect-[3/1]" : "aspect-video",
                 isDragActive && "border-indigo-500 bg-indigo-50/50",
                 disabled && "opacity-75 cursor-not-allowed",
                 !disabled && "cursor-pointer hover:border-indigo-400 hover:bg-gray-50/50"

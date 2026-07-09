@@ -6,7 +6,7 @@ interface ImageCropperModalProps {
   onClose: () => void;
   imageSrc: string;
   fileName: string;
-  aspectRatio: "1:1" | "16:9";
+  aspectRatio: "1:1" | "16:9" | "3:1";
   onCropComplete: (file: File, previewUrl: string) => void;
 }
 
@@ -46,13 +46,22 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   if (!isOpen || !imageSrc) return null;
 
   const is1to1 = aspectRatio === "1:1";
+  const is3to1 = aspectRatio === "3:1";
 
   // Calculate base scaling to cover the active crop zone
   const getScaleAndSize = (currentZoom: number) => {
     // 1:1 cutout is centered 280x280px
     // 16:9 cutout is centered 320x180px
-    const targetW = is1to1 ? 280 : 320;
-    const targetH = is1to1 ? 280 : 180;
+    // 3:1 cutout is centered 300x100px
+    let targetW = 320;
+    let targetH = 180;
+    if (is1to1) {
+      targetW = 280;
+      targetH = 280;
+    } else if (is3to1) {
+      targetW = 300;
+      targetH = 100;
+    }
 
     const baseScale = Math.max(targetW / naturalWidth, targetH / naturalHeight);
     const W = naturalWidth * baseScale * currentZoom;
@@ -78,10 +87,22 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
     // Boundaries: crop box boundaries inside 320x320 workspace
     // 1:1 circular crop box: starts at x=20, y=20 (centered 280x280)
     // 16:9 rectangular crop box: starts at x=0, y=70 (centered 320x180)
-    const minX = is1to1 ? 20 : 0;
-    const maxX = is1to1 ? 300 : 320;
-    const minY = is1to1 ? 20 : 70;
-    const maxY = is1to1 ? 300 : 250;
+    // 3:1 rectangular crop box: starts at x=10, y=110 (centered 300x100)
+    let minX = 0;
+    let maxX = 320;
+    let minY = 70;
+    let maxY = 250;
+    if (is1to1) {
+      minX = 20;
+      maxX = 300;
+      minY = 20;
+      maxY = 300;
+    } else if (is3to1) {
+      minX = 10;
+      maxX = 310;
+      minY = 110;
+      maxY = 210;
+    }
 
     const xOffsetConstrained = Math.min(minX, Math.max(maxX - W, xOffsetProposed));
     const yOffsetConstrained = Math.min(minY, Math.max(maxY - H, yOffsetProposed));
@@ -156,8 +177,15 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
         const { W, H, targetW, targetH } = getScaleAndSize(zoom);
         const clamped = clampOffsets(panX, panY, zoom);
 
-        const cropStartX = is1to1 ? 20 : 0;
-        const cropStartY = is1to1 ? 20 : 70;
+        let cropStartX = 0;
+        let cropStartY = 70;
+        if (is1to1) {
+          cropStartX = 20;
+          cropStartY = 20;
+        } else if (is3to1) {
+          cropStartX = 10;
+          cropStartY = 110;
+        }
 
         const sx = (cropStartX - clamped.xOffset) * (img.naturalWidth / W);
         const sy = (cropStartY - clamped.yOffset) * (img.naturalHeight / H);
@@ -172,6 +200,10 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
           // If 1:1 circle, reduce/cap at 720p. Do not upscale if smaller.
           destWidth = sWidth >= 720 ? 720 : Math.max(1, Math.round(sWidth));
           destHeight = destWidth;
+        } else if (is3to1) {
+          // If 3:1, cap width at 1200. Do not upscale if smaller.
+          destWidth = sWidth >= 1200 ? 1200 : Math.max(1, Math.round(sWidth));
+          destHeight = destWidth / 3;
         } else {
           // If 16:9, do NOT resize resolution/pixel ratio. Keep original crop size.
           destWidth = Math.max(16, Math.round(sWidth));
@@ -218,7 +250,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
     <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-150 animate-in zoom-in-95 duration-200 text-left">
         <h3 className="text-xl font-bold text-gray-900 mb-1">
-          {is1to1 ? "Crop Brand Logo" : "Crop Campaign Cover"}
+          {is1to1 ? "Crop Brand Logo" : is3to1 ? "Crop Store Banner" : "Crop Campaign Cover"}
         </h3>
         <p className="text-xs text-gray-500 mb-6">
           Drag to position the image inside the crop frame. Use the slider to zoom.
@@ -267,6 +299,33 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
               {/* Overlay guides */}
               <div className="absolute top-[160px] left-[20px] right-[20px] border-t border-dashed border-white/20 pointer-events-none z-20" />
               <div className="absolute left-[160px] top-[20px] bottom-[20px] border-l border-dashed border-white/20 pointer-events-none z-20" />
+            </>
+          ) : is3to1 ? (
+            <>
+              {/* Top/Bottom Overlay panels for 3:1 crop blur */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-[110px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-b border-white/10" 
+                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+              />
+              <div 
+                className="absolute bottom-0 left-0 right-0 h-[110px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-t border-white/10" 
+                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+              />
+              {/* Side overlay panels to constraint from 320 to 300 width (10px on each side) */}
+              <div 
+                className="absolute top-[110px] bottom-[110px] left-0 w-[10px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-r border-white/10" 
+                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+              />
+              <div 
+                className="absolute top-[110px] bottom-[110px] right-0 w-[10px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-l border-white/10" 
+                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+              />
+              {/* Crop bounds outline */}
+              <div className="absolute top-[110px] left-[10px] w-[300px] h-[100px] border-2 border-indigo-600 pointer-events-none z-20" />
+              <div className="absolute top-[110px] left-[10px] w-[300px] h-[100px] border border-white/30 pointer-events-none z-20" />
+              {/* Overlay guides */}
+              <div className="absolute left-[110px] top-[110px] bottom-[110px] border-l border-dashed border-white/20 pointer-events-none z-25" />
+              <div className="absolute left-[210px] top-[110px] bottom-[110px] border-l border-dashed border-white/20 pointer-events-none z-25" />
             </>
           ) : (
             <>

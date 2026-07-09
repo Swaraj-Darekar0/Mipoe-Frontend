@@ -34,6 +34,8 @@ const AffiliateCampaignView = React.lazy(() => import("./pages/creator/Affiliate
 const BrandAffiliateCampaignAnalytics = React.lazy(() => import("./pages/brand/BrandAffiliateCampaignAnalytics").then(m => ({ default: m.BrandAffiliateCampaignAnalytics })));
 const CreatorAffiliateAnalyticsPage = React.lazy(() => import("./pages/creator/AffiliateAnalytics"));
 const AffiliateRedirect = React.lazy(() => import("./pages/AffiliateRedirect"));
+const StoreConfig = React.lazy(() => import("./pages/creator/StoreConfig"));
+const PublicStore = React.lazy(() => import("./pages/PublicStore"));
 
 const queryClient = new QueryClient();
 
@@ -67,6 +69,8 @@ const App = () => (
             <Route path="/creator/affiliate-campaigns" element={<CreatorAffiliateCampaignsPage />} />
             <Route path="/creator/affiliate-campaigns/:campaign_id" element={<AffiliateCampaignView />} />
             <Route path="/creator/affiliate-analytics" element={<CreatorAffiliateAnalyticsPage />} />
+            <Route path="/creator/store" element={<StoreConfig />} />
+            <Route path="/store/:username" element={<PublicStore />} />
             <Route path="/affiliate/:code" element={<AffiliateRedirect />} />
             <Route path="/creator/profile" element={<CreatorProfile />} />
             <Route path="/creator/complete-profile" element={<CompleteProfile />} />

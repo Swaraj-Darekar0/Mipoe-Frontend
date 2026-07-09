@@ -46,7 +46,7 @@ export const DatabaseWebhookGuide: React.FC<DatabaseWebhookGuideProps> = ({
     {
       step: 4,
       title: "Deploy PostgreSQL Trigger to Format Payload",
-      description: "Create a PL/pgSQL database trigger function that compiles the required payment fields and invokes Mipoe's webhook automatically via the pg_net extension.",
+      description: "Create a PL/pgSQL database trigger function that compiles the required payment fields and conditionally invokes Mipoe's webhook automatically via the pg_net extension only when a referral code is present.",
       label: "SQL Trigger Action:",
       info: "See the Supabase PostgreSQL Trigger template script below."
     }
@@ -116,15 +116,17 @@ BEGIN
     'affiliate_code', NEW.referral_code -- Ensure you saved referral code in DB row
   );
 
-  -- Perform HTTP request using Supabase pg_net extension
-  PERFORM net.http_post(
-    url := '${webhookUrl}',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer ${apiKey}',
-      'Content-Type', 'application/json'
-    ),
-    body := payload::text
-  );
+  -- Only perform HTTP request if referral_code is present
+  IF NEW.referral_code IS NOT NULL AND NEW.referral_code != '' THEN
+    PERFORM net.http_post(
+      url := '${webhookUrl}',
+      headers := jsonb_build_object(
+        'Authorization', 'Bearer ${apiKey}',
+        'Content-Type', 'application/json'
+      ),
+      body := payload::text
+    );
+  END IF;
 
   RETURN NEW;
 END;
