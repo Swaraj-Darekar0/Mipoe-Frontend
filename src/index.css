@@ -111,6 +111,18 @@
   .dark .halftone-overlay {
     background-image: radial-gradient(circle, #fbfbfb 1px, transparent 1.5px);
   }
+
+  .orange-glow-shadow {
+    box-shadow: 0 0 35px -5px rgba(255, 92, 0, 0.35);
+  }
+
+  .orange-glow-sm {
+    box-shadow: 0 0 15px -3px rgba(255, 92, 0, 0.25);
+  }
+
+  .font-cursive {
+    font-family: 'Parisienne', cursive;
+  }
 }
 
 

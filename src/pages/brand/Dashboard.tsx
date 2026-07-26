@@ -83,8 +83,8 @@ const BrandDashboard = () => {
     if (!silent) setProfileLoading(true);
     try {
       const [data, statusData] = await Promise.all([
-        getBrandProfile(),
-        getAffiliateStatus()
+        getBrandProfile(silent),
+        getAffiliateStatus(silent)
       ]);
       setProfile(data);
       setAffiliateStatus(statusData.status);

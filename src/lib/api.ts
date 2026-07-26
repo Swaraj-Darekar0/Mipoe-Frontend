@@ -33,7 +33,58 @@ export async function logout(): Promise<void> {
     }
 }
 
+interface CacheEntry {
+  bodyText: string;
+  status: number;
+  statusText: string;
+  headers: [string, string][];
+  timestamp: number;
+}
+
+const apiCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 10000; // 10 seconds cache TTL
+
+function shouldBypassCache(url: string, options: RequestInit): boolean {
+  const method = (options.method || 'GET').toUpperCase();
+  if (method !== 'GET') return true;
+
+  if (url.includes('nocache=true')) return true;
+  
+  if (options.headers) {
+    const headersObj = options.headers as Record<string, string>;
+    if (headersObj['Cache-Control'] === 'no-cache' || headersObj['Pragma'] === 'no-cache') {
+      return true;
+    }
+  }
+
+  // Bypass cache for live analytics/graphs/real-time tracking
+  if (url.includes('/campaign-summary/')) return true;
+  if (url.includes('/affiliate-dashboard/')) return true;
+  
+  const campaignMatch = url.match(/\/api\/brand\/campaigns\/(\d+)(?:\/|$)/);
+  if (campaignMatch) return true;
+
+  return false;
+}
+
 async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const method = (options.method || 'GET').toUpperCase();
+  if (method !== 'GET') {
+    apiCache.clear();
+  }
+
+  const bypass = shouldBypassCache(url, options);
+  if (!bypass) {
+    const cached = apiCache.get(url);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      return new Response(cached.bodyText, {
+        status: cached.status,
+        statusText: cached.statusText,
+        headers: new Headers(cached.headers)
+      });
+    }
+  }
+
   options.credentials = 'include';
   
   const headers: Record<string, string> = {
@@ -55,6 +106,26 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
     if (!isAuthRoute) {
       clearAuthTokens();
       window.location.href = '/login';
+    }
+  }
+
+  if (!bypass && response.ok) {
+    try {
+      const clone = response.clone();
+      const bodyText = await clone.text();
+      const headersList: [string, string][] = [];
+      response.headers.forEach((val, key) => {
+        headersList.push([key, val]);
+      });
+      apiCache.set(url, {
+        bodyText,
+        status: response.status,
+        statusText: response.statusText,
+        headers: headersList,
+        timestamp: Date.now()
+      });
+    } catch (e) {
+      console.warn("Failed to cache response:", e);
     }
   }
 
@@ -696,10 +767,10 @@ export interface BrandProfile {
   msg?: string;
 }
 
-export async function getBrandProfile(): Promise<BrandProfile> {
+export async function getBrandProfile(nocache = false): Promise<BrandProfile> {
   try {
-    const res = await apiFetch(`${API_BASE}/api/brand/profile`, {
-          });
+    const url = `${API_BASE}/api/brand/profile` + (nocache ? '?nocache=true' : '');
+    const res = await apiFetch(url);
     const data = await res.json();
     if (!res.ok) {
       const errorData: ErrorResponse = data;
@@ -1716,8 +1787,9 @@ export interface AffiliateStatus {
   onboarding_gateway: string | null;
 }
 
-export async function getAffiliateStatus(): Promise<AffiliateStatus> {
-  const res = await apiFetch(`${API_BASE}/api/brand/affiliate/status`);
+export async function getAffiliateStatus(nocache = false): Promise<AffiliateStatus> {
+  const url = `${API_BASE}/api/brand/affiliate/status` + (nocache ? '?nocache=true' : '');
+  const res = await apiFetch(url);
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch affiliate status');
   return data;
@@ -2114,6 +2186,7 @@ export interface PromotedProduct {
   name: string;
   price: number;
   image_url: string | null;
+  product_url?: string | null;
   description: string | null;
 }
 
@@ -2166,6 +2239,272 @@ export interface PublicStoreData {
   promoted_products: Omit<PromotedProduct, 'id' | 'affiliate_mapping_id' | 'total_clicks'>[];
   promoted_saas: Omit<PromotedSaaS, 'id'>[];
 }
+
+const MOCK_PUBLIC_STORES: Record<string, PublicStoreData> = {
+  riaunfiltered: {
+    creator: {
+      username: 'riaunfiltered',
+      nickname: 'Ria Sharma'
+    },
+    store: {
+      banner_url: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1600&q=80',
+      bio: 'Beauty, fragrance, and everyday glow picks I would actually keep on my shelf.'
+    },
+    promoted_products: [
+      {
+        product_id: 101,
+        affiliate_code: 'MOCK-RIA-MINIMALIST',
+        name: 'Minimalist SPF 50 Sunscreen',
+        price: 399,
+        image_url: 'https://m.media-amazon.com/images/I/51YTdG8RPSL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Minimalist-Sunscreen-Multi-Vitamins-Cream/dp/B09FPS9D5T',
+        description: 'Lightweight daily sunscreen pick for creators shooting outdoors or under studio lights.'
+      },
+      {
+        product_id: 102,
+        affiliate_code: 'MOCK-RIA-MAYBELLINE',
+        name: 'Maybelline Fit Me Matte + Poreless Foundation',
+        price: 490,
+        image_url: 'https://m.media-amazon.com/images/I/31VJdsZMnGL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Maybelline-Poreless-Liquid-Foundation-Control/dp/B0BRKCH48H',
+        description: 'A compact base product for quick GRWM clips, reels, and creator touch-ups.'
+      }
+    ],
+    promoted_saas: []
+  },
+  riyaunfiltered: {
+    creator: {
+      username: 'riyaunfiltered',
+      nickname: 'Ashok Kumar'
+    },
+    store: {
+      banner_url: 'https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1600&q=80',
+      bio: 'Minimal fashion edits, daily wear, and clean monochrome creator gear.'
+    },
+    promoted_products: [
+      {
+        product_id: 201,
+        affiliate_code: 'MOCK-RIYA-EARBUDS',
+        name: 'boAt Airdopes True Wireless Earbuds',
+        price: 1299,
+        image_url: 'https://m.media-amazon.com/images/I/61bcY1YYXoL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Airdopes-141-Playtime-Resistance-Bluetooth/dp/B09N3ZNHTY',
+        description: 'Easy audio pick for shooting outfit transitions, voiceovers, and commute content.'
+      },
+      {
+        product_id: 202,
+        affiliate_code: 'MOCK-RIYA-FITME',
+        name: 'Maybelline Fit Me Foundation',
+        price: 490,
+        image_url: 'https://m.media-amazon.com/images/I/31VJdsZMnGL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Maybelline-Poreless-Liquid-Foundation-Control/dp/B0BRKCH48H',
+        description: 'Creator-kit essential for quick camera-ready styling.'
+      }
+    ],
+    promoted_saas: []
+  },
+  karanvibe: {
+    creator: {
+      username: 'karanvibe',
+      nickname: 'Karan Patel'
+    },
+    store: {
+      banner_url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80',
+      bio: 'Tech, lifestyle, audio, and desk-friendly creator setup recommendations.'
+    },
+    promoted_products: [
+      {
+        product_id: 301,
+        affiliate_code: 'MOCK-KARAN-EARBUDS',
+        name: 'boAt Airdopes 141 Bluetooth Earbuds',
+        price: 1299,
+        image_url: 'https://m.media-amazon.com/images/I/61bcY1YYXoL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Airdopes-141-Playtime-Resistance-Bluetooth/dp/B09N3ZNHTY',
+        description: 'Wireless earbuds for editing, calls, travel, and creator audio checks.'
+      }
+    ],
+    promoted_saas: [
+      {
+        affiliate_mapping_id: 3001,
+        custom_banner_url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80',
+        custom_description: 'A mock analytics tool recommendation for tracking creator campaign performance.',
+        campaign_name: 'Creator Analytics Pro',
+        campaign_description: 'Measure clicks, engagement, and affiliate conversion lift from one dashboard.',
+        campaign_image_url: null,
+        affiliate_code: 'MOCK-KARAN-SAAS'
+      }
+    ]
+  },
+  ananyaglow: {
+    creator: {
+      username: 'ananyaglow',
+      nickname: 'Ananya Roy'
+    },
+    store: {
+      banner_url: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=1600&q=80',
+      bio: 'Skincare-first creator picks for glow routines, campaign prep, and everyday content days.'
+    },
+    promoted_products: [
+      {
+        product_id: 401,
+        affiliate_code: 'MOCK-ANANYA-SPF',
+        name: 'Minimalist SPF 50 Sunscreen',
+        price: 399,
+        image_url: 'https://m.media-amazon.com/images/I/51YTdG8RPSL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Minimalist-Sunscreen-Multi-Vitamins-Cream/dp/B09FPS9D5T',
+        description: 'Daily SPF for creators who film outdoors, near windows, or under bright lights.'
+      },
+      {
+        product_id: 402,
+        affiliate_code: 'MOCK-ANANYA-BASE',
+        name: 'Maybelline Fit Me Matte + Poreless Foundation',
+        price: 490,
+        image_url: 'https://m.media-amazon.com/images/I/31VJdsZMnGL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Maybelline-Poreless-Liquid-Foundation-Control/dp/B0BRKCH48H',
+        description: 'A quick base product for beauty demos and campaign shoot days.'
+      }
+    ],
+    promoted_saas: []
+  },
+  meeraedits: {
+    creator: {
+      username: 'meeraedits',
+      nickname: 'Meera Kapoor'
+    },
+    store: {
+      banner_url: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80',
+      bio: 'Editing desk, creator tools, and small upgrades that make content days smoother.'
+    },
+    promoted_products: [
+      {
+        product_id: 501,
+        affiliate_code: 'MOCK-MEERA-EARBUDS',
+        name: 'boAt Airdopes 141 Bluetooth Earbuds',
+        price: 1299,
+        image_url: 'https://m.media-amazon.com/images/I/61bcY1YYXoL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Airdopes-141-Playtime-Resistance-Bluetooth/dp/B09N3ZNHTY',
+        description: 'A simple audio pick for editing, previewing reels, and creator calls.'
+      }
+    ],
+    promoted_saas: [
+      {
+        affiliate_mapping_id: 5001,
+        custom_banner_url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80',
+        custom_description: 'Mock recommendation for planning content drops and tracking affiliate clicks.',
+        campaign_name: 'Creator Workflow Board',
+        campaign_description: 'Plan campaigns, notes, links, and deliverables in one clean workspace.',
+        campaign_image_url: null,
+        affiliate_code: 'MOCK-MEERA-SAAS'
+      }
+    ]
+  },
+  devanshdesk: {
+    creator: {
+      username: 'devanshdesk',
+      nickname: 'Devansh Rao'
+    },
+    store: {
+      banner_url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80',
+      bio: 'Budget tech and desk essentials for filming, editing, and staying consistent.'
+    },
+    promoted_products: [
+      {
+        product_id: 601,
+        affiliate_code: 'MOCK-DEVANSH-EARBUDS',
+        name: 'boAt Airdopes True Wireless Earbuds',
+        price: 1299,
+        image_url: 'https://m.media-amazon.com/images/I/61bcY1YYXoL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Airdopes-141-Playtime-Resistance-Bluetooth/dp/B09N3ZNHTY',
+        description: 'Wireless earbuds for editing checks, client calls, and quick creator travel.'
+      }
+    ],
+    promoted_saas: []
+  },
+  ishaglowfile: {
+    creator: {
+      username: 'ishaglowfile',
+      nickname: 'Isha Menon'
+    },
+    store: {
+      banner_url: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=1600&q=80',
+      bio: 'Skincare prep, everyday base products, and camera-ready glow routines.'
+    },
+    promoted_products: [
+      {
+        product_id: 701,
+        affiliate_code: 'MOCK-ISHA-SPF',
+        name: 'Minimalist SPF 50 Sunscreen',
+        price: 399,
+        image_url: 'https://m.media-amazon.com/images/I/51YTdG8RPSL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Minimalist-Sunscreen-Multi-Vitamins-Cream/dp/B09FPS9D5T',
+        description: 'Light daily sunscreen for prep routines before long content days.'
+      },
+      {
+        product_id: 702,
+        affiliate_code: 'MOCK-ISHA-FITME',
+        name: 'Maybelline Fit Me Foundation',
+        price: 490,
+        image_url: 'https://m.media-amazon.com/images/I/31VJdsZMnGL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Maybelline-Poreless-Liquid-Foundation-Control/dp/B0BRKCH48H',
+        description: 'Quick base product for beauty reviews, try-ons, and GRWM clips.'
+      }
+    ],
+    promoted_saas: []
+  },
+  zoyafits: {
+    creator: {
+      username: 'zoyafits',
+      nickname: 'Zoya Khan'
+    },
+    store: {
+      banner_url: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1600&q=80',
+      bio: 'Fashion finds, compact creator bags, and everyday styling picks.'
+    },
+    promoted_products: [
+      {
+        product_id: 801,
+        affiliate_code: 'MOCK-ZOYA-BASE',
+        name: 'Maybelline Fit Me Matte + Poreless Foundation',
+        price: 490,
+        image_url: 'https://m.media-amazon.com/images/I/31VJdsZMnGL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Maybelline-Poreless-Liquid-Foundation-Control/dp/B0BRKCH48H',
+        description: 'A small creator bag essential for quick fit checks and events.'
+      }
+    ],
+    promoted_saas: []
+  },
+  nikhilnomad: {
+    creator: {
+      username: 'nikhilnomad',
+      nickname: 'Nikhil Verma'
+    },
+    store: {
+      banner_url: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80',
+      bio: 'Travel-friendly tech and creator kit picks for long shoot days.'
+    },
+    promoted_products: [
+      {
+        product_id: 901,
+        affiliate_code: 'MOCK-NIKHIL-EARBUDS',
+        name: 'boAt Airdopes 141 Bluetooth Earbuds',
+        price: 1299,
+        image_url: 'https://m.media-amazon.com/images/I/61bcY1YYXoL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Airdopes-141-Playtime-Resistance-Bluetooth/dp/B09N3ZNHTY',
+        description: 'Portable audio for travel edits, long rides, and location shoot days.'
+      },
+      {
+        product_id: 902,
+        affiliate_code: 'MOCK-NIKHIL-SPF',
+        name: 'Minimalist SPF 50 Sunscreen',
+        price: 399,
+        image_url: 'https://m.media-amazon.com/images/I/51YTdG8RPSL._SL1000_.jpg',
+        product_url: 'https://www.amazon.in/Minimalist-Sunscreen-Multi-Vitamins-Cream/dp/B09FPS9D5T',
+        description: 'Travel SPF for outdoor content and bright shoot locations.'
+      }
+    ],
+    promoted_saas: []
+  }
+};
 
 export async function getCreatorStore(): Promise<CreatorStoreData> {
   const res = await apiFetch(`${API_BASE}/api/creator/store`);
@@ -2237,6 +2576,9 @@ export async function unpromoteSaaS(mappingId: number): Promise<{ msg: string }>
 }
 
 export async function getPublicStore(username: string): Promise<PublicStoreData> {
+  const mockStore = MOCK_PUBLIC_STORES[username.toLowerCase()];
+  if (mockStore) return mockStore;
+
   const res = await apiFetch(`${API_BASE}/api/public/store/${username}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch public storefront');

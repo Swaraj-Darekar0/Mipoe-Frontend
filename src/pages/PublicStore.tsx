@@ -250,7 +250,7 @@ export default function PublicStore() {
 
             <div className="p-4 pt-0">
               <Button
-                onClick={() => window.open(getAffiliateRedirectUrl(prod.affiliate_code), "_blank")}
+                onClick={() => window.open(prod.product_url || getAffiliateRedirectUrl(prod.affiliate_code), "_blank")}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 h-9 transition-colors"
               >
                 <span>Buy Product</span>
