@@ -32,13 +32,13 @@ const DEFAULT_CLIPS: UGCClip[] = [
   {
     id: 'clip-2',
     creatorName: 'Ashok Kumar',
-    creatorHandle: '@riya_unfiltered',
+    creatorHandle: '@AshokVibes',
     views: '512.0K',
     likes: '89.1K',
     title: 'Monochrome aesthetics review',
     tag: 'Gen-Z Fashion',
     imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa0YO8bAujXXIatFG0psIns6JxrnVU2-mlvqZYAJ9n-Q&s=10',
-    storeUsername: 'riyaunfiltered',
+    storeUsername: 'ashokvibes',
     audioTrack: 'Viral Sound - Synth Swell'
   },
   {

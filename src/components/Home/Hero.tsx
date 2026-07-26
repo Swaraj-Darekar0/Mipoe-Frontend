@@ -4,12 +4,12 @@ import NavigationLinks from '@/components/Home/NavigationLinks';
 
 const Hero: React.FC = () => {
   return (
-    <section className="w-full grid-border flex flex-col justify-between items-center relative overflow-hidden h-[calc(100vh-50px)] min-h-[580px] max-h-[950px] bg-white dark:bg-black select-none">
+    <section className="w-full grid-border flex flex-col justify-between items-center relative overflow-hidden h-[calc(100vh)] min-h-[620px] max-h-[950px] bg-black select-none">
       
-      {/* 1. Content Layer (Video underneath) */}
+      {/* 1. Cinematic video background */}
       <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
         <video
-          className="w-full h-full object-cover" 
+          className="w-full h-full object-cover opacity-95 scale-105" 
           autoPlay
           loop
           muted
@@ -20,50 +20,34 @@ const Hero: React.FC = () => {
         </video>
       </div>
 
-      {/* 2. Mask Layer (Full Screen Solid White/Black Knockout - Video ONLY shows inside MIPOE) */}
-      <div className="absolute inset-0 z-10 flex flex-col justify-center items-center w-full h-full bg-white dark:bg-black mix-blend-screen dark:mix-blend-multiply pointer-events-none select-none">
-        <h1 className="font-display font-bold text-[22vw] md:text-[20vw] leading-none tracking-tighter text-center uppercase scale-y-110 -translate-y-6 text-black dark:text-white">
-          MIPOE
-        </h1>
-        
-        {/* Invisible spacer matching Layer 3's subtext container height exactly */}
-        <div className="mt-8 md:mt-12 text-center opacity-0">
-          <p className="font-display text-base sm:text-xl md:text-2xl lg:text-3xl px-6 py-2.5">
-            Spacer
-          </p>
-        </div>
-      </div>
+      <div className="absolute inset-0 z-10 bg-black/50 md:bg-black/45 pointer-events-none"></div>
+      <div className="absolute inset-x-0 top-0 z-10 h-32 bg-gradient-to-b from-black/55 to-transparent pointer-events-none"></div>
+      <div className="absolute inset-x-0 bottom-0 z-10 h-44 bg-gradient-to-t from-black/75 via-black/30 to-transparent pointer-events-none"></div>
 
-      {/* 3. Overlay Layer (Outline Stroke & Creator First Subtext) */}
-      <div className="absolute inset-0 z-20 flex flex-col justify-center items-center w-full h-full pointer-events-none">
+      {/* 2. Hero copy */}
+      <div className="absolute inset-0 z-20 flex flex-col justify-center items-center w-full h-full px-4 pointer-events-none">
         
-        {/* Crisp Bold Outline Text */}
-        <h1 
-          className="font-display font-bold text-[22vw] md:text-[20vw] leading-none tracking-tighter text-center uppercase scale-y-110 -translate-y-6 text-dark-void dark:text-snow selection:bg-primary selection:text-white"
-          style={{ 
-            WebkitTextFillColor: 'transparent', 
-            WebkitTextStroke: '1.5px currentColor' 
-          }}
-        >
+        <h1 className="font-display font-black text-[31vw] sm:text-[25vw] md:text-[20vw] leading-none tracking-tight text-center uppercase scale-y-110 -translate-y-5 text-white drop-shadow-[0_14px_40px_rgba(0,0,0,0.55)] selection:bg-primary selection:text-white">
           MIPOE
         </h1>
 
-        {/* Subtext with Cursive Accent (Clean Flat Glassmorphic Pill) */}
-        <div className="mt-8 md:mt-12 text-center pointer-events-auto">
-          <p className="font-display text-base sm:text-xl md:text-2xl lg:text-3xl text-dark-void dark:text-snow uppercase tracking-widest inline-block px-6 py-2.5 rounded-lg bg-white/90 dark:bg-black/90 backdrop-blur-md">
-            A <span className="font-cursive text-[1.7em] text-primary normal-case tracking-normal align-middle inline-block mx-1">Creator</span>  First platform.
+        <div className="mt-7 md:mt-10 text-center pointer-events-auto">
+          <p className="font-display text-[1.18rem] sm:text-2xl md:text-3xl lg:text-4xl text-white uppercase tracking-[0.18em] sm:tracking-[0.22em] inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 px-5 py-3 rounded-xl bg-black/24 backdrop-blur-[2px] shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+            <span>A</span>
+            <span className="font-cursive text-[1.85em] text-primary normal-case tracking-normal leading-none">Creator</span>
+            <span>First Platform.</span>
           </p>
         </div>
 
       </div>
 
-      {/* 4. Modular NavigationLinks Component Embedded at Bottom Boundary */}
+      {/* 3. Modular NavigationLinks Component Embedded at Bottom Boundary */}
       <div className="absolute bottom-0 left-0 right-0 z-30 w-full">
         <NavigationLinks />
       </div>
 
       {/* Noise Texture Overlay */}
-      <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/noise.png')] z-30"></div>
+      <div className="absolute top-0 left-0 w-full h-full opacity-15 pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/noise.png')] z-30"></div>
     </section>
   );
 };

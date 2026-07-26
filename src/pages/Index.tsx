@@ -11,8 +11,8 @@ const Index = () => {
   return (
     <div className="bg-background-light dark:bg-background-dark text-dark-void dark:text-snow font-mono transition-colors duration-300 antialiased overflow-x-hidden selection:bg-primary selection:text-snow min-h-screen">
       <main className="w-full max-w-[1920px] mx-auto border-x border-dark-void dark:border-dusty-grey/30 min-h-screen flex flex-col relative">
-        {/* 1. Glassmorphic Header */}
-        <Header />
+        {/* 1. Header */}
+        {/* <Header /> */}
         
         {/* 2. Hero Section with 100% Aligned Video Stencil Mask & Embedded Bottom Boundary Navigation Links */}
         <Hero />
