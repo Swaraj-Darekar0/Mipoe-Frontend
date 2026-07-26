@@ -2272,9 +2272,9 @@ const MOCK_PUBLIC_STORES: Record<string, PublicStoreData> = {
     ],
     promoted_saas: []
   },
-  riyaunfiltered: {
+  ashokkumar: {
     creator: {
-      username: 'riyaunfiltered',
+      username: 'AshokKumar',
       nickname: 'Ashok Kumar'
     },
     store: {
@@ -2316,12 +2316,30 @@ const MOCK_PUBLIC_STORES: Record<string, PublicStoreData> = {
       {
         product_id: 301,
         affiliate_code: 'MOCK-KARAN-EARBUDS',
-        name: 'boAt Airdopes 141 Bluetooth Earbuds',
-        price: 1299,
-        image_url: 'https://m.media-amazon.com/images/I/61bcY1YYXoL._SL1000_.jpg',
-        product_url: 'https://www.amazon.in/Airdopes-141-Playtime-Resistance-Bluetooth/dp/B09N3ZNHTY',
-        description: 'Wireless earbuds for editing, calls, travel, and creator audio checks.'
-      }
+        name: 'Nicosure Nicotine Lozenges - 2mg (Ice Mint Flavor)',
+        price: 306,
+        image_url: 'https://nicosure.in/wp-content/uploads/2020/03/FOP-Thummbnail-D2C-1.webp',
+        product_url: 'https://nicosure.in/product/icemint-lozenges/',
+        description: 'Nico sure gum,reduces nicotine cravings, and helps you stay focused during long editing sessions.'
+      },
+            {
+        product_id: 301,
+        affiliate_code: 'MOCK-KARAN-EARBUDS',
+        name: 'Nicosure Nicotine Gums - 2mg (Paan Bliss)',
+        price: 479,
+        image_url: 'https://nicosure.in/wp-content/uploads/2025/05/Paan_FOP_D2C.webp',
+        product_url: 'https://nicosure.in/product/paan-gums/',
+        description: 'Nico sure gum,reduces nicotine cravings, and helps you stay focused during long editing sessions (Paan flavour).'
+      },
+            {
+        product_id: 301,
+        affiliate_code: 'MOCK-KARAN-EARBUDS',
+        name: 'Nicosure Icemint Lozenges (2mg) Container Pack',
+        price: 409,
+        image_url: 'https://nicosure.in/wp-content/uploads/2025/05/Lozenges-Container-1.webp',
+        product_url: 'http://nicosure.in/product/nicosure-icemint-lozenges-2mg-container-pack/',
+        description: 'Nico sure gum,reduces nicotine cravings, and helps you stay focused during long editing sessions.'
+      },
     ],
     promoted_saas: [
       {

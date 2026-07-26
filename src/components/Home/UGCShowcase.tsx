@@ -2,10 +2,6 @@ import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Play, Volume2, Flame, Heart, Eye, ArrowUpRight, Sparkles } from 'lucide-react';
-import img1 from '@/assets/bg21.png';
-import img2 from '@/assets/bg22.png';
-import img3 from '@/assets/bg31.png';
-import img4 from '@/assets/bg2.png';
 
 export interface UGCClip {
   id: string;
@@ -149,16 +145,16 @@ const UGCShowcase: React.FC<UGCShowcaseProps> = ({ clips = DEFAULT_CLIPS }) => {
   return (
     <section 
       ref={containerRef}
-      className="w-full bg-white text-slate-950 py-20 md:py-32 grid-border relative overflow-hidden selection:bg-primary selection:text-white"
+      className="w-full bg-white text-slate-950 py-16 md:py-24 lg:py-28 grid-border relative overflow-hidden selection:bg-primary selection:text-white"
     >
       {/* Background Soft Orange Radial Glows */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#FF5C00]/10 rounded-full blur-[140px] pointer-events-none z-0"></div>
-      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#FF5C00]/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] md:w-[560px] md:h-[560px] bg-[#FF5C00]/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
+      <div className="absolute top-0 right-0 w-[280px] h-[280px] md:w-[380px] md:h-[380px] bg-[#FF5C00]/5 rounded-full blur-[90px] pointer-events-none z-0"></div>
 
-      <div className="max-w-[1920px] mx-auto px-6 md:px-12 lg:px-16 relative z-10">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 md:px-10 lg:px-14 relative z-10">
         
         {/* Header Section: Typography Pairing (Helvetica + Parisienne Cursive) */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 md:mb-16 gap-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 md:mb-12 gap-6">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-4">
               <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
@@ -167,7 +163,7 @@ const UGCShowcase: React.FC<UGCShowcaseProps> = ({ clips = DEFAULT_CLIPS }) => {
               </span>
             </div>
             
-            <h2 className="font-display font-bold text-4xl md:text-6xl lg:text-7xl tracking-tighter uppercase leading-[0.9]">
+            <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl tracking-tighter uppercase leading-[0.9]">
               REAL IMPACT, <br />
               REAL RESULTS
             </h2>
@@ -178,44 +174,48 @@ const UGCShowcase: React.FC<UGCShowcaseProps> = ({ clips = DEFAULT_CLIPS }) => {
           </p>
         </div>
 
-        {/* Horizontal UGC Clips Array with Soft Blurred Edge Boundaries */}
-        <motion.div 
-          style={{ scale, opacity }}
-          className="w-full overflow-x-auto pb-8 pt-4 scrollbar-none flex gap-6 md:gap-8 items-center justify-start md:justify-center"
-        >
-          {clips.map((clip, index) => {
-            // Subtle rotation offset for the fan/arc aesthetic
-            const rotations = [-4, -1.5, 2, 4.5];
-            const rotationAngle = rotations[index % rotations.length];
-            const openCreatorStore = () => navigate(`/store/${clip.storeUsername}`);
+        <div className="relative -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 overflow-visible">
+          <div className="pointer-events-none absolute inset-y-8 left-0 z-20 w-8 sm:w-12 bg-gradient-to-r from-white to-transparent"></div>
+          <div className="pointer-events-none absolute inset-y-8 right-0 z-20 w-8 sm:w-12 bg-gradient-to-l from-white to-transparent"></div>
 
-            return (
+          {/* Horizontal UGC Clips Array with Soft Blurred Edge Boundaries */}
+          <motion.div 
+            style={{ scale, opacity }}
+            className="w-full overflow-x-auto overflow-y-visible px-4 sm:px-6 md:px-10 lg:px-14 py-8 md:py-10 scrollbar-none flex gap-4 sm:gap-5 md:gap-6 items-center justify-start xl:justify-center"
+          >
+            {clips.map((clip, index) => {
+              // Subtle rotation offset for the fan/arc aesthetic
+              const rotations = [-2.5, -1, 1.5, 2.5];
+              const rotationAngle = rotations[index % rotations.length];
+              const openCreatorStore = () => navigate(`/store/${clip.storeUsername}`);
 
-              <motion.div
-                key={clip.id}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.12 }}
-                whileHover={{ 
-                  scale: 1.05, 
-                  rotate: 0,
-                  y: -10,
-                  transition: { type: "spring", stiffness: 300, damping: 20 }
-                }}
-                onClick={openCreatorStore}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    openCreatorStore();
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-label={`Open ${clip.creatorName}'s public store`}
-                style={{ rotate: `${rotationAngle}deg` }}
-                className="flex-shrink-0 w-[260px] sm:w-[290px] md:w-[320px] aspect-[9/16] relative rounded-2xl overflow-hidden bg-slate-950/90 border border-white/15 dark:border-white/10 orange-glow-shadow group cursor-pointer transition-shadow duration-500 hover:shadow-[0_0_50px_rgba(255,92,0,0.45)]"
-               >
+              return (
+
+                <motion.div
+                  key={clip.id}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: index * 0.12 }}
+                  whileHover={{ 
+                    scale: 1.035, 
+                    rotate: 0,
+                    y: -6,
+                    transition: { type: "spring", stiffness: 300, damping: 20 }
+                  }}
+                  onClick={openCreatorStore}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      openCreatorStore();
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open ${clip.creatorName}'s public store`}
+                  style={{ rotate: `${rotationAngle}deg` }}
+                  className="flex-shrink-0 w-[210px] sm:w-[235px] md:w-[255px] lg:w-[275px] xl:w-[290px] aspect-[9/16] relative rounded-2xl overflow-hidden bg-slate-950/90 border border-white/15 dark:border-white/10 orange-glow-shadow group cursor-pointer transition-shadow duration-500 hover:shadow-[0_0_36px_rgba(255,92,0,0.36)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+                >
                 {/* 1. Backdrop Image */}
                 <img 
                   src={clip.imageUrl} 
@@ -276,10 +276,11 @@ const UGCShowcase: React.FC<UGCShowcaseProps> = ({ clips = DEFAULT_CLIPS }) => {
 
                 {/* Corner Glow Accent */}
                 <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-primary/30 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
 
         {/* Footer Info & Call to Action */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-12 md:mt-16">
@@ -303,4 +304,3 @@ const UGCShowcase: React.FC<UGCShowcaseProps> = ({ clips = DEFAULT_CLIPS }) => {
 };
 
 export default UGCShowcase;
-
