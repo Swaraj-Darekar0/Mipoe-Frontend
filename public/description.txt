@@ -1,0 +1,372 @@
+
+=======================================================================
+sellr — HOMEPAGE COPY & CONTENT SPECIFICATION
+For: Index Page Redesign (Dual Persona: Brand + Creator)
+File: description.txt
+=======================================================================
+
+-----------------------------------------------------------------------
+SECTION 0 — BRAND IDENTITY ONE-LINER (Global, Used Everywhere)
+-----------------------------------------------------------------------
+
+"India's first pay-on-impact creator marketplace."
+
+Sub-tagline options:
+- "Brands pay for reach. Creators earn on results."
+- "The algorithm isn't your enemy. We made it your employee."
+- "Stop buying ads. Start buying outcomes."
+
+-----------------------------------------------------------------------
+SECTION 1 — HERO SECTION
+-----------------------------------------------------------------------
+
+[CREATOR MODE — DEFAULT PERSONA]
+
+Headline (bold weight mixed with regular):
+  "Your  CONTENT  Already Has
+   an Audience.
+   Get  PAID  For It."
+
+Sub-headline (muted gray, max ~70 chars):
+  No agency. No gatekeepers. No minimum follower count.
+  Just post, earn, repeat.
+
+Primary CTA button:
+  → "Start Earning Today"
+
+Visual RHS (phone mockup feed context label):
+  → Show 5–7 phone cards with live creator content from the UGC feed:
+     clips from @RiaUnfiltered, @ZoyaFits, @MeeraEdits etc.
+     Views/likes badges visible (248K views, 34K likes).
+
+---
+
+[BRAND MODE]
+
+Headline (bold weight mixed with regular):
+  "Stop  BURNING  Budget
+   on Ads Nobody Trusts.
+   Start  BUYING  Real Reach."
+
+Sub-headline (muted gray, max ~70 chars):
+  Set a campaign. Set a budget. Pay only when results hit.
+  Creators do the rest.
+
+Primary CTA button:
+  → "Launch a Campaign"
+
+Visual RHS (phone mockup feed context label):
+  → Show campaign analytics / performance dashboard mockups.
+     Brand logo next to creator content. Conversion badges.
+
+---
+
+DESIGN NOTE:
+Use VYRO's headline typographic rhythm — key nouns in ultra-heavy weight,
+filler words in regular. Example structure:
+  [regular] "Your Content Already Has an" [bold] "AUDIENCE."
+  [regular] "Get" [bold] "PAID" [regular] "For It."
+
+-----------------------------------------------------------------------
+SECTION 2 — SIGNALING FACTOR (Horizontal Scroll Carousel)
+           "How You Win on sellr"
+-----------------------------------------------------------------------
+
+=== BRAND VERSION — 5 STEPS ===
+Section Label: "HOW BRANDS WIN"
+Section Intro: "Set it. Watch creators run it. Pay for what lands."
+
+Step 1 — LAUNCH
+Title: "Set Your Campaign in Minutes"
+Description: Choose your campaign type — UGC content, product affiliate links, or viral clip campaigns. Define your budget, your brief, your CPV. We handle the rest.
+
+Step 2 — MATCH
+Title: "Creators Come to You"
+Description: No cold outreach. No agency middlemen. India's creator pool comes to your brief. Pick creators based on niche, reach, engagement, and audience demographics.
+
+Step 3 — CREATE
+Title: "Authentic Content Goes Live"
+Description: Real creators. Real audiences. Real trust. Your brand gets peer-to-peer storytelling — the only format Gen-Z and Millennial India actually listens to.
+
+Step 4 — TRACK
+Title: "Every View. Every Sale. Every Rupee."
+Description: Your dashboard tracks views, clicks, conversions, and affiliate commissions in real-time. No spreadsheets, no agency reports, no ambiguity.
+
+Step 5 — WIN
+Title: "Pay Only for Results. Keep the Rest."
+Description: CPV-based billing. You only pay per verified view or per conversion. Your ad budget finally works as hard as you do.
+
+---
+
+=== CREATOR VERSION — 5 STEPS ===
+Section Label: "HOW CREATORS EARN"
+Section Intro: "No agency contact. No minimum followers. Just create."
+
+Step 1 — JOIN
+Title: "Sign Up. No Gatekeeping."
+Description: Whether you have 500 followers or 5 lakh — if your content resonates, there's a campaign for you. Create a profile. Connect your Instagram or YouTube.
+
+Step 2 — BROWSE
+Title: "Pick Campaigns That Fit Your Vibe"
+Description: UGC video campaigns. Affiliate product links. Viral clip briefs. Browse live brand campaigns and apply to what matches your content style and audience.
+
+Step 3 — CREATE
+Title: "Post Your Content. That's It."
+Description: Film it your way. No corporate scripts. No stiff brand guidelines. Brands on sellr want authentic, not polished-to-death. Your real voice is the product.
+
+Step 4 — EARN
+Title: "Views Turn Into ₹₹₹"
+Description: Every verified view earns you CPV payouts. Affiliate sales earn you commissions. UGC content earns you flat fees. Three income streams, one platform.
+
+Step 5 — GROW
+Title: "Build Your Brand. Not Just Your Feed."
+Description: Your sellr store, your creator profile, your campaign history — it all builds your creator credibility. The more you do, the more brands come to you.
+
+---
+
+CAROUSEL DESIGN NOTE:
+Each step = one full-screen pinned panel with:
+- Large step number (e.g. "01", "02") in faded oversized font behind content
+- Bold title at center
+- 2-line description below
+- Minimalist illustration or icon top-right
+- Step indicator dots at bottom showing progress
+
+-----------------------------------------------------------------------
+SECTION 3 — EARNINGS CALCULATOR
+           "How Much Could You Actually Make?"
+-----------------------------------------------------------------------
+
+Section headline (dark bg, accent gradient on key word):
+  "How  RICH  is Rich?"
+
+Section sub-text (muted, center-aligned):
+  Based on real campaign data across active sellr creators and brands.
+  No fluff. No vanity projections.
+
+---
+
+[BRAND CALCULATOR]
+
+Slider 1 — Campaign Budget
+Label: "How much are you investing?"
+Range: ₹10,000 — ₹5,00,000
+Unit: ₹
+Current value display: bold centered under thumb
+
+Slider 2 — Campaign Duration
+Label: "For how many weeks?"
+Range: 1 week — 12 weeks
+Unit: weeks
+
+Output template:
+  "At this budget, your campaign reaches an estimated
+   [X lakh] to [Y lakh] organic views
+   and generates [₹A] to [₹B] in attributed revenue."
+
+Disclaimer:
+  *Projections based on average CPV of ₹0.08–₹0.20 and 3–6x ROAS from
+   comparable campaigns. Actual results may vary by niche and creator mix.
+
+CTA Row:
+  [dashed pill: sellr.in/your-brand] + [solid pill button: "Launch a Campaign →"]
+
+---
+
+[CREATOR CALCULATOR]
+
+Slider 1 — Your Follower Count
+Label: "How many followers do you have?"
+Range: 500 — 10,00,000
+Unit: followers
+
+Slider 2 — Posts Per Month
+Label: "How many campaign posts per month?"
+Range: 2 — 30
+Unit: posts
+
+Output template:
+  "Creators like you on sellr earn between
+   ₹[X] and ₹[Y] per month
+   from CPV payouts + affiliate commissions combined."
+
+Disclaimer:
+  *Estimated based on average CPV of ₹0.08–₹0.15 and 4–8% affiliate
+   conversion rate across active sellr campaigns.
+
+CTA Row:
+  [dashed pill: sellr.in/your_handle] + [solid pill button: "Join as a Creator →"]
+
+---
+
+CALCULATOR DESIGN NOTE:
+Exact multiplier formulas TBD — placeholder logic:
+  Brand output = budget × 0.0008 per view (CPV floor) × campaign_weeks × 1.3
+  Creator output = (followers × 0.001 × posts) × avg_cpv_₹0.10
+Replace with real data once first 100 active campaigns complete.
+
+Accent color for gradient emphasis word in headline: #FF5C00 (Liquid Lava)
+Dark section bg: #151419 (Dark Void)
+
+-----------------------------------------------------------------------
+SECTION 4 — FAQ
+-----------------------------------------------------------------------
+
+=== BRAND FAQ — 5 Q&As ===
+
+Q1: Do I need a big budget to start?
+A: No. You can launch a campaign starting from ₹5,000. Our CPV model means
+   you only spend money when real viewers actually watch your content — not
+   just when an ad loads on someone's screen. Start small, scale what works.
+
+Q2: How is this different from running Instagram or YouTube ads?
+A: Ads are push. sellr is pull. When a creator who already has a trusting
+   audience talks about your product — that's earned media, not paid media.
+   Our data shows 3–6x higher conversion rates vs. display ads in the same
+   category, because the recommendation comes from a real person, not a brand.
+
+Q3: What types of campaigns can I run?
+A: Three types — and you can mix them:
+   → UGC Video Campaigns: creators make authentic content about your product.
+   → Affiliate Campaigns: creators drive sales; you pay per conversion.
+   → Clipping Campaigns: creators cut and post viral-format short clips of your
+     existing video content, expanding your reach with zero extra production cost.
+   One dashboard. Three growth levers.
+
+Q4: How do I know the views are real and not bots?
+A: Every view is verified through the platform's engagement tracking before
+   any payout is processed. Creators only get paid for verified organic reach.
+   That means your billing is 100% tied to real human eyeballs — not inflated
+   impressions bought off an exchange.
+
+Q5: How long until I see results?
+A: Most campaigns get their first creator submissions within 48 hours of going
+   live. Campaigns with a clear brief and competitive CPV are typically fully
+   staffed within 72 hours. You'll see real-time data on views and conversions
+   from day one — no waiting for a monthly agency report.
+
+---
+
+=== CREATOR FAQ — 5 Q&As ===
+
+Q1: Do I need to be a big influencer to join?
+A: No. This is literally the point of sellr. If your content is good and your
+   audience trusts you — even 500 followers — there are brands here that want
+   to work with you. The era of "wait for a DM from a marketing agency" is
+   over. You come here, browse live campaigns, and apply directly.
+
+Q2: How exactly do I get paid?
+A: Three ways, depending on campaign type:
+   → CPV Payout: you earn per verified view on your campaign content.
+   → Affiliate Commission: you earn a % of every sale driven by your unique link.
+   → UGC Flat Fee: brands pay a fixed rate for the content you create,
+     regardless of views — think of it as a brand content job.
+   Payouts go directly to your linked payout account after verification.
+
+Q3: Do I have to follow a brand script?
+A: Brands on sellr specifically want authentic content — not scripted ads.
+   They give you a brief (product, key message, do's and don'ts), and you
+   create in your own style, your own language, your own voice. That's the
+   whole reason creators on this platform convert better than traditional ads.
+
+Q4: What if I post content and it doesn't get many views?
+A: Your payout scales with your reach — so lower views means lower CPV payout,
+   but you never go into debt or get penalized. The risk is on the brand, not
+   on you. For UGC campaigns (flat fee), you get paid regardless of view count.
+   Build your audience and your earnings grow with it.
+
+Q5: Can I participate in multiple campaigns at the same time?
+A: Yes — absolutely. Browse active campaigns, apply to as many as fit your
+   content style, and run them simultaneously. Your sellr creator profile
+   tracks all active campaigns, earnings, and payouts in one place. More
+   campaigns = more income streams, simple.
+
+-----------------------------------------------------------------------
+SECTION 5 — MANIFESTO / FEATURE SPLIT (Existing Section — Revised Copy)
+-----------------------------------------------------------------------
+
+Current heading: "Traditional platforms chase cold metrics. sellr disrupts the status quo."
+→ Keep structure. Suggest updating body copy to:
+
+"India has 200 million content creators. Less than 1% of them are paid fairly
+ for what they create. Meanwhile, brands spend crores on ads that feel like spam.
+
+ sellr fixes both sides of that equation. Creators get paid for reach.
+ Brands pay only for results. No agency cut. No algorithm lottery.
+ Just a marketplace where talent meets opportunity — and both sides win."
+
+Footer bar stays: "System: Decentralized  ●  Live"
+
+-----------------------------------------------------------------------
+SECTION 6 — COMPARISON TABLE (Existing Section — Revised Copy Suggestions)
+-----------------------------------------------------------------------
+
+Heading: Keep "THE EVOLUTION OF Advertising." — strong, works.
+Sub: Change from "// Stop fighting the algorithm. Start using it."
+     → "// The old model extracted value. We create it."
+
+Table rows — no changes needed, data is solid.
+Consider adding a 6th row:
+  Label: "CREATOR INCOME"
+  Definition: "Who actually gets paid?"
+  Competitors: "Mega-influencers only / Retainer-locked talent"
+  sellr: "OPEN: Every creator, every niche, every city"
+
+-----------------------------------------------------------------------
+SECTION 7 — UGC SHOWCASE SECTION (Existing Section — Revised Copy)
+-----------------------------------------------------------------------
+
+Keep: "REAL IMPACT, REAL RESULTS" — solid.
+
+Replace description from:
+  "Brands launch campaigns. Creators submit UGC clips. sellr's platform ensures..."
+To:
+  "This is what happens when real people talk about brands they actually tried.
+   No polish. No scripts. Just creators in their element — and brands getting
+   the results no ad ever could."
+
+Footer CTA: Change from "Explore All Clip Campaigns"
+→ "Browse Live Campaigns →" (more action-oriented)
+
+-----------------------------------------------------------------------
+SECTION 8 — NAVBAR COPY (Persona Toggle)
+-----------------------------------------------------------------------
+
+When in CREATOR mode:
+  Left: sellr logo
+  Center links: [How It Works] [Browse Campaigns] [Creator Payouts]
+  Right toggle pill: "For Brands →"
+
+When in BRAND mode:
+  Left: sellr logo
+  Center links: [How It Works] [Campaign Types] [Pricing]
+  Right toggle pill: "For Creators →"
+
+Note: The right pill is always showing the "other" persona as the CTA.
+Clicking it switches the entire page with a 200ms crossfade.
+
+-----------------------------------------------------------------------
+SECTION 9 — TONE & VOICE GUIDELINES (For All Copywriting)
+-----------------------------------------------------------------------
+
+DO:
+→ Speak like a smart friend, not a pitch deck.
+→ Lead with what the user gets, not what the platform does.
+→ Use numbers when they add credibility (3–6x ROAS, ₹0.08 CPV, 200M creators).
+→ India-first framing — "creator economy," "India's creators," "every city."
+→ Short sentences. Punchy. One idea per line.
+
+DON'T:
+→ Say "innovative," "cutting-edge," "revolutionary," "disruptive."
+→ Use passive voice ("brands are connected with creators").
+→ Bury the lead — put the benefit in the headline, not the 3rd paragraph.
+→ Make financial promises without a disclaimer.
+→ Use jargon the target user (a 22-year-old creator in Pune) wouldn't know.
+
+TARGET USERS:
+  Creator: 18–28, India, any city, 500–500K followers, wants income from content.
+  Brand: 25–45, DTC/SME/startup founder, tired of wasting ad spend.
+
+=======================================================================
+END OF FILE
+=======================================================================

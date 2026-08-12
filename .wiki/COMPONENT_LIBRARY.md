@@ -1,8 +1,10 @@
-# COMPONENT_LIBRARY.md – Shared UI Components
+# COMPONENT_LIBRARY.md – Shared UI Components & Design Standards
 
 ## Key UI Primitives (in `/src/components/ui/`)
+- **Stepper (`Stepper.tsx`, `Stepper.css`)**: **Mandatory Onboarding UI Standard**. Open-source React Bits animated step wizard component built with `framer-motion` slide transitions, automatic height resize detection via `ResizeObserver`, step indicators, progress connectors, and step labels. **All onboarding flows MUST use this component.**
 - **Button (`button.tsx`)**: Standard button, supports variants and loading state.
 - **Input (`input.tsx`)**: Text input, with label and error support.
+- **ImageCropInput (`ImageCropInput.tsx`)**: Centralized image uploader with aspect ratio cropping (1:1 logo, 3:1 banner) and 5MB size validation.
 - **Dialog (`dialog.tsx`)**: Modal dialog, composable for custom content.
 - **Card (`card.tsx`)**: Card container for grouping content.
 - **Table (`table.tsx`)**: Table component for data display.
@@ -15,21 +17,47 @@
 - **Popover (`popover.tsx`)**: Floating content container.
 - **Dropdown Menu (`dropdown-menu.tsx`)**: Menu for actions or navigation.
 
+---
+
+## 🚀 Onboarding Stepper UI Standard
+
+All onboarding workflows in Mipoe (Brand Onboarding, Affiliate Onboarding, Creator Onboarding, and any future onboarding flows) **must** be implemented using the `<Stepper />` UI primitive (`/src/components/ui/Stepper.tsx`).
+
+### Standardized Onboarding Flows:
+
+1. **Brand Onboarding (`BrandOnboarding.tsx`)**:
+   - **Step 1: Account**: Registered brand account details and active status.
+   - **Step 2: Verification**: Official PAN card number, holder name, business address, and Cashfree verification check.
+   - **Step 3: Profile Setup**: Business category (Personal Agency, Product Based, SaaS Based), website URL, brand description, mandatory logo upload, and Instagram/YouTube sandbox connections.
+   - **Step 4: Compliance Review**: Animated ticking clock review progress, admin feedback on rejection, or account verification completion.
+
+2. **Affiliate Onboarding (`AffiliateOnboarding.tsx`)**:
+   - **Step 1: Gateway Selection**: Choose payment processor (Stripe, Razorpay, PayU, Cashfree) or custom API integration.
+   - **Step 2: Integration Method**: Select architecture (Backend Server API, Serverless Edge, Database Webhooks, Client-side JS).
+   - **Step 3: Setup & Boilerplate**: Generate secret keys, view dynamic webhook checklist & copy framework code snippets (Node.js, Python, PHP, Go, cURL).
+   - **Step 4: Sandbox Connection Test**: Trigger test webhook ping, view live telemetry logs in the terminal console, and verify connection.
+
+3. **Creator Onboarding (`CompleteProfile.tsx`)**:
+   - **Step 1: Creator Bio & Info**: Nickname, bio description, phone number.
+   - **Step 2: Social Media Verification**: Connect Instagram Professional account / YouTube channel via OAuth or sandbox simulator.
+   - **Step 3: Payout Setup**: Configure UPI ID or Bank account details (account holder name, account number, IFSC code).
+   - **Step 4: Review & Launch**: Summary review, regulatory consent, and launch into Creator Hub.
+
+---
+
 ## Domain-Specific Brand Components (in `/src/components/brand/`)
-- **BrandOnboarding (`BrandOnboarding.tsx`)**: Standalone multi-step compliance wizard containing PAN inputs, disabled/locked states on verification success, a manual override Edit toggle, a secure brand logo image file uploader (supporting files up to 25MB, performing client-side center-cropping and up to 720x720px WebP pre-compression, and displaying an instant live circular avatar mockup preview card), and mandatory Instagram and YouTube OAuth connection buttons utilizing simulated sandbox connection flow modals.
-- **ClipsListTable (`ClipsListTable.tsx`)**: Top-row tabular view displaying all submitted, pending, and accepted clips for a selected campaign, with a compact popover filter for approval state and view-count ordering; by default it prioritizes non-approved clips before approved reels, then ranks by highest views.
-- **ReelPlayFrame (`ReelPlayFrame.tsx`)**: Bottom-left player preview displaying cached video thumbnails (with og:image S3 bucket url) and center play overlays.
-- **ReelMetricsPanel (`ReelMetricsPanel.tsx`)**: Bottom-right panel showing backend-supplied `view_count`, `like_count`, and `comment_count` metrics, dynamic outperforming/on-track/underperforming performance indicators, and composed charts mapping view growth against engagement rates over custom intervals.
-- **SaasCampaignBuilder (`SaasCampaignBuilder.tsx`)**: Form builder for launching SaaS-specific affiliate campaigns, supporting recurring payout rates mapped to interval schedules (weekly, monthly, yearly), product selection, and landing page domain restrictions.
-- **AffiliateCRM (`AffiliateCRM.tsx`)**: Rebuilt aggregated partner dashboard listing all affiliate creators, mapped campaigns, and code performance. Features a slide-in sub-panel with individual profile details, click stream telemetry log tables, and referred conversion events.
+- **BrandOnboarding (`BrandOnboarding.tsx`)**: Multi-step compliance wizard powered by `<Stepper />`.
+- **AffiliateOnboarding (`AffiliateOnboarding.tsx`)**: Multi-step technical gateway and webhook integration wizard.
+- **ClipsListTable (`ClipsListTable.tsx`)**: Tabular view displaying submitted, pending, and accepted clips for a selected campaign.
+- **ReelPlayFrame (`ReelPlayFrame.tsx`)**: Player preview displaying cached video thumbnails.
+- **ReelMetricsPanel (`ReelMetricsPanel.tsx`)**: Panel showing view counts, likes, comments, and engagement charts.
+- **SaasCampaignBuilder (`SaasCampaignBuilder.tsx`)**: Form builder for launching SaaS-specific affiliate campaigns.
+- **AffiliateCRM (`AffiliateCRM.tsx`)**: Aggregated partner dashboard listing affiliate creators and code performance.
 
-## Page-Level Notes
-- **Brand Campaign Analytics (`/src/pages/brand/CampaignAnalytics.tsx`)**: The statistics tab includes a "Top Performing Clips" section that ranks accepted reels by live engagement rate (`(likes + comments) / views`) and exposes a popover breakdown for each reel’s views, likes, and comments.
-- **Brand Affiliate Campaign Analytics (`/src/pages/brand/BrandAffiliateCampaignAnalytics.tsx`)**: Supports inline configuration editing under the "Overview & Campaign Rules" tab, allowing immediate updates of targets, commission values/intervals, follower criteria, and product associations with domain-matching validation. Also manages creator join applications.
-- **Creator Submissions (`/src/pages/creator/Submissions.tsx`)**: The submissions list now uses a dark, responsive table/card hybrid with filter controls for approval state and view-count ordering; accepted clips are pinned to the top by default and mobile users get stacked cards instead of a cramped table.
+---
 
-## Usage
+## Usage Guidelines
 - Always import from `/src/components/ui/` for shared primitives.
+- **Any new onboarding workflow MUST use `<Stepper />`** from `/src/components/ui/Stepper.tsx` for consistent UX across the application.
 - Prefer composition over duplication—extend primitives for custom needs.
 - Domain-specific widgets should reside in `/src/components/brand/` or `/src/components/creator/` folders.
-- Check this file before creating new UI components.

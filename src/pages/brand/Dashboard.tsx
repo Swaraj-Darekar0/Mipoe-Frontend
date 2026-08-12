@@ -629,12 +629,10 @@ const BrandDashboard = () => {
 
   // Render Onboarding Wizard
   return (
-    <BrandLayout>
-      <BrandOnboarding 
-        profile={profile} 
-        onProfileUpdated={loadProfile} 
-      />
-    </BrandLayout>
+    <BrandOnboarding 
+      profile={profile} 
+      onProfileUpdated={loadProfile} 
+    />
   );
 };
 
