@@ -17,7 +17,6 @@ interface DomeGalleryProps {
   maxVerticalRotationDeg?: number;
   dragSensitivity?: number;
   enlargeTransitionMs?: number;
-  segments?: number;
   dragDampening?: number;
   imageBorderRadius?: string;
   openedImageBorderRadius?: string;
@@ -27,19 +26,36 @@ interface DomeGalleryProps {
 }
 
 interface DomeItem {
-  x: number;
-  y: number;
-  sizeX: number;
-  sizeY: number;
+  /** Centre latitude in degrees: -90 is the south pole, +90 the north. */
+  lat: number;
+  /** Longitude in degrees around the globe. */
+  lon: number;
+  /**
+   * Card width (at its equator-facing edge) as a fraction of the sphere
+   * radius: that edge's circumference share, so adjacent cards in a ring
+   * touch along their wide edges and the meridian gaps between them stay
+   * constant-width lines that converge at the poles.
+   */
+  widthFactor: number;
+  /**
+   * Width of the pole-facing edge relative to the equator-facing edge —
+   * cos(latNarrow)/cos(latWide). 1 at the equator, 0 at the poles, where the
+   * card closes into a wedge and the whole ring converges to a point.
+   */
+  taper: number;
+  /** Which edge of the card faces its pole (the tapered edge). */
+  narrowEdge: "top" | "bottom";
   src: string;
   alt: string;
 }
 
 const DEFAULTS = {
-  maxVerticalRotationDeg: 5,
+  // 360 = free spin: vertical rotation wraps like a trackball, so the globe
+  // can be rolled up and over its poles. Pass anything < 180 to restore a
+  // clamped tilt instead.
+  maxVerticalRotationDeg: 360,
   dragSensitivity: 20,
   enlargeTransitionMs: 300,
-  segments: 35,
 };
 
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
@@ -54,15 +70,41 @@ const getDataNumber = (el: HTMLElement, name: string, fallback: number) => {
   return Number.isFinite(n) ? n : fallback;
 };
 
-function buildItems(pool: (string | DomeImage)[], seg: number): DomeItem[] {
-  const xCols = Array.from({ length: seg }, (_, i) => -37 + i * 2);
-  const evenYs = [-4, -2, 0, 2, 4];
-  const oddYs = [-3, -1, 1, 3, 5];
+function buildItems(pool: (string | DomeImage)[], latBands: number): DomeItem[] {
+  const bandDeg = 180 / latBands;
+  const toRad = Math.PI / 180;
 
-  const coords = xCols.flatMap((x, c) => {
-    const ys = c % 2 === 0 ? evenYs : oddYs;
-    return ys.map((y) => ({ x, y, sizeX: 2, sizeY: 2 }));
-  });
+  // Meridian tiling — the cards follow the globe's imaginary longitude lines.
+  // Every ring has the SAME number of cards, stacked in aligned columns like
+  // the segments of an orange. Convergence at the poles comes from geometry:
+  // each card's pole-facing edge is narrower than its equator-facing edge by
+  // exactly cos(latNarrow)/cos(latWide) (rendered with a clip-path taper), so
+  // the columns pinch continuously along their meridians and close into
+  // wedge points AT the poles — the "matter stretching into a black hole"
+  // convergence, rather than rings of loose rectangles.
+  //
+  // Cards per ring chosen so the equator cards are ~9:16 portraits (reels):
+  // card height arc = bandDeg, so lonStep ≈ (9/16)·bandDeg at cos(lat)=1.
+  const count = Math.round(360 / ((9 / 16) * bandDeg));
+  const lonStep = 360 / count;
+
+  const coords: Omit<DomeItem, "src" | "alt">[] = [];
+  for (let b = 0; b < latBands; b++) {
+    const latLow = -90 + b * bandDeg;
+    const latHigh = latLow + bandDeg;
+    const lat = (latLow + latHigh) / 2;
+    const cosLow = Math.cos(latLow * toRad);
+    const cosHigh = Math.cos(latHigh * toRad);
+    // The wide edge is whichever edge sits nearer the equator.
+    const cosWide = Math.max(cosLow, cosHigh);
+    const cosNarrow = Math.min(cosLow, cosHigh);
+    const widthFactor = (2 * Math.PI * cosWide) / count;
+    const taper = cosNarrow / cosWide;
+    const narrowEdge: "top" | "bottom" = lat > 0 ? "top" : "bottom";
+    for (let t = 0; t < count; t++) {
+      coords.push({ lat, lon: t * lonStep, widthFactor, taper, narrowEdge });
+    }
+  }
 
   const totalSlots = coords.length;
   if (pool.length === 0) {
@@ -91,12 +133,9 @@ function buildItems(pool: (string | DomeImage)[], seg: number): DomeItem[] {
   return coords.map((c, i) => ({ ...c, src: usedImages[i].src, alt: usedImages[i].alt }));
 }
 
-function computeItemBaseRotation(offsetX: number, offsetY: number, sizeX: number, sizeY: number, segments: number) {
-  const unit = 360 / segments / 2;
-  const rotateY = unit * (offsetX + (sizeX - 1) / 2);
-  const rotateX = unit * (offsetY - (sizeY - 1) / 2);
-  return { rotateX, rotateY };
-}
+/** Latitude bands the globe is divided into. 8 keeps each card's arc small
+ *  enough to fake curvature while keeping the DOM around ~140 tiles. */
+const LAT_BANDS = 8;
 
 const DomeGallery: React.FC<DomeGalleryProps> = ({
   images = [],
@@ -109,7 +148,6 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
   maxVerticalRotationDeg = DEFAULTS.maxVerticalRotationDeg,
   dragSensitivity = DEFAULTS.dragSensitivity,
   enlargeTransitionMs = DEFAULTS.enlargeTransitionMs,
-  segments = DEFAULTS.segments,
   dragDampening = 2,
   imageBorderRadius = "12px",
   openedImageBorderRadius = "16px",
@@ -135,6 +173,11 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
   const openingRef = useRef(false);
   const openStartedAtRef = useRef(0);
   const lastDragEndAt = useRef(0);
+  // Direction the idle rotation drifts in. Starts positive, then adopts
+  // whichever way the user last spun the dome, so after a flick the gallery
+  // keeps travelling the way they pushed it rather than snapping back to a
+  // fixed house direction.
+  const autoRotateDirRef = useRef(1);
 
   const scrollLockedRef = useRef(false);
   const lockScroll = useCallback(() => {
@@ -149,7 +192,7 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
     document.body.classList.remove("dg-scroll-lock");
   }, []);
 
-  const items = useMemo(() => buildItems(images, segments), [images, segments]);
+  const items = useMemo(() => buildItems(images, LAT_BANDS), [images]);
 
   const applyTransform = (xDeg: number, yDeg: number) => {
     const el = sphereRef.current;
@@ -191,6 +234,14 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
       const heightGuard = h * 1.35;
       radius = Math.min(radius, heightGuard);
       radius = clamp(radius, minRadius, maxRadius);
+      // Containment guard — deliberately applied AFTER the minRadius clamp.
+      // minRadius is a floor, so on a narrow container it OVERRODE the fit
+      // calculation and inflated the sphere past the container, clipping it on
+      // both sides at mobile widths. Capping here means a floor tuned for a
+      // wide desktop column can never overflow a narrow one. Half the width is
+      // the right cap because the sphere projects to roughly 1.5x its radius,
+      // which leaves a real margin rather than letting it touch the edges.
+      radius = Math.min(radius, w * 0.5);
       lockedRadiusRef.current = Math.round(radius);
 
       const viewerPad = Math.max(8, Math.round(minDim * padFactor));
@@ -228,7 +279,7 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
       const dt = (now - last) / 1000;
       last = now;
       if (!draggingRef.current && !inertiaRAF.current && !focusedElRef.current) {
-        const nextY = wrapAngleSigned(rotationRef.current.y + autoRotateSpeed * dt);
+        const nextY = wrapAngleSigned(rotationRef.current.y + autoRotateSpeed * dt * autoRotateDirRef.current);
         rotationRef.current = { x: rotationRef.current.x, y: nextY };
         applyTransform(rotationRef.current.x, nextY);
       }
@@ -266,7 +317,10 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
           inertiaRAF.current = null;
           return;
         }
-        const nextX = clamp(rotationRef.current.x - vY / 200, -maxVerticalRotationDeg, maxVerticalRotationDeg);
+        const rawX = rotationRef.current.x - vY / 200;
+        // ≥180 means trackball mode: wrap through the poles instead of
+        // stopping at a tilt limit (same rule as the drag handler).
+        const nextX = maxVerticalRotationDeg >= 180 ? wrapAngleSigned(rawX) : clamp(rawX, -maxVerticalRotationDeg, maxVerticalRotationDeg);
         const nextY = wrapAngleSigned(rotationRef.current.y + vX / 200);
         rotationRef.current = { x: nextX, y: nextY };
         applyTransform(nextX, nextY);
@@ -298,7 +352,8 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
           const dist2 = dxTotal * dxTotal + dyTotal * dyTotal;
           if (dist2 > 16) movedRef.current = true;
         }
-        const nextX = clamp(startRotRef.current.x - dyTotal / dragSensitivity, -maxVerticalRotationDeg, maxVerticalRotationDeg);
+        const rawX = startRotRef.current.x - dyTotal / dragSensitivity;
+        const nextX = maxVerticalRotationDeg >= 180 ? wrapAngleSigned(rawX) : clamp(rawX, -maxVerticalRotationDeg, maxVerticalRotationDeg);
         const nextY = wrapAngleSigned(startRotRef.current.y + dxTotal / dragSensitivity);
         if (rotationRef.current.x !== nextX || rotationRef.current.y !== nextY) {
           rotationRef.current = { x: nextX, y: nextY };
@@ -306,6 +361,11 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
         }
         if (last) {
           draggingRef.current = false;
+          // Adopt the user's spin direction for the idle rotation. Falls back
+          // to the total drag distance when the release velocity is ~0 (a slow
+          // drag), so a deliberate slow push still sets the direction.
+          const spin = Math.sign(dxTotal);
+          if (spin !== 0) autoRotateDirRef.current = spin;
           const [vMagX, vMagY] = velocity;
           const [dirX, dirY] = direction;
           let vx = vMagX * dirX;
@@ -369,22 +429,22 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
       const parent = el.parentElement as HTMLElement;
       focusedElRef.current = el;
       el.setAttribute("data-focused", "true");
-      const offsetX = getDataNumber(parent, "offsetX", 0);
-      const offsetY = getDataNumber(parent, "offsetY", 0);
-      const sizeX = getDataNumber(parent, "sizeX", 2);
-      const sizeY = getDataNumber(parent, "sizeY", 2);
-      const parentRot = computeItemBaseRotation(offsetX, offsetY, sizeX, sizeY, segments);
-      const parentY = normalizeAngle(parentRot.rotateY);
+      // The tile's own placement is rotateY(lon) rotateX(-lat), so the deltas
+      // that swing it flat to face the camera are the negation of those, minus
+      // however far the globe itself is currently turned.
+      const lat = getDataNumber(parent, "lat", 0);
+      const lon = getDataNumber(parent, "lon", 0);
+      const parentY = normalizeAngle(lon);
       const globalY = normalizeAngle(rotationRef.current.y);
       let rotY = -(parentY + globalY) % 360;
       if (rotY < -180) rotY += 360;
-      const rotX = -parentRot.rotateX - rotationRef.current.x;
+      const rotX = lat - rotationRef.current.x;
       parent.style.setProperty("--rot-y-delta", `${rotY}deg`);
       parent.style.setProperty("--rot-x-delta", `${rotX}deg`);
 
       const refDiv = document.createElement("div");
       refDiv.setAttribute("data-role", "reference");
-      refDiv.style.cssText = `position:absolute;inset:10px;opacity:0;transform:rotateX(${-parentRot.rotateX}deg) rotateY(${-parentRot.rotateY}deg);`;
+      refDiv.style.cssText = `position:absolute;inset:5%;opacity:0;transform:rotateX(${lat}deg) rotateY(${-lon}deg);`;
       parent.appendChild(refDiv);
 
       void refDiv.offsetHeight;
@@ -430,7 +490,7 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
         rootRef.current?.setAttribute("data-enlarging", "true");
       }, 16);
     },
-    [enlargeTransitionMs, lockScroll, segments, unlockScroll]
+    [enlargeTransitionMs, lockScroll, unlockScroll]
   );
 
   const onTileClick = useCallback(
@@ -465,11 +525,12 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
   return (
     <div
       ref={rootRef}
-      className="group absolute inset-0 [--radius:520px] [--viewer-pad:72px] [--circ:calc(var(--radius)*3.14)] [--rot-y:calc((360deg/var(--segments-x))/2)] [--rot-x:calc((360deg/var(--segments-y))/2)] [--item-width:calc(var(--circ)/var(--segments-x))] [--item-height:calc(var(--circ)/var(--segments-y))]"
+      // Every card shares one height: the pole-to-pole arc (πR) divided by the
+      // latitude bands. Card widths are set per-ring in the tile styles.
+      className="group absolute inset-0 [--radius:520px] [--viewer-pad:72px] [--item-height:calc((var(--radius)*3.1416)/var(--lat-bands))]"
       style={
         {
-          "--segments-x": segments,
-          "--segments-y": segments,
+          "--lat-bands": LAT_BANDS,
           "--overlay-blur-color": overlayBlurColor,
           "--tile-radius": imageBorderRadius,
           "--enlarge-radius": openedImageBorderRadius,
@@ -488,24 +549,42 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
           >
             {items.map((it, i) => (
               <div
-                key={`${it.x},${it.y},${i}`}
-                className="absolute [top:-999px] [bottom:-999px] [left:-999px] [right:-999px] m-auto [transform-origin:50%_50%] [backface-visibility:hidden] transition-transform duration-300 [transform-style:preserve-3d] [width:calc(var(--item-width)*var(--item-size-x))] [height:calc(var(--item-height)*var(--item-size-y))] [transform:rotateY(calc(var(--rot-y)*(var(--offset-x)+((var(--item-size-x)-1)/2))+var(--rot-y-delta,0deg)))_rotateX(calc(var(--rot-x)*(var(--offset-y)-((var(--item-size-y)-1)/2))+var(--rot-x-delta,0deg)))_translateZ(var(--radius))]"
+                key={`${it.lat},${it.lon},${i}`}
+                className="absolute [top:-999px] [bottom:-999px] [left:-999px] [right:-999px] m-auto [transform-origin:50%_50%] [backface-visibility:hidden] transition-transform duration-300 [transform-style:preserve-3d]"
                 data-src={it.src}
-                data-offset-x={it.x}
-                data-offset-y={it.y}
-                data-size-x={it.sizeX}
-                data-size-y={it.sizeY}
+                data-lat={it.lat}
+                data-lon={it.lon}
                 style={
                   {
-                    "--offset-x": it.x,
-                    "--offset-y": it.y,
-                    "--item-size-x": it.sizeX,
-                    "--item-size-y": it.sizeY,
+                    // Placed on the sphere by spherical coordinates. Width is
+                    // the wide (equator-facing) edge's share of its ring, so
+                    // meridian columns stay aligned from equator to pole.
+                    width: `calc(var(--radius) * ${it.widthFactor})`,
+                    height: "var(--item-height)",
+                    transform: `rotateY(calc(${it.lon}deg + var(--rot-y-delta, 0deg))) rotateX(calc(${-it.lat}deg + var(--rot-x-delta, 0deg))) translateZ(var(--radius))`,
                   } as React.CSSProperties
                 }
               >
                 <div
-                  className="absolute block inset-[10px] overflow-hidden [backface-visibility:hidden] [transform-style:preserve-3d] transition-transform duration-300 cursor-pointer [-webkit-tap-highlight-color:transparent] [touch-action:manipulation] pointer-events-auto [transform:translateZ(0)] focus:outline-none [border-radius:var(--tile-radius,12px)]"
+                  // Percentage gutter, not a fixed 10px: pole-adjacent cards
+                  // are narrow, and a fixed inset would collapse them.
+                  // The clip-path tapers the pole-facing edge to `taper` of
+                  // the card's width — cards become trapezoids that pinch
+                  // along their meridians and close into wedge points at the
+                  // poles. Skipped near the equator (taper ≈ 1) so those
+                  // cards keep their rounded corners; clip-path would
+                  // otherwise square them off for no visible gain.
+                  className="absolute block inset-[5%] overflow-hidden [backface-visibility:hidden] [transform-style:preserve-3d] transition-transform duration-300 cursor-pointer [-webkit-tap-highlight-color:transparent] [touch-action:manipulation] pointer-events-auto [transform:translateZ(0)] focus:outline-none [border-radius:var(--tile-radius,12px)]"
+                  style={
+                    it.taper < 0.9
+                      ? {
+                          clipPath:
+                            it.narrowEdge === "top"
+                              ? `polygon(${(50 * (1 - it.taper)).toFixed(2)}% 0, ${(100 - 50 * (1 - it.taper)).toFixed(2)}% 0, 100% 100%, 0 100%)`
+                              : `polygon(0 0, 100% 0, ${(100 - 50 * (1 - it.taper)).toFixed(2)}% 100%, ${(50 * (1 - it.taper)).toFixed(2)}% 100%)`,
+                        }
+                      : undefined
+                  }
                   role="button"
                   tabIndex={0}
                   aria-label={it.alt || "Open image"}
@@ -524,10 +603,30 @@ const DomeGallery: React.FC<DomeGalleryProps> = ({
           </div>
         </div>
 
-        <div className="absolute inset-0 m-auto z-[3] pointer-events-none [background-image:radial-gradient(rgba(235,235,235,0)_65%,var(--overlay-blur-color,#0a1530)_100%)]" />
-        <div className="absolute inset-0 m-auto z-[3] pointer-events-none [mask-image:radial-gradient(rgba(235,235,235,0)_70%,var(--overlay-blur-color,#0a1530)_90%)] backdrop-blur-[3px]" />
-        <div className="absolute left-0 right-0 top-0 h-[120px] z-[5] pointer-events-none rotate-180 [background:linear-gradient(to_bottom,transparent,var(--overlay-blur-color,#0a1530))]" />
-        <div className="absolute left-0 right-0 bottom-0 h-[120px] z-[5] pointer-events-none [background:linear-gradient(to_bottom,transparent,var(--overlay-blur-color,#0a1530))]" />
+        {/* A single ELLIPTICAL vignette, concentric with the globe, replaces the
+            old treatment (a radial wash plus two 120px linear bands pinned to
+            the top and bottom edges). Those bands ran straight across the
+            frame, cutting the sphere with two horizontal hard edges that read
+            as strips laid over the scene. A globe should recede radially, so
+            the falloff follows its silhouette instead: the centre stays fully
+            crisp and the fade only begins out where the sphere curves away.
+            Multi-stop with eased midpoints so there is no visible banding. */}
+        <div
+          className="absolute inset-0 z-[3] pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(ellipse 62% 62% at 50% 50%, transparent 0%, transparent 58%, color-mix(in srgb, var(--overlay-blur-color, #ffffff) 55%, transparent) 78%, var(--overlay-blur-color, #ffffff) 100%)",
+          }}
+        />
+        {/* Matching depth-of-field: blur strengthens with the same falloff, so
+            tiles soften as they curve away rather than at an arbitrary line. */}
+        <div
+          className="absolute inset-0 z-[4] pointer-events-none backdrop-blur-[2px]"
+          style={{
+            maskImage: "radial-gradient(ellipse 62% 62% at 50% 50%, transparent 62%, #000 92%)",
+            WebkitMaskImage: "radial-gradient(ellipse 62% 62% at 50% 50%, transparent 62%, #000 92%)",
+          }}
+        />
 
         <div ref={viewerRef} className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center [padding:var(--viewer-pad)]">
           <div

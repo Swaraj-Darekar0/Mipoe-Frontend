@@ -11,7 +11,10 @@ import Footer from '@/components/Home/Footer';
 const Index = () => {
   return (
     <div className="bg-background-light dark:bg-background-dark text-dark-void dark:text-snow font-mono transition-colors duration-300 antialiased overflow-x-hidden selection:bg-primary selection:text-snow min-h-screen">
-      <main className="w-full max-w-[1920px] mx-auto border-x border-dark-void dark:border-dusty-grey/30 min-h-screen flex flex-col relative">
+      {/* border-x is scoped to md+ : at mobile widths the page fills the
+          viewport, so the rule sat hard against both screen edges and read as
+          a stray vertical line beside the content rather than a page frame. */}
+      <main className="w-full max-w-[1920px] mx-auto md:border-x border-dark-void dark:border-dusty-grey/30 min-h-screen flex flex-col relative">
         {/* 1. Header */}
         {/* <Header /> */}
 
@@ -25,13 +28,13 @@ const Index = () => {
         <UGCShowcase />
         
         {/* 4. Manifesto Feature Split */}
-        <FeatureSplit />
+        {/* <FeatureSplit /> */}
         
         {/* 5. Interaction Model Guide */}
-        <IllustratedGuide />
+        {/* <IllustratedGuide /> */}
         
         {/* 6. Comparison Matrix */}
-        <ComparisonMatrix />
+        {/* <ComparisonMatrix /> */}
         
         {/* 7. Footer */}
         <Footer />
