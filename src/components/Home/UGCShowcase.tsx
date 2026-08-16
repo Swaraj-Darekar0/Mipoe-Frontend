@@ -16,7 +16,7 @@ export interface UGCClip {
   audioTrack?: string;
 }
 
-const DEFAULT_CLIPS: UGCClip[] = [
+export const DEFAULT_CLIPS: UGCClip[] = [
   {
     id: 'clip-1',
     creatorName: 'Ria Sharma',
@@ -170,7 +170,7 @@ const UGCShowcase: React.FC<UGCShowcaseProps> = ({ clips = DEFAULT_CLIPS }) => {
           </div>
 
           <p className="font-mono text-xs md:text-sm text-dusty-grey max-w-md leading-relaxed uppercase tracking-wider">
-            Brands launch campaigns. Creators submit UGC clips. Mipoe’s platform ensures that every clip is optimized for engagement, reach, and conversion, delivering measurable results for both parties.
+            This is what happens when real people talk about brands they actually tried. No polish. No scripts. Just creators in their element — and brands getting the results no ad ever could.
           </p>
         </div>
 
@@ -289,11 +289,11 @@ const UGCShowcase: React.FC<UGCShowcaseProps> = ({ clips = DEFAULT_CLIPS }) => {
           </p>
 
           {/* Call to Action Button */}
-          <a 
-            href="login?role=creator" 
+          <a
+            href="login?role=creator"
             className="group flex items-center gap-2 text-blue-500 hover:text-primary transition-colors uppercase tracking-widest font-bold"
           >
-            <span>Explore All Clip Campaigns</span>
+            <span>Browse Live Campaigns →</span>
             <ArrowUpRight className="w-4 h-4 transform group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </a>
         </div>

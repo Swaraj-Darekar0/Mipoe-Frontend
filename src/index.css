@@ -123,6 +123,10 @@
   .font-cursive {
     font-family: 'Parisienne', cursive;
   }
+
+  .dg-scroll-lock {
+    overflow: hidden;
+  }
 }
 
 
@@ -167,12 +171,48 @@
   --color-dusty-grey: #878787;
   --color-snow: #fbfbfb;
 
+  /* Persona section design system (sellr rebrand) — Notion-inspired tokens.
+     Scoped to the new persona-toggling sections only; kept out of the
+     existing radius/typography scale so shadcn primitives elsewhere are unaffected. */
+  --color-canvas: #ffffff;
+  --color-surface: #f6f5f4;
+  --color-surface-soft: #fafaf9;
+  --color-hairline: #e5e3df;
+  --color-hairline-soft: #ede9e4;
+  --color-hairline-strong: #c8c4be;
+
+  --color-ink: #1a1a1a;
+  --color-ink-deep: #000000;
+  --color-charcoal: #37352f;
+  --color-slate: #5d5b54;
+  --color-steel: #787671;
+  --color-stone: #a4a097;
+  --color-muted-notion: #bbb8b1;
+
+  --color-brand-navy: #0a1530;
+  --color-brand-navy-deep: #070f24;
+  --color-brand-navy-mid: #1a2a52;
+
+  --color-notion-purple: #5645d4;
+  --color-notion-purple-pressed: #4534b3;
+
+  --color-brand-teal: #2a9d99;
+  --color-creator-pink: #ff64c8;
+
+  --color-tint-peach: #ffe8d4;
+  --color-tint-rose: #fde0ec;
+  --color-tint-mint: #d9f3e1;
+  --color-tint-lavender: #e6e0f5;
+  --color-tint-sky: #dcecfa;
+  --color-tint-yellow: #fef7d6;
+
   --border-radius-lg: var(--radius);
   --border-radius-md: calc(var(--radius) - 2px);
   --border-radius-sm: calc(var(--radius) - 4px);
 
   --animation-accordion-down: accordion-down 0.2s ease-out;
   --animation-accordion-up: accordion-up 0.2s ease-out;
+  --animation-card-sway: card-sway 4s ease-in-out infinite;
 
   @keyframes accordion-down {
     from {
@@ -189,6 +229,16 @@
     }
     to {
       height: 0;
+    }
+  }
+
+  @keyframes card-sway {
+    0%,
+    100% {
+      transform: rotate(-3deg);
+    }
+    50% {
+      transform: rotate(3deg);
     }
   }
 }

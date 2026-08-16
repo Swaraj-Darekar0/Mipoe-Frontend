@@ -11,9 +11,7 @@ SECTION 0 — BRAND IDENTITY ONE-LINER (Global, Used Everywhere)
 
 "India's first pay-on-impact creator marketplace."
 
-Sub-tagline options:
-- "Brands pay for reach. Creators earn on results."
-- "The algorithm isn't your enemy. We made it your employee."
+Sub-tagline:
 - "Stop buying ads. Start buying outcomes."
 
 -----------------------------------------------------------------------
@@ -34,15 +32,923 @@ Sub-headline (muted gray, max ~70 chars):
 Primary CTA button:
   → "Start Earning Today"
 
-Visual RHS (phone mockup feed context label):
-  → Show 5–7 phone cards with live creator content from the UGC feed:
-     clips from @RiaUnfiltered, @ZoyaFits, @MeeraEdits etc.
-     Views/likes badges visible (248K views, 34K likes).
+Visual RHS (dome gallery compeonent feed context label):
+  → Show dome gallery compeonent from  npx shadcn shadcn@latest add @react-bits/DomeGallery-JS-CSS:
+     clips from @RiaUnfiltered, @ZoyaFits, @MeeraEdits etc.for now repeat the clip images ,as we don't have much in the hardcoded image urls (you can take this image urls from one of our componetns -D:\Mipoe\Mipoe-Frontend\src\components\Home\UGCShowcase.tsx)
+      also here is referencve prompt to create such componet which we copied from shadcn , tune its color pallete as pe our use case , 
+    :- ## Integrate the <DomeGallery /> component from React Bits
+
+    You are helping integrate an open-source React component into an existing application.
+
+    ### Component: DomeGallery
+    ### Variant: JavaScript + CSS
+    ### Dependencies: @use-gesture/react
+
+    ---
+
+    ### Usage Example
+    ```jsx
+    import DomeGallery from './DomeGallery';
+    export default function App() {
+      return (
+        <div style={{ width: '100vw', height: '100vh' }}>
+          <DomeGallery />
+        </div>
+      );
+    }
+    ```
+
+    ### Props
+    | Prop | Type | Default | Description |
+    |------|------|---------|-------------|
+    | images | (string | { src: string; alt?: string })[] | DEFAULT_IMAGES | Array of image URLs (strings) or image objects with src and optional alt text |
+    | fit | number | 0.5 | Size factor for the dome radius based on container dimensions |
+    | fitBasis | 'auto' | 'min' | 'max' | 'width' | 'height' | 'auto' | Basis for calculating the dome size |
+    | minRadius | number | 600 | Minimum radius for the dome in pixels |
+    | maxRadius | number | Infinity | Maximum radius for the dome in pixels |
+    | padFactor | number | 0.25 | Padding factor for the viewer area |
+    | overlayBlurColor | string | '#120F17' | Color for the outer portion of the radial overlay blur |
+    | maxVerticalRotationDeg | number | 5 | Maximum vertical rotation angle in degrees |
+    | dragSensitivity | number | 20 | Sensitivity of drag interactions |
+    | enlargeTransitionMs | number | 300 | Duration of image enlargement transition in milliseconds |
+    | segments | number | 35 | Number of segments for both X and Y to keep the dome proportional |
+    | dragDampening | number | 2 | Damping factor for drag inertia (0-1, higher = more damping) |
+    | openedImageWidth | string | '400px' | Width of the enlarged image |
+    | openedImageHeight | string | '400px' | Height of the enlarged image |
+    | imageBorderRadius | string | '30px' | Border radius for closed tile images |
+    | openedImageBorderRadius | string | '30px' | Border radius for opened/enlarged images |
+    | grayscale | boolean | true | Whether to render all images in grayscale |
+
+    ### Full Component Source
+    ```jsx
+    import { useEffect, useMemo, useRef, useCallback } from 'react';
+    import { useGesture } from '@use-gesture/react';
+    import './DomeGallery.css';
+
+    const DEFAULT_IMAGES = [
+      {
+        src: 'https://images.unsplash.com/photo-1755331039789-7e5680e26e8f?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        alt: 'Abstract art'
+      },
+      {
+        src: 'https://images.unsplash.com/photo-1755569309049-98410b94f66d?q=80&w=772&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        alt: 'Modern sculpture'
+      },
+      {
+        src: 'https://images.unsplash.com/photo-1755497595318-7e5e3523854f?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        alt: 'Digital artwork'
+      },
+      {
+        src: 'https://images.unsplash.com/photo-1755353985163-c2a0fe5ac3d8?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        alt: 'Contemporary art'
+      },
+      {
+        src: 'https://images.unsplash.com/photo-1745965976680-d00be7dc0377?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        alt: 'Geometric pattern'
+      },
+      {
+        src: 'https://images.unsplash.com/photo-1752588975228-21f44630bb3c?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        alt: 'Textured surface'
+      },
+      { src: 'https://pbs.twimg.com/media/Gyla7NnXMAAXSo_?format=jpg&name=large', alt: 'Social media image' }
+    ];
+
+    const DEFAULTS = {
+      maxVerticalRotationDeg: 5,
+      dragSensitivity: 20,
+      enlargeTransitionMs: 300,
+      segments: 35
+    };
+
+    const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+    const normalizeAngle = d => ((d % 360) + 360) % 360;
+    const wrapAngleSigned = deg => {
+      const a = (((deg + 180) % 360) + 360) % 360;
+      return a - 180;
+    };
+    const getDataNumber = (el, name, fallback) => {
+      const attr = el.dataset[name] ?? el.getAttribute(`data-${name}`);
+      const n = attr == null ? NaN : parseFloat(attr);
+      return Number.isFinite(n) ? n : fallback;
+    };
+
+    function buildItems(pool, seg) {
+      const xCols = Array.from({ length: seg }, (_, i) => -37 + i * 2);
+      const evenYs = [-4, -2, 0, 2, 4];
+      const oddYs = [-3, -1, 1, 3, 5];
+
+      const coords = xCols.flatMap((x, c) => {
+        const ys = c % 2 === 0 ? evenYs : oddYs;
+        return ys.map(y => ({ x, y, sizeX: 2, sizeY: 2 }));
+      });
+
+      const totalSlots = coords.length;
+      if (pool.length === 0) {
+        return coords.map(c => ({ ...c, src: '', alt: '' }));
+      }
+      if (pool.length > totalSlots) {
+        console.warn(
+          `[DomeGallery] Provided image count (${pool.length}) exceeds available tiles (${totalSlots}). Some images will not be shown.`
+        );
+      }
+
+      const normalizedImages = pool.map(image => {
+        if (typeof image === 'string') {
+          return { src: image, alt: '' };
+        }
+        return { src: image.src || '', alt: image.alt || '' };
+      });
+
+      const usedImages = Array.from({ length: totalSlots }, (_, i) => normalizedImages[i % normalizedImages.length]);
+
+      for (let i = 1; i < usedImages.length; i++) {
+        if (usedImages[i].src === usedImages[i - 1].src) {
+          for (let j = i + 1; j < usedImages.length; j++) {
+            if (usedImages[j].src !== usedImages[i].src) {
+              const tmp = usedImages[i];
+              usedImages[i] = usedImages[j];
+              usedImages[j] = tmp;
+              break;
+            }
+          }
+        }
+      }
+
+      return coords.map((c, i) => ({
+        ...c,
+        src: usedImages[i].src,
+        alt: usedImages[i].alt
+      }));
+    }
+
+    function computeItemBaseRotation(offsetX, offsetY, sizeX, sizeY, segments) {
+      const unit = 360 / segments / 2;
+      const rotateY = unit * (offsetX + (sizeX - 1) / 2);
+      const rotateX = unit * (offsetY - (sizeY - 1) / 2);
+      return { rotateX, rotateY };
+    }
+
+    export default function DomeGallery({
+      images = DEFAULT_IMAGES,
+      fit = 0.5,
+      fitBasis = 'auto',
+      minRadius = 600,
+      maxRadius = Infinity,
+      padFactor = 0.25,
+      overlayBlurColor = '#120F17',
+      maxVerticalRotationDeg = DEFAULTS.maxVerticalRotationDeg,
+      dragSensitivity = DEFAULTS.dragSensitivity,
+      enlargeTransitionMs = DEFAULTS.enlargeTransitionMs,
+      segments = DEFAULTS.segments,
+      dragDampening = 2,
+      openedImageWidth = '250px',
+      openedImageHeight = '350px',
+      imageBorderRadius = '30px',
+      openedImageBorderRadius = '30px',
+      grayscale = true
+    }) {
+      const rootRef = useRef(null);
+      const mainRef = useRef(null);
+      const sphereRef = useRef(null);
+      const frameRef = useRef(null);
+      const viewerRef = useRef(null);
+      const scrimRef = useRef(null);
+      const focusedElRef = useRef(null);
+      const originalTilePositionRef = useRef(null);
+
+      const rotationRef = useRef({ x: 0, y: 0 });
+      const startRotRef = useRef({ x: 0, y: 0 });
+      const startPosRef = useRef(null);
+      const draggingRef = useRef(false);
+      const movedRef = useRef(false);
+      const inertiaRAF = useRef(null);
+      const openingRef = useRef(false);
+      const openStartedAtRef = useRef(0);
+      const lastDragEndAt = useRef(0);
+
+      const scrollLockedRef = useRef(false);
+      const lockScroll = useCallback(() => {
+        if (scrollLockedRef.current) return;
+        scrollLockedRef.current = true;
+        document.body.classList.add('dg-scroll-lock');
+      }, []);
+      const unlockScroll = useCallback(() => {
+        if (!scrollLockedRef.current) return;
+        if (rootRef.current?.getAttribute('data-enlarging') === 'true') return;
+        scrollLockedRef.current = false;
+        document.body.classList.remove('dg-scroll-lock');
+      }, []);
+
+      const items = useMemo(() => buildItems(images, segments), [images, segments]);
+
+      const applyTransform = (xDeg, yDeg) => {
+        const el = sphereRef.current;
+        if (el) {
+          el.style.transform = `translateZ(calc(var(--radius) * -1)) rotateX(${xDeg}deg) rotateY(${yDeg}deg)`;
+        }
+      };
+
+      const lockedRadiusRef = useRef(null);
+
+      useEffect(() => {
+        const root = rootRef.current;
+        if (!root) return;
+        const ro = new ResizeObserver(entries => {
+          const cr = entries[0].contentRect;
+          const w = Math.max(1, cr.width),
+            h = Math.max(1, cr.height);
+          const minDim = Math.min(w, h),
+            maxDim = Math.max(w, h),
+            aspect = w / h;
+          let basis;
+          switch (fitBasis) {
+            case 'min':
+              basis = minDim;
+              break;
+            case 'max':
+              basis = maxDim;
+              break;
+            case 'width':
+              basis = w;
+              break;
+            case 'height':
+              basis = h;
+              break;
+            default:
+              basis = aspect >= 1.3 ? w : minDim;
+          }
+          let radius = basis * fit;
+          const heightGuard = h * 1.35;
+          radius = Math.min(radius, heightGuard);
+          radius = clamp(radius, minRadius, maxRadius);
+          lockedRadiusRef.current = Math.round(radius);
+
+          const viewerPad = Math.max(8, Math.round(minDim * padFactor));
+          root.style.setProperty('--radius', `${lockedRadiusRef.current}px`);
+          root.style.setProperty('--viewer-pad', `${viewerPad}px`);
+          root.style.setProperty('--overlay-blur-color', overlayBlurColor);
+          root.style.setProperty('--tile-radius', imageBorderRadius);
+          root.style.setProperty('--enlarge-radius', openedImageBorderRadius);
+          root.style.setProperty('--image-filter', grayscale ? 'grayscale(1)' : 'none');
+          applyTransform(rotationRef.current.x, rotationRef.current.y);
+
+          const enlargedOverlay = viewerRef.current?.querySelector('.enlarge');
+          if (enlargedOverlay && frameRef.current && mainRef.current) {
+            const frameR = frameRef.current.getBoundingClientRect();
+            const mainR = mainRef.current.getBoundingClientRect();
+
+            const hasCustomSize = openedImageWidth && openedImageHeight;
+            if (hasCustomSize) {
+              const tempDiv = document.createElement('div');
+              tempDiv.style.cssText = `position: absolute; width: ${openedImageWidth}; height: ${openedImageHeight}; visibility: hidden;`;
+              document.body.appendChild(tempDiv);
+              const tempRect = tempDiv.getBoundingClientRect();
+              document.body.removeChild(tempDiv);
+
+              const centeredLeft = frameR.left - mainR.left + (frameR.width - tempRect.width) / 2;
+              const centeredTop = frameR.top - mainR.top + (frameR.height - tempRect.height) / 2;
+
+              enlargedOverlay.style.left = `${centeredLeft}px`;
+              enlargedOverlay.style.top = `${centeredTop}px`;
+            } else {
+              enlargedOverlay.style.left = `${frameR.left - mainR.left}px`;
+              enlargedOverlay.style.top = `${frameR.top - mainR.top}px`;
+              enlargedOverlay.style.width = `${frameR.width}px`;
+              enlargedOverlay.style.height = `${frameR.height}px`;
+            }
+          }
+        });
+        ro.observe(root);
+        return () => ro.disconnect();
+      }, [
+        fit,
+        fitBasis,
+        minRadius,
+        maxRadius,
+        padFactor,
+        overlayBlurColor,
+        grayscale,
+        imageBorderRadius,
+        openedImageBorderRadius,
+        openedImageWidth,
+        openedImageHeight
+      ]);
+
+      useEffect(() => {
+        applyTransform(rotationRef.current.x, rotationRef.current.y);
+      }, []);
+
+      const stopInertia = useCallback(() => {
+        if (inertiaRAF.current) {
+          cancelAnimationFrame(inertiaRAF.current);
+          inertiaRAF.current = null;
+        }
+      }, []);
+
+      const startInertia = useCallback(
+        (vx, vy) => {
+          const MAX_V = 1.4;
+          let vX = clamp(vx, -MAX_V, MAX_V) * 80;
+          let vY = clamp(vy, -MAX_V, MAX_V) * 80;
+          let frames = 0;
+          const d = clamp(dragDampening ?? 0.6, 0, 1);
+          const frictionMul = 0.94 + 0.055 * d;
+          const stopThreshold = 0.015 - 0.01 * d;
+          const maxFrames = Math.round(90 + 270 * d);
+          const step = () => {
+            vX *= frictionMul;
+            vY *= frictionMul;
+            if (Math.abs(vX) < stopThreshold && Math.abs(vY) < stopThreshold) {
+              inertiaRAF.current = null;
+              return;
+            }
+            if (++frames > maxFrames) {
+              inertiaRAF.current = null;
+              return;
+            }
+            const nextX = clamp(rotationRef.current.x - vY / 200, -maxVerticalRotationDeg, maxVerticalRotationDeg);
+            const nextY = wrapAngleSigned(rotationRef.current.y + vX / 200);
+            rotationRef.current = { x: nextX, y: nextY };
+            applyTransform(nextX, nextY);
+            inertiaRAF.current = requestAnimationFrame(step);
+          };
+          stopInertia();
+          inertiaRAF.current = requestAnimationFrame(step);
+        },
+        [dragDampening, maxVerticalRotationDeg, stopInertia]
+      );
+
+      useGesture(
+        {
+          onDragStart: ({ event }) => {
+            if (focusedElRef.current) return;
+            stopInertia();
+            const evt = event;
+            draggingRef.current = true;
+            movedRef.current = false;
+            startRotRef.current = { ...rotationRef.current };
+            startPosRef.current = { x: evt.clientX, y: evt.clientY };
+          },
+          onDrag: ({ event, last, velocity = [0, 0], direction = [0, 0], movement }) => {
+            if (focusedElRef.current || !draggingRef.current || !startPosRef.current) return;
+            const evt = event;
+            const dxTotal = evt.clientX - startPosRef.current.x;
+            const dyTotal = evt.clientY - startPosRef.current.y;
+            if (!movedRef.current) {
+              const dist2 = dxTotal * dxTotal + dyTotal * dyTotal;
+              if (dist2 > 16) movedRef.current = true;
+            }
+            const nextX = clamp(
+              startRotRef.current.x - dyTotal / dragSensitivity,
+              -maxVerticalRotationDeg,
+              maxVerticalRotationDeg
+            );
+            const nextY = wrapAngleSigned(startRotRef.current.y + dxTotal / dragSensitivity);
+            if (rotationRef.current.x !== nextX || rotationRef.current.y !== nextY) {
+              rotationRef.current = { x: nextX, y: nextY };
+              applyTransform(nextX, nextY);
+            }
+            if (last) {
+              draggingRef.current = false;
+              let [vMagX, vMagY] = velocity;
+              const [dirX, dirY] = direction;
+              let vx = vMagX * dirX;
+              let vy = vMagY * dirY;
+              if (Math.abs(vx) < 0.001 && Math.abs(vy) < 0.001 && Array.isArray(movement)) {
+                const [mx, my] = movement;
+                vx = clamp((mx / dragSensitivity) * 0.02, -1.2, 1.2);
+                vy = clamp((my / dragSensitivity) * 0.02, -1.2, 1.2);
+              }
+              if (Math.abs(vx) > 0.005 || Math.abs(vy) > 0.005) startInertia(vx, vy);
+              if (movedRef.current) lastDragEndAt.current = performance.now();
+              movedRef.current = false;
+            }
+          }
+        },
+        { target: mainRef, eventOptions: { passive: true } }
+      );
+
+      useEffect(() => {
+        const scrim = scrimRef.current;
+        if (!scrim) return;
+        const close = () => {
+          if (performance.now() - openStartedAtRef.current < 250) return;
+          const el = focusedElRef.current;
+          if (!el) return;
+          const parent = el.parentElement;
+          const overlay = viewerRef.current?.querySelector('.enlarge');
+          if (!overlay) return;
+          const refDiv = parent.querySelector('.item__image--reference');
+          const originalPos = originalTilePositionRef.current;
+          if (!originalPos) {
+            overlay.remove();
+            if (refDiv) refDiv.remove();
+            parent.style.setProperty('--rot-y-delta', '0deg');
+            parent.style.setProperty('--rot-x-delta', '0deg');
+            el.style.visibility = '';
+            el.style.zIndex = 0;
+            focusedElRef.current = null;
+            rootRef.current?.removeAttribute('data-enlarging');
+            openingRef.current = false;
+            unlockScroll();
+            return;
+          }
+          const currentRect = overlay.getBoundingClientRect();
+          const rootRect = rootRef.current.getBoundingClientRect();
+          const originalPosRelativeToRoot = {
+            left: originalPos.left - rootRect.left,
+            top: originalPos.top - rootRect.top,
+            width: originalPos.width,
+            height: originalPos.height
+          };
+          const overlayRelativeToRoot = {
+            left: currentRect.left - rootRect.left,
+            top: currentRect.top - rootRect.top,
+            width: currentRect.width,
+            height: currentRect.height
+          };
+          const animatingOverlay = document.createElement('div');
+          animatingOverlay.className = 'enlarge-closing';
+          animatingOverlay.style.cssText = `position:absolute;left:${overlayRelativeToRoot.left}px;top:${overlayRelativeToRoot.top}px;width:${overlayRelativeToRoot.width}px;height:${overlayRelativeToRoot.height}px;z-index:9999;border-radius: var(--enlarge-radius, 32px);overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.35);transition:all ${enlargeTransitionMs}ms ease-out;pointer-events:none;margin:0;transform:none;`;
+          const originalImg = overlay.querySelector('img');
+          if (originalImg) {
+            const img = originalImg.cloneNode();
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            animatingOverlay.appendChild(img);
+          }
+          overlay.remove();
+          rootRef.current.appendChild(animatingOverlay);
+          void animatingOverlay.getBoundingClientRect();
+          requestAnimationFrame(() => {
+            animatingOverlay.style.left = originalPosRelativeToRoot.left + 'px';
+            animatingOverlay.style.top = originalPosRelativeToRoot.top + 'px';
+            animatingOverlay.style.width = originalPosRelativeToRoot.width + 'px';
+            animatingOverlay.style.height = originalPosRelativeToRoot.height + 'px';
+            animatingOverlay.style.opacity = '0';
+          });
+          const cleanup = () => {
+            animatingOverlay.remove();
+            originalTilePositionRef.current = null;
+            if (refDiv) refDiv.remove();
+            parent.style.transition = 'none';
+            el.style.transition = 'none';
+            parent.style.setProperty('--rot-y-delta', '0deg');
+            parent.style.setProperty('--rot-x-delta', '0deg');
+            requestAnimationFrame(() => {
+              el.style.visibility = '';
+              el.style.opacity = '0';
+              el.style.zIndex = 0;
+              focusedElRef.current = null;
+              rootRef.current?.removeAttribute('data-enlarging');
+              requestAnimationFrame(() => {
+                parent.style.transition = '';
+                el.style.transition = 'opacity 300ms ease-out';
+                requestAnimationFrame(() => {
+                  el.style.opacity = '1';
+                  setTimeout(() => {
+                    el.style.transition = '';
+                    el.style.opacity = '';
+                    openingRef.current = false;
+                    if (!draggingRef.current && rootRef.current?.getAttribute('data-enlarging') !== 'true')
+                      document.body.classList.remove('dg-scroll-lock');
+                  }, 300);
+                });
+              });
+            });
+          };
+          animatingOverlay.addEventListener('transitionend', cleanup, { once: true });
+        };
+        scrim.addEventListener('click', close);
+        const onKey = e => {
+          if (e.key === 'Escape') close();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => {
+          scrim.removeEventListener('click', close);
+          window.removeEventListener('keydown', onKey);
+        };
+      }, [enlargeTransitionMs, unlockScroll]);
+
+      const openItemFromElement = useCallback(
+        el => {
+          if (openingRef.current) return;
+          openingRef.current = true;
+          openStartedAtRef.current = performance.now();
+          lockScroll();
+          const parent = el.parentElement;
+          focusedElRef.current = el;
+          el.setAttribute('data-focused', 'true');
+          const offsetX = getDataNumber(parent, 'offsetX', 0);
+          const offsetY = getDataNumber(parent, 'offsetY', 0);
+          const sizeX = getDataNumber(parent, 'sizeX', 2);
+          const sizeY = getDataNumber(parent, 'sizeY', 2);
+          const parentRot = computeItemBaseRotation(offsetX, offsetY, sizeX, sizeY, segments);
+          const parentY = normalizeAngle(parentRot.rotateY);
+          const globalY = normalizeAngle(rotationRef.current.y);
+          let rotY = -(parentY + globalY) % 360;
+          if (rotY < -180) rotY += 360;
+          const rotX = -parentRot.rotateX - rotationRef.current.x;
+          parent.style.setProperty('--rot-y-delta', `${rotY}deg`);
+          parent.style.setProperty('--rot-x-delta', `${rotX}deg`);
+          const refDiv = document.createElement('div');
+          refDiv.className = 'item__image item__image--reference';
+          refDiv.style.opacity = '0';
+          refDiv.style.transform = `rotateX(${-parentRot.rotateX}deg) rotateY(${-parentRot.rotateY}deg)`;
+          parent.appendChild(refDiv);
+
+          void refDiv.offsetHeight;
+
+          const tileR = refDiv.getBoundingClientRect();
+          const mainR = mainRef.current?.getBoundingClientRect();
+          const frameR = frameRef.current?.getBoundingClientRect();
+
+          if (!mainR || !frameR || tileR.width <= 0 || tileR.height <= 0) {
+            openingRef.current = false;
+            focusedElRef.current = null;
+            parent.removeChild(refDiv);
+            unlockScroll();
+            return;
+          }
+
+          originalTilePositionRef.current = { left: tileR.left, top: tileR.top, width: tileR.width, height: tileR.height };
+          el.style.visibility = 'hidden';
+          el.style.zIndex = 0;
+          const overlay = document.createElement('div');
+          overlay.className = 'enlarge';
+          overlay.style.position = 'absolute';
+          overlay.style.left = frameR.left - mainR.left + 'px';
+          overlay.style.top = frameR.top - mainR.top + 'px';
+          overlay.style.width = frameR.width + 'px';
+          overlay.style.height = frameR.height + 'px';
+          overlay.style.opacity = '0';
+          overlay.style.zIndex = '30';
+          overlay.style.willChange = 'transform, opacity';
+          overlay.style.transformOrigin = 'top left';
+          overlay.style.transition = `transform ${enlargeTransitionMs}ms ease, opacity ${enlargeTransitionMs}ms ease`;
+          const rawSrc = parent.dataset.src || el.querySelector('img')?.src || '';
+          const img = document.createElement('img');
+          img.src = rawSrc;
+          overlay.appendChild(img);
+          viewerRef.current.appendChild(overlay);
+          const tx0 = tileR.left - frameR.left;
+          const ty0 = tileR.top - frameR.top;
+          const sx0 = tileR.width / frameR.width;
+          const sy0 = tileR.height / frameR.height;
+
+          const validSx0 = isFinite(sx0) && sx0 > 0 ? sx0 : 1;
+          const validSy0 = isFinite(sy0) && sy0 > 0 ? sy0 : 1;
+
+          overlay.style.transform = `translate(${tx0}px, ${ty0}px) scale(${validSx0}, ${validSy0})`;
+
+          setTimeout(() => {
+            if (!overlay.parentElement) return;
+            overlay.style.opacity = '1';
+            overlay.style.transform = 'translate(0px, 0px) scale(1, 1)';
+            rootRef.current?.setAttribute('data-enlarging', 'true');
+          }, 16);
+
+          const wantsResize = openedImageWidth || openedImageHeight;
+          if (wantsResize) {
+            const onFirstEnd = ev => {
+              if (ev.propertyName !== 'transform') return;
+              overlay.removeEventListener('transitionend', onFirstEnd);
+              const prevTransition = overlay.style.transition;
+              overlay.style.transition = 'none';
+              const tempWidth = openedImageWidth || `${frameR.width}px`;
+              const tempHeight = openedImageHeight || `${frameR.height}px`;
+              overlay.style.width = tempWidth;
+              overlay.style.height = tempHeight;
+              const newRect = overlay.getBoundingClientRect();
+              overlay.style.width = frameR.width + 'px';
+              overlay.style.height = frameR.height + 'px';
+              void overlay.offsetWidth;
+              overlay.style.transition = `left ${enlargeTransitionMs}ms ease, top ${enlargeTransitionMs}ms ease, width ${enlargeTransitionMs}ms ease, height ${enlargeTransitionMs}ms ease`;
+              const centeredLeft = frameR.left - mainR.left + (frameR.width - newRect.width) / 2;
+              const centeredTop = frameR.top - mainR.top + (frameR.height - newRect.height) / 2;
+              requestAnimationFrame(() => {
+                overlay.style.left = `${centeredLeft}px`;
+                overlay.style.top = `${centeredTop}px`;
+                overlay.style.width = tempWidth;
+                overlay.style.height = tempHeight;
+              });
+              const cleanupSecond = () => {
+                overlay.removeEventListener('transitionend', cleanupSecond);
+                overlay.style.transition = prevTransition;
+              };
+              overlay.addEventListener('transitionend', cleanupSecond, { once: true });
+            };
+            overlay.addEventListener('transitionend', onFirstEnd);
+          }
+        },
+        [enlargeTransitionMs, lockScroll, openedImageHeight, openedImageWidth, segments, unlockScroll]
+      );
+
+      const onTileClick = useCallback(
+        e => {
+          if (draggingRef.current) return;
+          if (movedRef.current) return;
+          if (performance.now() - lastDragEndAt.current < 80) return;
+          if (openingRef.current) return;
+          openItemFromElement(e.currentTarget);
+        },
+        [openItemFromElement]
+      );
+
+      const onTilePointerUp = useCallback(
+        e => {
+          if (e.pointerType !== 'touch') return;
+          if (draggingRef.current) return;
+          if (movedRef.current) return;
+          if (performance.now() - lastDragEndAt.current < 80) return;
+          if (openingRef.current) return;
+          openItemFromElement(e.currentTarget);
+        },
+        [openItemFromElement]
+      );
+
+      useEffect(() => {
+        return () => {
+          document.body.classList.remove('dg-scroll-lock');
+        };
+      }, []);
+
+      return (
+        <div
+          ref={rootRef}
+          className="sphere-root"
+          style={{
+            ['--segments-x']: segments,
+            ['--segments-y']: segments,
+            ['--overlay-blur-color']: overlayBlurColor,
+            ['--tile-radius']: imageBorderRadius,
+            ['--enlarge-radius']: openedImageBorderRadius,
+            ['--image-filter']: grayscale ? 'grayscale(1)' : 'none'
+          }}
+        >
+          <main ref={mainRef} className="sphere-main">
+            <div className="stage">
+              <div ref={sphereRef} className="sphere">
+                {items.map((it, i) => (
+                  <div
+                    key={`${it.x},${it.y},${i}`}
+                    className="item"
+                    data-src={it.src}
+                    data-offset-x={it.x}
+                    data-offset-y={it.y}
+                    data-size-x={it.sizeX}
+                    data-size-y={it.sizeY}
+                    style={{
+                      ['--offset-x']: it.x,
+                      ['--offset-y']: it.y,
+                      ['--item-size-x']: it.sizeX,
+                      ['--item-size-y']: it.sizeY
+                    }}
+                  >
+                    <div
+                      className="item__image"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={it.alt || 'Open image'}
+                      onClick={onTileClick}
+                      onPointerUp={onTilePointerUp}
+                    >
+                      <img src={it.src} draggable={false} alt={it.alt} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="overlay" />
+            <div className="overlay overlay--blur" />
+            <div className="edge-fade edge-fade--top" />
+            <div className="edge-fade edge-fade--bottom" />
+
+            <div className="viewer" ref={viewerRef}>
+              <div ref={scrimRef} className="scrim" />
+              <div ref={frameRef} className="frame" />
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    ```
+
+    ### Component CSS
+    ```css
+    .sphere-root {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      --radius: 520px;
+      --viewer-pad: 72px;
+      --circ: calc(var(--radius) * 3.14);
+      --rot-y: calc((360deg / var(--segments-x)) / 2);
+      --rot-x: calc((360deg / var(--segments-y)) / 2);
+      --item-width: calc(var(--circ) / var(--segments-x));
+      --item-height: calc(var(--circ) / var(--segments-y));
+    }
+
+    .sphere-root * {
+      box-sizing: border-box;
+    }
+
+    .sphere,
+    .item,
+    .item__image {
+      transform-style: preserve-3d;
+    }
+
+    main.sphere-main {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      background: transparent;
+    }
+
+    .stage {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      perspective: calc(var(--radius) * 2);
+      perspective-origin: 50% 50%;
+      contain: layout paint size;
+    }
+
+    .sphere {
+      transform: translateZ(calc(var(--radius) * -1));
+      will-change: transform;
+    }
+
+    .overlay,
+    .overlay--blur {
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .overlay {
+      background-image: radial-gradient(rgba(235, 235, 235, 0) 65%, var(--overlay-blur-color, #120F17) 100%);
+    }
+
+    .overlay--blur {
+      -webkit-mask-image: radial-gradient(rgba(235, 235, 235, 0) 70%, var(--overlay-blur-color, #120F17) 90%);
+      mask-image: radial-gradient(rgba(235, 235, 235, 0) 70%, var(--overlay-blur-color, #120F17) 90%);
+      backdrop-filter: blur(3px);
+    }
+
+    .item {
+      width: calc(var(--item-width) * var(--item-size-x));
+      height: calc(var(--item-height) * var(--item-size-y));
+      position: absolute;
+      top: -999px;
+      bottom: -999px;
+      left: -999px;
+      right: -999px;
+      margin: auto;
+      transform-origin: 50% 50%;
+      backface-visibility: hidden;
+      transition: transform 300ms;
+      transform: rotateY(calc(var(--rot-y) * (var(--offset-x) + ((var(--item-size-x) - 1) / 2)) + var(--rot-y-delta, 0deg)))
+        rotateX(calc(var(--rot-x) * (var(--offset-y) - ((var(--item-size-y) - 1) / 2)) + var(--rot-x-delta, 0deg)))
+        translateZ(var(--radius));
+    }
+
+    .item__image {
+      position: absolute;
+      display: block;
+      inset: 10px;
+      border-radius: var(--tile-radius, 12px);
+      background: transparent;
+      overflow: hidden;
+      backface-visibility: hidden;
+      transition: transform 300ms;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      pointer-events: auto;
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+    }
+
+    .item__image:focus {
+      outline: none;
+    }
+
+    .item__image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      backface-visibility: hidden;
+      filter: var(--image-filter, none);
+    }
+
+    .viewer {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--viewer-pad);
+    }
+
+    .viewer .frame {
+      height: 100%;
+      aspect-ratio: 1;
+      border-radius: var(--enlarge-radius, 32px);
+      display: flex;
+    }
+
+    @media (max-aspect-ratio: 1/1) {
+      .viewer .frame {
+        height: auto;
+        width: 100%;
+      }
+    }
+
+    .viewer .scrim {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 500ms ease;
+      backdrop-filter: blur(3px);
+    }
+
+    .sphere-root[data-enlarging='true'] .viewer .scrim {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .viewer .enlarge {
+      position: absolute;
+      z-index: 30;
+      border-radius: var(--enlarge-radius, 32px);
+      overflow: hidden;
+      transition:
+        transform 500ms ease,
+        opacity 500ms ease;
+      transform-origin: top left;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .viewer .enlarge img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: var(--image-filter, none);
+    }
+
+    .sphere-root .enlarge-closing img {
+      filter: var(--image-filter, none);
+    }
+
+    .edge-fade {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 120px;
+      z-index: 5;
+      pointer-events: none;
+      background: linear-gradient(to bottom, transparent, var(--overlay-blur-color, #120F17));
+    }
+
+    .edge-fade--top {
+      top: 0;
+      transform: rotate(180deg);
+    }
+
+    .edge-fade--bottom {
+      bottom: 0;
+    }
+
+    ```
+
+    ### Integration Instructions
+    1. Install any listed dependencies.
+    2. Copy the component source into the appropriate directory in the project.
+    3. don't use css use tailwind.
+    4. Import and render the component using the usage example above as a starting point.
+    5. Adjust props as needed for the specific use case — refer to the props table for all available options.
 
 ---
 
 [BRAND MODE]
-
+write all this part on the left side while in destop viewport and the lanyeyard(i.e visual rhs) compoent on the right in the same section and in middle while in mobile viewport and lanyeyard(i.e visual rhs ) below it (mantian responsive nes ) .
 Headline (bold weight mixed with regular):
   "Stop  BURNING  Budget
    on Ads Nobody Trusts.
@@ -55,20 +961,401 @@ Sub-headline (muted gray, max ~70 chars):
 Primary CTA button:
   → "Launch a Campaign"
 
-Visual RHS (phone mockup feed context label):
-  → Show campaign analytics / performance dashboard mockups.
-     Brand logo next to creator content. Conversion badges.
+Visual RHS (lanyeard dispaying sellr logo context label,use this image on lanyeyard - Mipoe-Frontend\public\logo_image.png):
+  → npx shadcn@latest add @react-bits/Lanyard-JS-TW
+      ## Integrate the <Lanyard /> component from React Bits
+
+    You are helping integrate an open-source React component into an existing application.
+
+    ### Component: Lanyard
+    ### Variant: JavaScript + Tailwind
+    ### Dependencies: three meshline @react-three/fiber @react-three/drei @react-three/rapier
+
+    ---
+
+    ### Usage Example
+    ```jsx
+    import Lanyard from './Lanyard'
+
+    <Lanyard position={[0, 0, 20]} gravity={[0, -40, 0]} />
+
+    // Pass custom images for the card's front/back faces and/or the lanyard band.
+    // frontImage and backImage render independently; imageFit keeps aspect ratio.
+    // lanyardWidth widens the band so a custom band image has more room.
+    <Lanyard
+      position={[0,0,24]}
+      gravity={[0,-40,0]}
+      frontImage="/my-front.png"
+      backImage="/my-back.png"
+      imageFit="cover"
+      lanyardImage="/my-band.png"
+      lanyardWidth={1}
+    />
+
+    /* IMPORTANT INFO BELOW
+
+    1. You MUST have the card.glb and lanyard.png files in your project and import them
+    - these can be downloaded from the repo's files, under src/assets/lanyard
+
+    2. You can edit your card.glb file in this online .glb editor and change the texture:
+    - https://modelviewer.dev/editor/
+    - alternatively, pass the "frontImage" / "backImage" props to swap the card's faces at runtime
+
+    4. The png file is the texture for the lanyard's band and can be edited in any image editor
+
+    5. Your Vite configuration must be updated to include the following in vite.config.js:
+    assetsInclude: ['**/*.glb']
+
+    6. For TS users, you might need these changes:
+
+    - src/global.d.ts
+    export { };
+
+    declare module '*.glb';
+    declare module '*.png';
+
+    declare module 'meshline' {
+      export const MeshLineGeometry: any;
+      export const MeshLineMaterial: any;
+    }
+
+    declare global {
+      namespace JSX {
+        interface IntrinsicElements {
+          meshLineGeometry: any;
+          meshLineMaterial: any;
+        }
+      }
+    }
+
+    - src/vite-env.d.ts
+    /// <reference types="vite/client" />
+    declare module '*.glb';
+    declare module '*.png';
+    */
+    ```
+
+    ### Props
+    | Prop | Type | Default | Description |
+    |------|------|---------|-------------|
+    | position | array | [0, 0, 30] | Initial camera position for the canvas. |
+    | gravity | array | [0, -40, 0] | Gravity vector for the physics simulation. |
+    | fov | number | 20 | Camera field of view. |
+    | transparent | boolean | true | Enables a transparent background for the canvas. |
+    | frontImage | string | null | Custom image URL for the card's front face. Falls back to the model's built-in texture when not set. |
+    | backImage | string | null | Custom image URL for the card's back face, rendered independently from the front. |
+    | imageFit | "cover" | "contain" | "cover" | How a custom front/back image fits its face. Both preserve aspect ratio; 'cover' fills and crops, 'contain' letterboxes. |
+    | lanyardImage | string | null | Custom image URL for the lanyard band's repeating texture. Falls back to the default band texture when not set. |
+    | lanyardWidth | number | 1 | Width of the lanyard band (meshline lineWidth). Increase it to give a custom band image more room and reduce stretching. |
+
+    ### Full Component Source
+    ```jsx
+    /* eslint-disable react/no-unknown-property */
+    'use client';
+    import { useEffect, useMemo, useRef, useState } from 'react';
+    import { Canvas, extend, useFrame } from '@react-three/fiber';
+    import { useGLTF, useTexture, Environment, Lightformer } from '@react-three/drei';
+    import { BallCollider, CuboidCollider, Physics, RigidBody, useRopeJoint, useSphericalJoint } from '@react-three/rapier';
+    import { MeshLineGeometry, MeshLineMaterial } from 'meshline';
+
+    // replace with your own imports, see the usage snippet for details
+    import cardGLB from './card.glb';
+    import lanyard from './lanyard.png';
+
+    import * as THREE from 'three';
+
+    extend({ MeshLineGeometry, MeshLineMaterial });
+
+    // 1x1 transparent pixel — lets useTexture be called unconditionally when a
+    // front/back image isn't supplied.
+    const BLANK_PIXEL =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+    // The card model's front face is UV-mapped to the LEFT half of the texture
+    // atlas and the back face to the RIGHT half (measured from card.glb). Each
+    // custom image is composited into its own half so the two faces render
+    // independently, aspect-preserving (no stretching).
+    const FRONT_UV_RECT = { x: 0, y: 0, w: 0.5, h: 0.755 };
+    const BACK_UV_RECT = { x: 0.5, y: 0, w: 0.5, h: 0.757 };
+
+    export default function Lanyard({
+      position = [0, 0, 30],
+      gravity = [0, -40, 0],
+      fov = 20,
+      transparent = true,
+      frontImage = null,
+      backImage = null,
+      imageFit = 'cover',
+      lanyardImage = null,
+      lanyardWidth = 1
+    }) {
+      const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+
+      useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+      }, []);
+
+      return (
+        <div className="relative z-0 w-full h-screen flex justify-center items-center transform scale-100 origin-center">
+          <Canvas
+            camera={{ position: position, fov: fov }}
+            dpr={[1, isMobile ? 1.5 : 2]}
+            gl={{ alpha: transparent }}
+            onCreated={({ gl }) => gl.setClearColor(new THREE.Color(0x000000), transparent ? 0 : 1)}
+          >
+            <ambientLight intensity={Math.PI} />
+            <Physics gravity={gravity} timeStep={isMobile ? 1 / 30 : 1 / 60}>
+              <Band
+                isMobile={isMobile}
+                frontImage={frontImage}
+                backImage={backImage}
+                imageFit={imageFit}
+                lanyardImage={lanyardImage}
+                lanyardWidth={lanyardWidth}
+              />
+            </Physics>
+            <Environment blur={0.75}>
+              <Lightformer
+                intensity={2}
+                color="white"
+                position={[0, -1, 5]}
+                rotation={[0, 0, Math.PI / 3]}
+                scale={[100, 0.1, 1]}
+              />
+              <Lightformer
+                intensity={3}
+                color="white"
+                position={[-1, -1, 1]}
+                rotation={[0, 0, Math.PI / 3]}
+                scale={[100, 0.1, 1]}
+              />
+              <Lightformer
+                intensity={3}
+                color="white"
+                position={[1, 1, 1]}
+                rotation={[0, 0, Math.PI / 3]}
+                scale={[100, 0.1, 1]}
+              />
+              <Lightformer
+                intensity={10}
+                color="white"
+                position={[-10, 0, 14]}
+                rotation={[0, Math.PI / 2, Math.PI / 3]}
+                scale={[100, 10, 1]}
+              />
+            </Environment>
+          </Canvas>
+        </div>
+      );
+    }
+    function Band({
+      maxSpeed = 50,
+      minSpeed = 0,
+      isMobile = false,
+      frontImage = null,
+      backImage = null,
+      imageFit = 'cover',
+      lanyardImage = null,
+      lanyardWidth = 1
+    }) {
+      const band = useRef(),
+        fixed = useRef(),
+        j1 = useRef(),
+        j2 = useRef(),
+        j3 = useRef(),
+        card = useRef();
+      const vec = new THREE.Vector3(),
+        ang = new THREE.Vector3(),
+        rot = new THREE.Vector3(),
+        dir = new THREE.Vector3();
+      const segmentProps = { type: 'dynamic', canSleep: true, colliders: false, angularDamping: 4, linearDamping: 4 };
+      const { nodes, materials } = useGLTF(cardGLB);
+      const texture = useTexture(lanyardImage || lanyard);
+      // useTexture must be called unconditionally; use a blank pixel when an image
+      // isn't supplied for a given face, then skip compositing it below.
+      const frontTex = useTexture(frontImage || BLANK_PIXEL);
+      const backTex = useTexture(backImage || BLANK_PIXEL);
+
+      // Composite the front/back images into the card's texture atlas (front = left
+      // half, back = right half). Each image is drawn aspect-preserving (no stretch).
+      const cardMap = useMemo(() => {
+        const baseMap = materials.base.map;
+        if (!frontImage && !backImage) return baseMap;
+
+        const baseImg = baseMap.image;
+        const W = baseImg.width;
+        const H = baseImg.height;
+        const canvas = document.createElement('canvas');
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return baseMap;
+        // Keep the original baked atlas for the card edges and any untouched face.
+        ctx.drawImage(baseImg, 0, 0, W, H);
+
+        const drawFitted = (img, rect) => {
+          const rx = rect.x * W;
+          const ry = rect.y * H;
+          const rw = rect.w * W;
+          const rh = rect.h * H;
+          const pick = imageFit === 'contain' ? Math.min : Math.max;
+          const scale = pick(rw / img.width, rh / img.height);
+          const dw = img.width * scale;
+          const dh = img.height * scale;
+          const dx = rx + (rw - dw) / 2;
+          const dy = ry + (rh - dh) / 2;
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(rx, ry, rw, rh);
+          ctx.clip();
+          ctx.drawImage(img, dx, dy, dw, dh);
+          ctx.restore();
+        };
+
+        if (frontImage && frontTex.image) drawFitted(frontTex.image, FRONT_UV_RECT);
+        if (backImage && backTex.image) drawFitted(backTex.image, BACK_UV_RECT);
+
+        const composite = new THREE.CanvasTexture(canvas);
+        composite.colorSpace = THREE.SRGBColorSpace;
+        composite.flipY = baseMap.flipY;
+        composite.anisotropy = 16;
+        composite.needsUpdate = true;
+        return composite;
+      }, [frontImage, backImage, imageFit, frontTex, backTex, materials.base.map]);
+      const [curve] = useState(
+        () =>
+          new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()])
+      );
+      const [dragged, drag] = useState(false);
+      const [hovered, hover] = useState(false);
+
+      useRopeJoint(fixed, j1, [[0, 0, 0], [0, 0, 0], 1]);
+      useRopeJoint(j1, j2, [[0, 0, 0], [0, 0, 0], 1]);
+      useRopeJoint(j2, j3, [[0, 0, 0], [0, 0, 0], 1]);
+      useSphericalJoint(j3, card, [
+        [0, 0, 0],
+        [0, 1.5, 0]
+      ]);
+
+      useEffect(() => {
+        if (hovered) {
+          document.body.style.cursor = dragged ? 'grabbing' : 'grab';
+          return () => void (document.body.style.cursor = 'auto');
+        }
+      }, [hovered, dragged]);
+
+      useFrame((state, delta) => {
+        if (dragged) {
+          vec.set(state.pointer.x, state.pointer.y, 0.5).unproject(state.camera);
+          dir.copy(vec).sub(state.camera.position).normalize();
+          vec.add(dir.multiplyScalar(state.camera.position.length()));
+          [card, j1, j2, j3, fixed].forEach(ref => ref.current?.wakeUp());
+          card.current?.setNextKinematicTranslation({ x: vec.x - dragged.x, y: vec.y - dragged.y, z: vec.z - dragged.z });
+        }
+        if (fixed.current) {
+          [j1, j2].forEach(ref => {
+            if (!ref.current.lerped) ref.current.lerped = new THREE.Vector3().copy(ref.current.translation());
+            const clampedDistance = Math.max(0.1, Math.min(1, ref.current.lerped.distanceTo(ref.current.translation())));
+            ref.current.lerped.lerp(
+              ref.current.translation(),
+              delta * (minSpeed + clampedDistance * (maxSpeed - minSpeed))
+            );
+          });
+          curve.points[0].copy(j3.current.translation());
+          curve.points[1].copy(j2.current.lerped);
+          curve.points[2].copy(j1.current.lerped);
+          curve.points[3].copy(fixed.current.translation());
+          band.current.geometry.setPoints(curve.getPoints(isMobile ? 16 : 32));
+          ang.copy(card.current.angvel());
+          rot.copy(card.current.rotation());
+          card.current.setAngvel({ x: ang.x, y: ang.y - rot.y * 0.25, z: ang.z });
+        }
+      });
+
+      curve.curveType = 'chordal';
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
+      return (
+        <>
+          <group position={[0, 4, 0]}>
+            <RigidBody ref={fixed} {...segmentProps} type="fixed" />
+            <RigidBody position={[0.5, 0, 0]} ref={j1} {...segmentProps}>
+              <BallCollider args={[0.1]} />
+            </RigidBody>
+            <RigidBody position={[1, 0, 0]} ref={j2} {...segmentProps}>
+              <BallCollider args={[0.1]} />
+            </RigidBody>
+            <RigidBody position={[1.5, 0, 0]} ref={j3} {...segmentProps}>
+              <BallCollider args={[0.1]} />
+            </RigidBody>
+            <RigidBody position={[2, 0, 0]} ref={card} {...segmentProps} type={dragged ? 'kinematicPosition' : 'dynamic'}>
+              <CuboidCollider args={[0.8, 1.125, 0.01]} />
+              <group
+                scale={2.25}
+                position={[0, -1.2, -0.05]}
+                onPointerOver={() => hover(true)}
+                onPointerOut={() => hover(false)}
+                onPointerUp={e => (e.target.releasePointerCapture(e.pointerId), drag(false))}
+                onPointerDown={e => (
+                  e.target.setPointerCapture(e.pointerId),
+                  drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current.translation())))
+                )}
+              >
+                <mesh geometry={nodes.card.geometry}>
+                  <meshPhysicalMaterial
+                    map={cardMap}
+                    map-anisotropy={16}
+                    clearcoat={isMobile ? 0 : 1}
+                    clearcoatRoughness={0.15}
+                    roughness={0.9}
+                    metalness={0.8}
+                  />
+                </mesh>
+                <mesh geometry={nodes.clip.geometry} material={materials.metal} material-roughness={0.3} />
+                <mesh geometry={nodes.clamp.geometry} material={materials.metal} />
+              </group>
+            </RigidBody>
+          </group>
+          <mesh ref={band}>
+            <meshLineGeometry />
+            <meshLineMaterial
+              color="white"
+              depthTest={false}
+              resolution={isMobile ? [1000, 2000] : [1000, 1000]}
+              useMap
+              map={texture}
+              repeat={[-4, 1]}
+              lineWidth={lanyardWidth}
+            />
+          </mesh>
+        </>
+      );
+    }
+
+    ```
+
+    ### Integration Instructions
+    1. Install any listed dependencies.
+    2. Copy the component source into the appropriate directory in the project.
+    3. Import and render the component using the usage example above as a starting point.
+    4. Adjust props as needed for the specific use case — refer to the props table for all available options.
+
+    ### More from React Bits
+    The full library index, including everything reactbits.dev offers, is at https://reactbits.dev/llms.txt — fetch it if this component is not the right fit or the project needs more pieces.
+
 
 ---
 
 DESIGN NOTE:
-Use VYRO's headline typographic rhythm — key nouns in ultra-heavy weight,
+Use VYRO's - https://www.vyro.com/home headline typographic rhythm — key nouns in ultra-heavy weight,
 filler words in regular. Example structure:
   [regular] "Your Content Already Has an" [bold] "AUDIENCE."
   [regular] "Get" [bold] "PAID" [regular] "For It."
 
 -----------------------------------------------------------------------
-SECTION 2 — SIGNALING FACTOR (Horizontal Scroll Carousel)
+SECTION 2 — SIGNALING FACTOR (Horizontal Scroll Carousel - npx shadcn@latest add @react-bits/Carousel-JS-TW)
            "How You Win on sellr"
 -----------------------------------------------------------------------
 
@@ -131,10 +1418,341 @@ Each step = one full-screen pinned panel with:
 - 2-line description below
 - Minimalist illustration or icon top-right
 - Step indicator dots at bottom showing progress
+ 
+ sample promtp for esign help  (we can tune it as per our use case ):-
+        ## Integrate the <Carousel /> component from React Bits
+
+      You are helping integrate an open-source React component into an existing application.
+
+      ### Component: Carousel
+      ### Variant: JavaScript + Tailwind
+      ### Dependencies: motion
+
+      ---
+
+      ### Usage Example
+      ```jsx
+      import Carousel from './Carousel'
+
+      <div style={{ height: '600px', position: 'relative' }}>
+        <Carousel
+          baseWidth={300}
+          autoplay={true}
+          autoplayDelay={3000}
+          pauseOnHover={true}
+          loop={true}
+          round={false}
+        />
+      </div>
+      ```
+
+      ### Props
+      | Prop | Type | Default | Description |
+      |------|------|---------|-------------|
+      | items | CarouselItem[] | DEFAULT_ITEMS | An array of carousel items. Each item must include title, description, id, and icon. |
+      | baseWidth | number | 300 | Total width (in px) of the carousel container. Effective item width is baseWidth minus padding. |
+      | autoplay | boolean | false | Enables automatic scrolling to the next item at a fixed interval. |
+      | autoplayDelay | number | 3000 | Delay in milliseconds between automatic scrolls when autoplay is enabled. |
+      | pauseOnHover | boolean | false | Pauses the autoplay functionality when the carousel is hovered. |
+      | loop | boolean | false | When true, the carousel loops seamlessly from the last item back to the first. |
+      | round | boolean | true | When true, the carousel is rendered with a 1:1 aspect ratio and circular container/items. |
+
+      ### Full Component Source
+      ```jsx
+      import { useEffect, useMemo, useRef, useState } from 'react';
+      import { motion, useMotionValue, useTransform } from 'motion/react';
+      // replace icons with your own if needed
+      import { FiCircle, FiCode, FiFileText, FiLayers, FiLayout } from 'react-icons/fi';
+
+      const DEFAULT_ITEMS = [
+        {
+          title: 'Text Animations',
+          description: 'Cool text animations for your projects.',
+          id: 1,
+          icon: <FiFileText className="h-[16px] w-[16px] text-white" />
+        },
+        {
+          title: 'Animations',
+          description: 'Smooth animations for your projects.',
+          id: 2,
+          icon: <FiCircle className="h-[16px] w-[16px] text-white" />
+        },
+        {
+          title: 'Components',
+          description: 'Reusable components for your projects.',
+          id: 3,
+          icon: <FiLayers className="h-[16px] w-[16px] text-white" />
+        },
+        {
+          title: 'Backgrounds',
+          description: 'Beautiful backgrounds and patterns for your projects.',
+          id: 4,
+          icon: <FiLayout className="h-[16px] w-[16px] text-white" />
+        },
+        {
+          title: 'Common UI',
+          description: 'Common UI components are coming soon!',
+          id: 5,
+          icon: <FiCode className="h-[16px] w-[16px] text-white" />
+        }
+      ];
+
+      const DRAG_BUFFER = 0;
+      const VELOCITY_THRESHOLD = 500;
+      const GAP = 16;
+      const SPRING_OPTIONS = { type: 'spring', stiffness: 300, damping: 30 };
+
+      function CarouselItem({ item, index, itemWidth, round, trackItemOffset, x, transition }) {
+        const range = [-(index + 1) * trackItemOffset, -index * trackItemOffset, -(index - 1) * trackItemOffset];
+        const outputRange = [90, 0, -90];
+        const rotateY = useTransform(x, range, outputRange, { clamp: false });
+
+        return (
+          <motion.div
+            key={`${item?.id ?? index}-${index}`}
+            className={`relative shrink-0 flex flex-col ${
+              round
+                ? 'items-center justify-center text-center bg-[#120F17] border-0'
+                : 'items-start justify-between bg-[#222] border border-[#222] rounded-[12px]'
+            } overflow-hidden cursor-grab active:cursor-grabbing`}
+            style={{
+              width: itemWidth,
+              height: round ? itemWidth : '100%',
+              rotateY: rotateY,
+              ...(round && { borderRadius: '50%' })
+            }}
+            transition={transition}
+          >
+            <div className={`${round ? 'p-0 m-0' : 'mb-4 p-5'}`}>
+              <span className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-[#120F17]">
+                {item.icon}
+              </span>
+            </div>
+            <div className="p-5">
+              <div className="mb-1 font-black text-lg text-white">{item.title}</div>
+              <p className="text-sm text-white">{item.description}</p>
+            </div>
+          </motion.div>
+        );
+      }
+
+      export default function Carousel({
+        items = DEFAULT_ITEMS,
+        baseWidth = 300,
+        autoplay = false,
+        autoplayDelay = 3000,
+        pauseOnHover = false,
+        loop = false,
+        round = false
+      }) {
+        const containerPadding = 16;
+        const itemWidth = baseWidth - containerPadding * 2;
+        const trackItemOffset = itemWidth + GAP;
+        const itemsForRender = useMemo(() => {
+          if (!loop) return items;
+          if (items.length === 0) return [];
+          return [items[items.length - 1], ...items, items[0]];
+        }, [items, loop]);
+
+        const [position, setPosition] = useState(loop ? 1 : 0);
+        const x = useMotionValue(0);
+        const [isHovered, setIsHovered] = useState(false);
+        const [isJumping, setIsJumping] = useState(false);
+        const [isAnimating, setIsAnimating] = useState(false);
+
+        const containerRef = useRef(null);
+        useEffect(() => {
+          if (pauseOnHover && containerRef.current) {
+            const container = containerRef.current;
+            const handleMouseEnter = () => setIsHovered(true);
+            const handleMouseLeave = () => setIsHovered(false);
+            container.addEventListener('mouseenter', handleMouseEnter);
+            container.addEventListener('mouseleave', handleMouseLeave);
+            return () => {
+              container.removeEventListener('mouseenter', handleMouseEnter);
+              container.removeEventListener('mouseleave', handleMouseLeave);
+            };
+          }
+        }, [pauseOnHover]);
+
+        useEffect(() => {
+          if (!autoplay || itemsForRender.length <= 1) return undefined;
+          if (pauseOnHover && isHovered) return undefined;
+
+          const timer = setInterval(() => {
+            setPosition(prev => Math.min(prev + 1, itemsForRender.length - 1));
+          }, autoplayDelay);
+
+          return () => clearInterval(timer);
+        }, [autoplay, autoplayDelay, isHovered, pauseOnHover, itemsForRender.length]);
+
+        useEffect(() => {
+          const startingPosition = loop ? 1 : 0;
+          setPosition(startingPosition);
+          x.set(-startingPosition * trackItemOffset);
+        }, [items.length, loop, trackItemOffset, x]);
+
+        useEffect(() => {
+          if (!loop && position > itemsForRender.length - 1) {
+            setPosition(Math.max(0, itemsForRender.length - 1));
+          }
+        }, [itemsForRender.length, loop, position]);
+
+        const effectiveTransition = isJumping ? { duration: 0 } : SPRING_OPTIONS;
+
+        const handleAnimationStart = () => {
+          setIsAnimating(true);
+        };
+
+        const handleAnimationComplete = () => {
+          if (!loop || itemsForRender.length <= 1) {
+            setIsAnimating(false);
+            return;
+          }
+          const lastCloneIndex = itemsForRender.length - 1;
+
+          if (position === lastCloneIndex) {
+            setIsJumping(true);
+            const target = 1;
+            setPosition(target);
+            x.set(-target * trackItemOffset);
+            requestAnimationFrame(() => {
+              setIsJumping(false);
+              setIsAnimating(false);
+            });
+            return;
+          }
+
+          if (position === 0) {
+            setIsJumping(true);
+            const target = items.length;
+            setPosition(target);
+            x.set(-target * trackItemOffset);
+            requestAnimationFrame(() => {
+              setIsJumping(false);
+              setIsAnimating(false);
+            });
+            return;
+          }
+
+          setIsAnimating(false);
+        };
+
+        const handleDragEnd = (_, info) => {
+          const { offset, velocity } = info;
+          const direction =
+            offset.x < -DRAG_BUFFER || velocity.x < -VELOCITY_THRESHOLD
+              ? 1
+              : offset.x > DRAG_BUFFER || velocity.x > VELOCITY_THRESHOLD
+                ? -1
+                : 0;
+
+          if (direction === 0) return;
+
+          setPosition(prev => {
+            const next = prev + direction;
+            const max = itemsForRender.length - 1;
+            return Math.max(0, Math.min(next, max));
+          });
+        };
+
+        const dragProps = loop
+          ? {}
+          : {
+              dragConstraints: {
+                left: -trackItemOffset * Math.max(itemsForRender.length - 1, 0),
+                right: 0
+              }
+            };
+
+        const activeIndex =
+          items.length === 0 ? 0 : loop ? (position - 1 + items.length) % items.length : Math.min(position, items.length - 1);
+
+        return (
+          <div
+            ref={containerRef}
+            className={`relative overflow-hidden p-4 ${
+              round ? 'rounded-full border border-white' : 'rounded-[24px] border border-[#222]'
+            }`}
+            style={{
+              width: `${baseWidth}px`,
+              ...(round && { height: `${baseWidth}px` })
+            }}
+          >
+            <motion.div
+              className="flex"
+              drag={isAnimating ? false : 'x'}
+              {...dragProps}
+              style={{
+                width: itemWidth,
+                gap: `${GAP}px`,
+                perspective: 1000,
+                perspectiveOrigin: `${position * trackItemOffset + itemWidth / 2}px 50%`,
+                x
+              }}
+              onDragEnd={handleDragEnd}
+              animate={{ x: -(position * trackItemOffset) }}
+              transition={effectiveTransition}
+              onAnimationStart={handleAnimationStart}
+              onAnimationComplete={handleAnimationComplete}
+            >
+              {itemsForRender.map((item, index) => (
+                <CarouselItem
+                  key={`${item?.id ?? index}-${index}`}
+                  item={item}
+                  index={index}
+                  itemWidth={itemWidth}
+                  round={round}
+                  trackItemOffset={trackItemOffset}
+                  x={x}
+                  transition={effectiveTransition}
+                />
+              ))}
+            </motion.div>
+            <div className={`flex w-full justify-center ${round ? 'absolute z-20 bottom-12 left-1/2 -translate-x-1/2' : ''}`}>
+              <div className="mt-4 flex w-[150px] justify-between px-8">
+                {items.map((_, index) => (
+                  <motion.button
+                    type="button"
+                    key={index}
+                    aria-label={`Go to slide ${index + 1}`}
+                    aria-current={activeIndex === index}
+                    className={`h-2 w-2 rounded-full cursor-pointer border-0 p-0 appearance-none transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                      activeIndex === index
+                        ? round
+                          ? 'bg-white'
+                          : 'bg-[#333333]'
+                        : round
+                          ? 'bg-[#555]'
+                          : 'bg-[rgba(51,51,51,0.4)]'
+                    }`}
+                    animate={{
+                      scale: activeIndex === index ? 1.2 : 1
+                    }}
+                    onClick={() => setPosition(loop ? index + 1 : index)}
+                    transition={{ duration: 0.15 }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      ```
+
+      ### Integration Instructions
+      1. Install any listed dependencies.
+      2. Copy the component source into the appropriate directory in the project.
+      3. Import and render the component using the usage example above as a starting point.
+      4. Adjust props as needed for the specific use case — refer to the props table for all available options.
+
+      ### More from React Bits
+      The full library index, including everything reactbits.dev offers, is at https://reactbits.dev/llms.txt — fetch it if this component is not the right fit or the project needs more pieces.
 
 -----------------------------------------------------------------------
 SECTION 3 — EARNINGS CALCULATOR
-           "How Much Could You Actually Make?"
+           "How Much Could You Actually Make?" 
 -----------------------------------------------------------------------
 
 Section headline (dark bg, accent gradient on key word):
@@ -146,7 +1764,7 @@ Section sub-text (muted, center-aligned):
 
 ---
 
-[BRAND CALCULATOR]
+[BRAND CALCULATOR] - built it similar as per the attach reference image 
 
 Slider 1 — Campaign Budget
 Label: "How much are you investing?"
@@ -173,7 +1791,7 @@ CTA Row:
 
 ---
 
-[CREATOR CALCULATOR]
+[CREATOR CALCULATOR] - built it similar as per the attach reference image 
 
 Slider 1 — Your Follower Count
 Label: "How many followers do you have?"

@@ -1,6 +1,8 @@
 # Design.md — Index Page Redesign (Brand / Creator Dual Portal)
 
-> Prompt spec for the AI coordinator. Implements a persona-aware index page with a sticky nav that toggles the entire page UI between **Brand** mode and **Creator** mode. Reference images: `vyro-hero.png` (hero), `hypd-signal-grid.png` (brand motivation grid), `hypd-rangebar.png` (brand + creator earnings calculator).
+> Prompt spec for the AI coordinator. Implements a persona-aware index page with a sticky nav that toggles the entire page UI between **Brand** mode and **Creator** mode. Structural references: `vyro-hero.png` (hero layout), `hypd-signal-grid.png` (brand motivation grid), `hypd-rangebar.png` (earnings calculator mechanic). **Visual system (color, type, shape, elevation): Notion**, applied in full — this replaces the project's prior orange/black palette. Treat every color, font-size, radius, and shadow value below as the literal spec, not inspiration.
+
+**Design philosophy for this pass:** one confident brand color, used sparingly and consistently, against a mostly-neutral canvas — restraint over decoration. Every accent color earns its place by carrying meaning (a specific persona, a specific state), never applied just to fill space. This is a deliberate move away from a busier orange/black scheme toward something that reads as edited, not decorated.
 
 ---
 
@@ -11,13 +13,14 @@
 - `BrandHome.tsx` (or `/brand` view) — full brand-mode page
 - `CreatorHome.tsx` (or `/creator` view) — full creator-mode page
 - Index page renders `Navbar` + conditionally renders `BrandHome` or `CreatorHome` based on active persona state
+- `design-tokens.(ts|css)` — single source of truth for the token set in Section 1 below; every component pulls from here, nothing hardcodes a hex value inline
 
 **Persona toggle behavior:**
 - Two nav buttons: **"For Brands"** and **"For Creators"**
 - Default state on load: pick one persona as default (recommend Creator, since that's likely the primary acquisition funnel — confirm with Swaraj if unsure)
 - Clicking "For Brands" while in Creator mode → swaps entire page content to Brand UI, and the nav button that was "For Brands" now reads/behaves as "For Creators" (i.e., the nav always shows the *other* option as the CTA — clicking it takes you to the other persona)
 - This swap should NOT be a route change necessarily — can be client-side state (persona: 'brand' | 'creator') so the nav stays sticky and mounted across the swap
-- Transition between personas should have a smooth crossfade/slide (150–250ms) — avoid a jarring hard cut
+- Transition between personas should have a smooth crossfade/slide (**180ms ease**, per Notion's recommended transition timing) — avoid a jarring hard cut
 
 **Sections per persona (in order):**
 1. Hero (persona-specific copy, shared structural style)
@@ -27,120 +30,224 @@
 
 ---
 
-## 1. Hero Section
-**Reference: Image 1 (VYRO)**
+## 1. Design Tokens (Notion System — Applied Wholesale)
 
-### Navbar (adapt VYRO's structure)
-- Pill/rounded-full container, floating with padding from the top edge, NOT full-bleed — matches VYRO's inset white pill navbar
-- Left: logo/wordmark
-- Center: nav links
-- Right: persona toggle button ("For Brands" / "For Creators") styled as a solid dark pill button (matches VYRO's black "Sign up" pill) — this replaces VYRO's Login/Sign up pair with our single persona-toggle CTA
-- Keep it **sticky** across scroll and across persona swaps, per project requirement
-- Background of navbar: white/light, high contrast against page background regardless of which persona's background color is active
+This section **replaces** all prior orange/black color references anywhere else in this document or in the existing codebase. Two persona accents are introduced (Section 1.3) since we need brand/creator to feel distinct within one otherwise-neutral system — everything else is Notion's palette verbatim.
 
-### Layout
-- Two-column hero: left = text block, right = visual (fanned/stacked mobile mockups showing content in-feed, as in reference)
-- Left column headline: large, bold, multi-line, left-aligned, mixing regular-weight and bold-weight words for emphasis (VYRO does "Never Leave The **For** You **Feed**" — bold on key nouns). Adapt this treatment to our own headline copy per persona.
-- Sub-headline: 1–2 sentence description in muted gray, regular weight, max-width constrained (~480px) below headline
-- Primary CTA button below sub-headline (pill-shaped, dark fill, matches nav CTA styling)
-- Right column: 5–7 phone-mockup cards fanned/overlapping at slight rotation angles, front card largest and fully visible, back cards partially cropped/faded — shows platform content in a social-feed style UI (likes, comments, shares icons visible) to reinforce "this is where your content lives"
+### 1.1 Colors
 
-### Color & Typography (adapt from VYRO, don't clone)
-- Background: soft gradient, light tone (VYRO uses pale blue-to-mint) — carry this airy, optimistic light-mode feel into our Brand hero; for Creator hero, keep the same structural layout but this is where our existing Desi-Pop palette/accent colors should be layered in per our established brand aesthetic
-- Font: bold geometric sans-serif for headline (heavy weight), clean sans for body — match what's already defined for the project's type system; do not introduce a new typeface family, just apply VYRO's *weight contrast* technique (regular + bold mixed in one heading)
-- Keep our existing brand color identity — this reference is for **layout and typographic rhythm**, not literal color replacement
+```
+primary:            #5645d4   — signature purple, dominant CTA only
+primary-pressed:     #4534b3
+primary-deep:         #3a2a99
+on-primary:            #ffffff
 
-### Task for coordinator
-Map our current hero content/assets into this structure. Do not invent new copy — flag to Swaraj which existing hero copy needs shortening/restructuring to fit the two-line bold-emphasis headline pattern.
+brand-navy:      #0a1530   — dark hero/section band background
+brand-navy-deep:  #070f24
+brand-navy-mid:    #1a2a52
+
+link-blue:         #0075de   — inline text links ONLY, never buttons
+link-blue-pressed:  #005bab
+
+card-tint-peach:     #ffe8d4
+card-tint-rose:       #fde0ec
+card-tint-mint:        #d9f3e1
+card-tint-lavender:     #e6e0f5
+card-tint-sky:           #dcecfa
+card-tint-yellow:         #fef7d6
+card-tint-yellow-bold:     #f9e79f
+card-tint-cream:            #f8f5e8
+card-tint-gray:               #f0eeec
+
+canvas:        #ffffff   — page background, card surfaces
+surface:        #f6f5f4   — subtle section backgrounds
+surface-soft:    #fafaf9
+hairline:         #e5e3df   — 1px borders, dividers
+hairline-soft:     #ede9e4
+hairline-strong:    #c8c4be   — input borders
+
+ink-deep:   #000000
+ink:         #1a1a1a   — headlines, primary body
+charcoal:     #37352f   — body emphasis, text-on-tint
+slate:         #5d5b54
+steel:          #787671   — footer links, tertiary text
+stone:           #a4a097
+muted:            #bbb8b1
+
+on-dark:        #ffffff
+on-dark-muted:   #a4a097
+
+semantic-success: #1aae39
+semantic-warning:  #dd5b00
+semantic-error:     #e03131
+```
+
+### 1.2 Persona Accent Colors (new — not from Notion, needed for brand/creator differentiation)
+Notion's system has no built-in concept of "two audiences," so we introduce exactly two accent colors, borrowed from Notion's own brand spectrum so they still feel native to the palette rather than bolted on:
+- **Brand persona accent** → `brand-teal` (`#2a9d99`) — used for Brand-mode active states, Brand slider fill, Brand badge
+- **Creator persona accent** → `brand-pink` (`#ff64c8`) — used for Creator-mode active states, Creator slider fill, Creator badge
+- `primary` purple stays reserved for the ONE universal action that exists regardless of persona (e.g. the main nav CTA, if we keep one neutral "Get Started"). If every CTA is persona-specific, purple can be dropped entirely in favor of the two accents — coordinator's call, but pick one rule and apply it everywhere, don't mix.
+
+### 1.3 Typography
+
+Font family: **Notion Sans** (Inter-based). Fallback stack: `Inter, -apple-system, system-ui, 'Segoe UI', Helvetica, sans-serif`. This **replaces** whatever typeface the project currently uses for headings and body — one family, weight does the differentiating work.
+
+| Token | Size | Weight | Line Height | Letter Spacing | Use here |
+|---|---|---|---|---|---|
+| `hero-display` | 80px | 600 | 1.05 | -2px | Hero headline (desktop) |
+| `display-lg` | 56px | 600 | 1.10 | -1px | Calculator section headline |
+| `heading-1` | 48px | 600 | 1.15 | -0.5px | Section openers (Signaling Factor intro) |
+| `heading-2` | 36px | 600 | 1.20 | -0.5px | Subsection headlines |
+| `heading-3` | 28px | 600 | 1.25 | 0 | Carousel step titles |
+| `heading-4` | 22px | 600 | 1.30 | 0 | Feature tile titles |
+| `heading-5` | 18px | 600 | 1.40 | 0 | FAQ questions |
+| `subtitle` | 18px | 400 | 1.50 | 0 | Hero sub-headline |
+| `body-md` | 16px | 400 | 1.55 | 0 | Primary body copy |
+| `body-md-medium` | 16px | 500 | 1.55 | 0 | Body emphasis |
+| `body-sm` | 14px | 400 | 1.50 | 0 | Secondary/disclaimer text |
+| `body-sm-medium` | 14px | 500 | 1.50 | 0 | Button labels, nav links |
+| `caption-bold` | 13px | 600 | 1.40 | 0 | Badge labels |
+| `micro-uppercase` | 11px | 600 | 1.40 | 1px | Slider min/max labels |
+| `button-md` | 14px | 500 | 1.30 | 0 | All button text |
+
+**Rule, non-negotiable:** headline weight is always 600, body is always 400, nothing in between except where the table explicitly says `-medium` (500). No italics, no light weights — this is where the "edited, not decorated" discipline shows up most.
+
+### 1.4 Shape
+
+| Token | Value | Use |
+|---|---|---|
+| `xs` | 4px | Tag chips |
+| `sm` | 6px | Type badges |
+| `md` | **8px** | **Buttons, inputs — rectangular, NOT pill** |
+| `lg` | 12px | Cards, calculator panel, mockup frames |
+| `xl` | 16px | Larger feature panels |
+| `xxl` | 20px | Featured showcases |
+| `full` | 9999px | Status badges, tab pills ONLY — never regular buttons |
+
+**This is the one deliberate break from the VYRO reference below**: VYRO's nav/CTA buttons are pill-shaped. Notion's discipline is rectangular 8px buttons everywhere, pills reserved for tabs and badges. We are following Notion's rule system throughout, so **every button in this spec — nav CTA, hero CTA, calculator CTA — is an 8px-radius rectangle**, not a pill. The persona toggle in the nav can still use the pill-tab component (`pill-tab` / `pill-tab-active`), since that's a tab-switch control, not an action button — that distinction is exactly what keeps the system internally consistent instead of arbitrary.
+
+### 1.5 Elevation
+
+| Level | Shadow | Use |
+|---|---|---|
+| 0 | none, `hairline` border only | Default cards, table rows |
+| 1 | `rgba(15,15,15,0.04) 0px 1px 2px 0px` | Hover-elevated tiles |
+| 2 | `rgba(15,15,15,0.08) 0px 4px 12px 0px` | Feature/step cards |
+| 3 | `rgba(15,15,15,0.20) 0px 24px 48px -8px` | Hero phone-mockup stack |
+| 4 | `rgba(15,15,15,0.16) 0px 16px 48px -8px` | Modals, dropdowns |
+
+### 1.6 Spacing
+4px base unit. Section rhythm: `96px` between major page sections on desktop, tightening to `64px` on tablet, `48px` on mobile. Container max-width `1280px`, `32px` gutters.
 
 ---
 
-## 2. Signaling Factor Section
+## 2. Hero Section
+**Structural reference: Image 1 (VYRO)** — layout and typographic weight-contrast technique only. **All color, type, shape values below are Notion tokens per Section 1.**
+
+### Navbar
+- Rectangular container (not pill — see 1.4), sticky, floating with padding from the top edge on desktop, full-bleed on mobile
+- Background `canvas` (#ffffff), bottom border `1px solid hairline`, height ~64px
+- Left: logo/wordmark in `heading-5` weight
+- Center: nav links, `body-sm-medium`, text `steel`
+- Right: persona toggle rendered as `pill-tab` / `pill-tab-active` pair (this is the one pill element we keep — see 1.4 rationale), active state background `ink-deep`, text `on-dark`
+- Stays sticky across scroll and across persona swaps
+
+### Layout
+- Two-column hero on `brand-navy` (#0a1530) background — dark hero band, matching Notion's signature treatment, replacing VYRO's light mint gradient
+- Left column: headline in `hero-display` (80px/600), text `on-dark`, mixing weight is no longer the emphasis technique — instead use the **persona accent color** on the key noun (e.g., "Never Leave The **Feed**" with "Feed" in `brand-teal` for Brand mode or `brand-pink` for Creator mode). This achieves the same emphasis effect as VYRO's bold-word technique but through Notion's color-accent logic instead of weight-mixing, keeping to the "one weight for headlines" rule in 1.3
+- Sub-headline: `subtitle` token, text `on-dark-muted`, max-width ~480px
+- Primary CTA: `button-primary` if using the universal purple rule, or a persona-accent-filled rectangular button (8px radius) if using the persona-only rule — pick one per 1.2 and apply everywhere
+- Right column: phone-mockup stack, Elevation Level 3 shadow, cards at `rounded.lg` (12px) corners — matches Notion's `workspace-mockup-card` treatment applied to a stack instead of a single card
+
+### Task for coordinator
+Map existing hero copy into this structure. Flag to Swaraj which existing copy needs shortening for the 80px display size at desktop (this is a large, confident headline — expect to cut copy, not compress it).
+
+---
+
+## 3. Signaling Factor Section
 **No direct visual reference — structural spec only**
 
 ### Behavior
-- Horizontal-scrolling carousel, **scroll-triggered** (page scroll drives horizontal movement within a pinned/sticky section — scrollytelling pattern, e.g. via GSAP ScrollTrigger horizontal-scroll or Framer Motion `useScroll` + `translateX`)
-- Section pins vertically while the user scrolls; vertical scroll input translates to horizontal panel movement until the carousel completes, then normal vertical scroll resumes
-- Each panel = one step, image/illustration + short label, revealing a step-by-step "how you make money on this platform" narrative
+- Horizontal-scrolling carousel, scroll-triggered (pinned section, vertical scroll drives horizontal translate — e.g. GSAP ScrollTrigger or Framer Motion `useScroll`)
+- Section background: `surface` (#f6f5f4), a quiet neutral so the pastel step cards inside it carry the color
+- Each step renders as a `card-feature` variant using one of Notion's pastel tints (`card-tint-peach`, `card-tint-mint`, `card-tint-sky`, `card-tint-lavender`, `card-tint-rose`, `card-tint-yellow`) — cycle through tints in a fixed order across steps so it reads as a designed sequence, not random color
+- Step title `heading-3`, text `charcoal`; step description `body-md`, text `charcoal`
 
 ### Brand version
-- Steps walk through: how a brand sets up a campaign → gets matched with creators → content goes live → brand tracks performance/sales → brand earns ROI
-- (Exact step count and copy TBD with Swaraj — placeholder 4–5 steps)
+Steps: campaign setup → creator matching → content goes live → performance tracking → ROI. 4–5 steps, copy TBD with Swaraj.
 
 ### Creator version
-- Steps walk through: how a creator joins → links their store/content → posts campaign content → gets discovered/shared → earns commission/payout
-- (Exact step count and copy TBD — placeholder 4–5 steps)
+Steps: join → link store/content → post campaign content → get discovered/shared → earn payout. 4–5 steps, copy TBD.
 
 ### Task for coordinator
-Build the scroll-pin + horizontal-translate mechanism as a reusable component (`ScrollCarousel`) accepting an array of `{image, title, description}` steps, so it can be dropped into both Brand and Creator pages with different data.
+Build `ScrollCarousel` accepting `{image, title, description, tint}[]` so tint assignment is data-driven, not hardcoded per persona.
 
 ---
 
-## 3. Motivation / Earnings Calculator Section
-**Reference: Image 3 (HYPD "how rich is rich?")**
+## 4. Motivation / Earnings Calculator Section
+**Structural reference: Image 3 (HYPD "how rich is rich?")** — slider mechanic and layout only; all visual treatment below is Notion tokens.
 
 ### Visual style
-- Dark background (near-black), full-bleed section, high contrast with light hero above it
-- Centered headline with one word in accent gradient color (HYPD does "rich?" in coral/orange — pick our own accent color for the emphasis word)
-- Small muted subtext under headline explaining the calculation basis
-- Two labeled range sliders stacked vertically, each with:
-  - Left-side min value label, right-side max value label (small, muted)
-  - Slider track with gradient fill (color-coded per metric — e.g. red-to-white for one, purple-to-white for the other)
-  - Current value shown as a bold label centered under the thumb
-- Below both sliders: a large bold result statement with the computed number in an accent gradient color, using a template like "you could earn between **[X]** and **[Y]** more!"
-- Small disclaimer/asterisk text under the result explaining the assumption basis
-- Bottom row: a dashed-border pill showing a personalized URL/handle placeholder + a solid gradient CTA pill button side-by-side
+- Background `brand-navy-deep` (#070f24) — darkest tone in the system, for maximum contrast against the neutral sections above/below it
+- Headline `display-lg` (56px/600), text `on-dark`, with the emphasis word in the active persona's accent color (`brand-teal` for Brand, `brand-pink` for Creator) — same accent-word technique as the hero, kept consistent site-wide
+- Subtext: `body-sm`, text `on-dark-muted`
+- Sliders: track fill uses the persona accent color at full saturation fading to `on-dark-muted` at the unfilled portion; value label in `heading-4`, text `on-dark`; min/max labels in `micro-uppercase`, text `on-dark-muted`
+- Result statement: `heading-1` (48px/600), computed numbers in the persona accent color, surrounding text `on-dark`
+- Disclaimer: `body-sm`, `on-dark-muted`
+- Bottom row: handle-preview input styled as `text-input` with `hairline-strong` dashed border, `canvas`-on-dark contrast card; CTA button rectangular `button-primary`-style but filled with the persona accent instead of purple (persona-specific action, per the 1.2 rule)
 
-### Brand version (inputs → output)
-- Slider 1: **Investment amount** (₹ range — define min/max with Swaraj, e.g. ₹10K–₹5L)
-- Slider 2: **Campaign scenario/scale** (e.g. number of creators engaged, or campaign duration — TBD)
-- Output: estimated return range in ₹, live-recalculated as sliders move
-- CTA: "Start a Campaign" or similar, linking to brand signup
+### Brand version
+- Slider 1: Investment amount (₹, range TBD with Swaraj)
+- Slider 2: Campaign scale/duration (TBD)
+- Output: estimated return range in ₹
+- CTA: "Start a Campaign"
 
-### Creator version (inputs → output)
-- Slider 1: **Follower count** (500 – 1M, matching reference pattern)
-- Slider 2: **Monthly posts** (10 – 100, matching reference pattern)
-- Optional slider 3 if desired: **Campaigns participated in per month**
-- Output: estimated earnings range in ₹, live-recalculated as sliders move
-- CTA: "Join as a Creator" linking to creator signup, alongside a `ourdomain.com/your_name` style handle preview input (dashed border, matches reference)
+### Creator version
+- Slider 1: Follower count (500–1M)
+- Slider 2: Monthly posts (10–100)
+- Output: estimated earnings range in ₹
+- CTA: "Join as a Creator"
 
 ### Task for coordinator
-- Build as a reusable `EarningsCalculator` component taking `{sliders: [{label, min, max, step, unit}], computeResult: (values) => {min, max}}` so brand/creator variants just pass different config + formula
-- Formula (multiplier logic) for both versions: **flag to Swaraj for exact numbers** — do not invent real financial claims; use conservative placeholder logic (e.g. simple % range of follower count × posts, or % of investment) until real numbers are supplied
-- All values must update live/interactively on drag, not just on release
+- Build reusable `EarningsCalculator` taking `{sliders, computeResult, accentColor}` so Brand/Creator only differ by config
+- Formula/multiplier logic: **flag to Swaraj**, do not invent real financial claims — placeholder logic only until real numbers are supplied
+- Live recalculation on drag, not just on release
 
 ---
 
-## 4. FAQ Section
+## 5. FAQ Section
 
 ### Structure
-- 5 questions per persona (Brand FAQ ≠ Creator FAQ — separate content sets, same component)
-- Standard accordion pattern: click question → expands answer, collapses others (or allows multiple open — coordinator's call based on existing site pattern)
-- Keep visual style consistent with whichever section precedes it (likely inherits the dark theme from the calculator section, or returns to light — coordinator to match existing site's FAQ treatment if one already exists)
+- Background `canvas`, returning to light after the dark calculator section — matches Notion's pattern of alternating dark hero/feature bands with light documentation-style sections
+- Each item uses `faq-accordion-item`: `canvas` background, `rounded.md` (8px), bottom border `1px solid hairline`, question in `heading-5`, answer in `body-md` text `slate`
+- 5 questions per persona, separate content sets, same component
+- Standard single-open accordion pattern (click to expand, others collapse) — matches Notion's understated documentation feel rather than an all-open list
 
 ### Task for coordinator
-- Reuse existing FAQ component/pattern if the site already has one; otherwise build simple accordion
-- Content (5 Q&As each for Brand and Creator) — **placeholder needed from Swaraj**, do not fabricate platform policy/pricing claims
+Content (5 Q&As × 2 personas) — placeholder needed from Swaraj, do not fabricate platform policy/pricing claims.
 
 ---
 
-## 5. Open Items Requiring Swaraj's Input Before Build
+## 6. Open Items Requiring Swaraj's Input Before Build
+- [ ] Confirm persona-accent rule: does `primary` purple survive anywhere, or do Brand/Creator accents (teal/pink) replace it entirely? (Section 1.2)
 - [ ] Default persona on first load (Brand or Creator)
-- [ ] Exact hero headline copy for both personas
+- [ ] Exact hero headline copy for both personas (expect trimming for 80px display size)
 - [ ] Signaling Factor step copy + step count (brand + creator)
-- [ ] Earnings calculator real formulas/multipliers (brand + creator) — currently placeholder logic only
+- [ ] Earnings calculator real formulas/multipliers (brand + creator)
 - [ ] Slider min/max ranges for brand investment scenario
 - [ ] FAQ content (5 Q&As × 2 personas = 10 total)
-- [ ] Accent gradient color choice for calculator section (currently referencing HYPD's coral/purple — confirm or replace with our palette)
+- [ ] Sign off on dropping the orange/black palette entirely in favor of the Notion token set above — this is a full palette replacement, not an addition
 
 ---
 
-## 6. Component Checklist for Coordinator
-- [ ] `Navbar` — sticky, persona-aware toggle, shared across both modes
-- [ ] `Hero` — persona-variant content, shared layout shell
-- [ ] `ScrollCarousel` — reusable horizontal scroll-pin carousel
-- [ ] `EarningsCalculator` — reusable dual-slider live calculator
-- [ ] `FAQAccordion` — reusable accordion, persona-variant content
-- [ ] `BrandHome` — composes Hero + ScrollCarousel + EarningsCalculator + FAQAccordion (brand config)
-- [ ] `CreatorHome` — composes same components (creator config)
-- [ ] Persona state management (context/store) shared between Navbar and Home views, with smooth transition on switch
+## 7. Component Checklist for Coordinator
+- [ ] `design-tokens` file — single source for Section 1, imported everywhere, no inline hex values
+- [ ] `Navbar` — sticky, rectangular container, pill-tab persona toggle
+- [ ] `Hero` — dark navy band, 80px display headline, accent-word emphasis, phone-mockup stack at Elevation 3
+- [ ] `ScrollCarousel` — reusable horizontal scroll-pin carousel, pastel-tint step cards
+- [ ] `EarningsCalculator` — reusable dual-slider live calculator, persona-accent theming
+- [ ] `FAQAccordion` — reusable single-open accordion, persona-variant content
+- [ ] `BrandHome` — composes Hero + ScrollCarousel + EarningsCalculator + FAQAccordion (brand config, teal accent)
+- [ ] `CreatorHome` — composes same components (creator config, pink accent)
+- [ ] Persona state management (context/store) shared between Navbar and Home views, 180ms crossfade on switch
+- [ ] Audit existing codebase for any remaining orange/black hardcoded values and migrate to tokens

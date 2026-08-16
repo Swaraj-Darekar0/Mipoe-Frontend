@@ -4,7 +4,7 @@ interface ComparisonRow {
   label: string;
   definition: string;
   competitors: string;
-  mipoe: string;
+  sellr: string;
 }
 
 const comparisonData: ComparisonRow[] = [
@@ -12,31 +12,37 @@ const comparisonData: ComparisonRow[] = [
     label: "THE TRUST PROTOCOL",
     definition: "Do they believe you?",
     competitors: "Low (Spam) / Medium (Scripted)",
-    mipoe: "HIGH: 92% (Peer-to-Peer)"
+    sellr: "HIGH: 92% (Peer-to-Peer)"
   },
   {
     label: "COST EFFICIENCY",
     definition: "Price per result.",
     competitors: "High (Bidding War) / Highest (Retainers)",
-    mipoe: "LOW: 40% Less (Pay-on-Impact)"
+    sellr: "LOW: 40% Less (Pay-on-Impact)"
   },
   {
     label: "DISTRIBUTION ENGINE",
     definition: "How it spreads.",
     competitors: "Forced Push / Managed Hand-holding",
-    mipoe: "VIRAL: Organic 'Swell'"
+    sellr: "VIRAL: Organic 'Swell'"
   },
   {
     label: "CULTURAL RESONANCE",
     definition: "Native vs. Generic.",
     competitors: "Generic Translated / Limited 'Creative Team'",
-    mipoe: "HYPER-LOCAL: 10+ Native Dialects"
+    sellr: "HYPER-LOCAL: 10+ Native Dialects"
   },
   {
     label: "OPERATIONAL DRAG",
     definition: "Your time wasted.",
     competitors: "Constant Tweaking / Long Meetings",
-    mipoe: "ZERO: Automated Scaling"
+    sellr: "ZERO: Automated Scaling"
+  },
+  {
+    label: "CREATOR INCOME",
+    definition: "Who actually gets paid?",
+    competitors: "Mega-influencers only / Retainer-locked talent",
+    sellr: "OPEN: Every creator, every niche, every city"
   }
 ];
 
@@ -49,7 +55,7 @@ const ComparisonMatrix: React.FC = () => {
           THE EVOLUTION <br />OF <span className="font-['Parisienne',cursive] text-[1.68em] text-[#FF5C00] \ tracking-normal normal-case">Advertising.</span>
         </h2>
         <p className="font-mono text-sm md:text-base text-dusty-grey mt-6 uppercase tracking-widest">
-          // Stop fighting the algorithm. Start using it.
+          // The old model extracted value. We create it.
         </p>
       </div>
 
@@ -65,7 +71,7 @@ const ComparisonMatrix: React.FC = () => {
             Traditional Ads & Agencies (The Old World)
           </div>
           <div className="p-6 border-b border-dusty-grey/30 bg-glucon-grey font-mono text-xs text-primary uppercase text-center font-bold">
-            Mipoe (The New World)
+            sellr (The New World)
           </div>
 
           {/* Grid Rows */}
@@ -92,7 +98,7 @@ const ComparisonMatrix: React.FC = () => {
                 <div className="absolute inset-0 border-l border-r border-primary/30 z-0 pointer-events-none group-hover:bg-primary/5 transition-colors duration-300"></div>
                 
                 <span className="relative z-10 font-mono font-bold text-primary text-sm lg:text-base tracking-tight uppercase">
-                  {row.mipoe}
+                  {row.sellr}
                 </span>
               </div>
             </React.Fragment>

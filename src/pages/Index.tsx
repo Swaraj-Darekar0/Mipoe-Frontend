@@ -1,6 +1,7 @@
 import React from "react";
 import Header from '@/components/Home/Header';
 import Hero from '@/components/Home/Hero';
+import PersonaHome from '@/components/Home/persona/PersonaHome';
 import UGCShowcase from '@/components/Home/UGCShowcase';
 import FeatureSplit from '@/components/Home/FeatureSplit';
 import IllustratedGuide from '@/components/Home/illustrationGuide';
@@ -13,10 +14,13 @@ const Index = () => {
       <main className="w-full max-w-[1920px] mx-auto border-x border-dark-void dark:border-dusty-grey/30 min-h-screen flex flex-col relative">
         {/* 1. Header */}
         {/* <Header /> */}
-        
-        {/* 2. Hero Section with 100% Aligned Video Stencil Mask & Embedded Bottom Boundary Navigation Links */}
-        <Hero />
-        
+
+        {/* 2. Persona-toggling Hero + Signaling Factor + Earnings Calculator + FAQ (sellr rebrand) */}
+        <PersonaHome />
+
+        {/* Old video Hero — superseded by PersonaHome above, kept in the codebase but not rendered */}
+        {/* <Hero /> */}
+
         {/* 3. Horizontal 9:16 UGC Reel Clip Showcase */}
         <UGCShowcase />
         

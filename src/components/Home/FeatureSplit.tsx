@@ -25,12 +25,15 @@ const FeatureSplit: React.FC = () => {
           </span>
         </div>
         <h2 className="font-display font-bold text-3xl md:text-4xl text-snow mb-6 leading-tight">
-          Traditional platforms chase cold metrics. Mipoe disrupts the status quo.
+          Traditional platforms chase cold metrics. sellr disrupts the status quo.
         </h2>
         <p className="font-mono text-sm md:text-base text-snow leading-relaxed text-justify tracking-tight mb-6">
-          We empower intuitive creators to tell brand stories authentically.
-          Creators are paid strictly on achieved reach and impact. Genuine
-          sales. Mass visibility. Rewarding talent, not just spending budget.
+          India has 200 million content creators. Less than 1% of them are paid
+          fairly for what they create. Meanwhile, brands spend crores on ads
+          that feel like spam. sellr fixes both sides of that equation.
+          Creators get paid for reach. Brands pay only for results. No agency
+          cut. No algorithm lottery. Just a marketplace where talent meets
+          opportunity — and both sides win.
         </p>
         <div className="mt-4 pt-4 border-t border-snow flex justify-between items-center font-mono text-xs font-bold uppercase tracking-wider text-snow">
           <span>System: Decentralized</span>

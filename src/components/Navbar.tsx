@@ -36,7 +36,7 @@ export const Navbar = ({ role }: NavbarProps) => {
     <nav className="w-full bg-white border-b shadow-sm px-4 py-3 flex items-center justify-between">
       <Link to="#" className="flex items-center text-xl font-bold text-black">
         <img src="/play-symbol.svg" alt="Clipper Icon" className="h-6 w-6 mr-2" />
-        Mipoe
+        sellr
       </Link>
       <div className="flex items-center gap-6">
         {items.map(item => {
