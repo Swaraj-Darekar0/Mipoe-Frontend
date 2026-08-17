@@ -9,6 +9,7 @@ import {
   RigidBody,
   useRopeJoint,
   useSphericalJoint,
+  useRapier,
   RapierRigidBody,
   RigidBodyProps,
 } from "@react-three/rapier";
@@ -24,6 +25,8 @@ import cardGLB from "../../../assets/brand/card.glb";
 import cardFace from "../../../assets/brand/card.png";
 
 extend({ MeshLineGeometry, MeshLineMaterial });
+
+const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
 
 // The card model's front face is UV-mapped to the LEFT half of its texture
 // atlas and the back face to the RIGHT half. Our brand art is composited
@@ -53,23 +56,43 @@ export default function Lanyard({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // iOS 13+ withholds DeviceOrientationEvent until permission is requested
+  // from inside a real user gesture — it cannot be asked for on load. A tap is
+  // safe to hook here because mobile no longer drags the card, so a tap has no
+  // other meaning and can't be confused with a scroll. Android and desktop
+  // have no such gate, so this is a no-op there.
+  const unlockMotion = () => {
+    const DOE = window.DeviceOrientationEvent as unknown as {
+      requestPermission?: () => Promise<PermissionState>;
+    };
+    if (typeof DOE?.requestPermission === "function") {
+      DOE.requestPermission().catch(() => {
+        /* declined — the ambient sway keeps the lanyard alive regardless */
+      });
+    }
+  };
+
   return (
     <div className="relative z-0 w-full h-full flex justify-center items-center">
       <Canvas
         camera={{ position, fov }}
         dpr={[1, isMobile ? 1.5 : 2]}
         gl={{ alpha: transparent }}
+        // `pan-y` is the fix for the scroll fight: it hands vertical panning
+        // back to the browser unconditionally, so a swipe over this full-bleed
+        // canvas always scrolls the page. Desktop keeps `none` so mouse drags
+        // aren't interpreted as gestures.
+        style={{ touchAction: isMobile ? "pan-y" : "none" }}
+        onPointerDown={isMobile ? unlockMotion : undefined}
         onCreated={({ gl }) => gl.setClearColor(new THREE.Color(0xffffff), transparent ? 0 : 1)}
       >
         <ambientLight intensity={Math.PI} />
         <Suspense fallback={null}>
           <Physics gravity={gravity} timeStep={isMobile ? 1 / 30 : 1 / 60}>
-            {/* The vertical anchor is not passed in: Band pins it to the top
-                edge of the canvas itself, so the strap always originates from
-                behind the navbar with no gap at any viewport size.
-                anchorX offsets the hang to the right on desktop (the copy
-                occupies the left half); centred on mobile. */}
-            <Band isMobile={isMobile} anchorX={isMobile ? 0 : 3.5} ropeLength={2.3} />
+            {/* anchorX offsets the hang to the right on desktop (the copy
+                occupies the left half); centred on mobile. The vertical anchor
+                is derived inside Band from fov + camera distance. */}
+            <BandStage isMobile={isMobile} anchorX={isMobile ? 0 : 3.5} fov={fov} camZ={position[2]} />
           </Physics>
         </Suspense>
         <Environment blur={0.75}>
@@ -89,6 +112,35 @@ interface BandProps {
   isMobile?: boolean;
   anchorX?: number;
   ropeLength?: number;
+  fov?: number;
+  camZ?: number;
+}
+
+/**
+ * Rebuilds the physics tree whenever the measured viewport changes size.
+ *
+ * Joint anchors, collider half-extents and initial body positions are all
+ * derived from viewport-dependent values, but Rapier reads each of them ONCE
+ * when the body mounts. Letting them change in place therefore desynchronises
+ * the simulation from the rendered meshes — which is what detached the strap
+ * from the card. Remounting on a quantised key guarantees every one of those
+ * values is built from the same measurement. Quantised so ordinary sub-pixel
+ * resizes don't thrash the sim.
+ */
+function BandStage({
+  isMobile,
+  anchorX,
+  fov,
+  camZ,
+}: {
+  isMobile: boolean;
+  anchorX: number;
+  fov: number;
+  camZ: number;
+}) {
+  const { viewport } = useThree();
+  const sizeKey = Math.round(viewport.width * 2) / 2;
+  return <Band key={sizeKey} isMobile={isMobile} anchorX={anchorX} fov={fov} camZ={camZ} />;
 }
 
 type LanyardRigidBody = RapierRigidBody & { lerped?: THREE.Vector3 };
@@ -110,7 +162,9 @@ function Band({
   minSpeed = 0,
   isMobile = false,
   anchorX = 0,
-  ropeLength = 1,
+  ropeLength = 2.3,
+  fov = 40,
+  camZ = 30,
 }: BandProps) {
   const band = useRef<any>(null!);
   const fixed = useRef<RapierRigidBody>(null!);
@@ -119,6 +173,34 @@ function Band({
   const j3 = useRef<RapierRigidBody>(null!);
   const card = useRef<RapierRigidBody>(null!);
   const { gl, viewport } = useThree();
+  const { world } = useRapier();
+
+  // MOBILE INPUT MODEL
+  // Touch-dragging a full-bleed 3D canvas fights the page scroll, so on mobile
+  // the card isn't dragged at all (see the handlers further down). Instead the
+  // phone itself is the controller: device tilt rotates the GRAVITY vector, and
+  // the existing rope simulation reacts to it. Tilting gravity rather than
+  // moving the card is what keeps the motion physical — the lanyard swings,
+  // overshoots and settles under its own momentum instead of being teleported.
+  const tiltDegRef = useRef(0);
+  const gyroLiveRef = useRef(false);
+  const reducedMotionRef = useRef(false);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    reducedMotionRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotionRef.current) return;
+
+    const onOrient = (e: DeviceOrientationEvent) => {
+      if (e.gamma == null) return;
+      // gamma is the left/right tilt. Clamped: past ~40° the swing is more
+      // disorienting than delightful, and it stops the card lapping the strap.
+      gyroLiveRef.current = true;
+      tiltDegRef.current = clamp(e.gamma, -40, 40);
+    };
+    window.addEventListener("deviceorientation", onOrient);
+    return () => window.removeEventListener("deviceorientation", onOrient);
+  }, [isMobile]);
 
   // While the card is being dragged it is a KINEMATIC body, which by
   // definition accumulates no velocity. Releasing it therefore handed the
@@ -129,19 +211,19 @@ function Band({
   const lastDragPos = useRef<THREE.Vector3 | null>(null);
   const releaseVel = useRef<THREE.Vector3 | null>(null);
 
-  // Pin the strap's anchor to the very top edge of the canvas so it is always
-  // hidden behind the navbar and the strap reads as originating from under it,
-  // with no gap — at ANY viewport size.
+  // Pin the strap's anchor to the top edge of the frame, so the strap always
+  // originates from behind the navbar with no gap at any viewport size.
   //
-  // Why this works: `viewport.height` is the visible height in WORLD units,
-  // which is a function of fov and camera distance only — it does not change
-  // with the canvas pixel size. So `viewport.height / 2` is the top edge of the
-  // frame at every screen size, and the anchor's on-screen position collapses
-  // to exactly the canvas top edge regardless of how tall the viewport is.
-  // A hard-coded world Y cannot do this: it drifts as the viewport height
-  // changes, which is what kept reintroducing the gap.
+  // Computed from fov + camera distance rather than read from `viewport`:
+  // half the visible world height IS camZ·tan(fov/2), so this is the same
+  // number — but available on the FIRST render. `viewport` is measured from the
+  // canvas, so it starts wrong and settles a frame later. That moved this
+  // group after mount, and Rapier captures its parent's inverted world matrix
+  // once at mount — so the card ended up rendered against a stale transform
+  // while the strap drew from raw physics coords, and the two visibly came
+  // apart. A value that never changes after mount cannot cause that.
   // The small 0.2 inset keeps the anchor just inside the frustum.
-  const anchorY = viewport.height / 2 - 0.2;
+  const anchorY = camZ * Math.tan(((fov / 2) * Math.PI) / 180) - 0.2;
 
   const vec = new THREE.Vector3();
   const ang = new THREE.Vector3();
@@ -285,6 +367,28 @@ function Band({
   }, [hovered, dragged, gl]);
 
   useFrame((state, delta) => {
+    // Mobile: rotate gravity to match how the phone is being held. Written
+    // straight to the Rapier world rather than through the <Physics gravity>
+    // prop, because that prop is synced by a React effect — driving it at
+    // 60fps would re-render the tree every frame.
+    if (isMobile && !reducedMotionRef.current) {
+      // Ambient sway is the baseline, not a fallback afterthought: iOS refuses
+      // orientation data until permission is granted from a user gesture, so
+      // without this the lanyard would hang dead still on every iPhone.
+      // Amplitude and rate are both low on purpose. Driving the sway near the
+      // rope's natural frequency made each cycle reinforce the last — textbook
+      // resonance — and the card ended up swinging across the whole hero. A
+      // small, slow drive stays well below resonance and reads as a breeze.
+      const deg = gyroLiveRef.current
+        ? tiltDegRef.current
+        : Math.sin(state.clock.elapsedTime * 0.22) * 2.2;
+      const rad = (deg * Math.PI) / 180;
+      const g = 40;
+      // Decomposed properly, so total gravity stays constant as it rotates —
+      // the lanyard changes direction of fall without changing weight.
+      world.gravity = { x: g * Math.sin(rad), y: -g * Math.cos(rad), z: 0 };
+    }
+
     if (dragged && typeof dragged !== "boolean") {
       vec.set(state.pointer.x, state.pointer.y, 0.5).unproject(state.camera);
       dir.copy(vec).sub(state.camera.position).normalize();
@@ -339,51 +443,69 @@ function Band({
 
   return (
     <>
-      {/* The segments start already hanging vertically at their rest position,
-          rather than strung out horizontally as in the upstream demo. That demo
-          relied on very heavy damping to kill the resulting dramatic drop; now
-          that damping is low enough to give a lively swing, the same horizontal
-          start would flail on every page load. Starting at rest means the
-          entrance is calm and the springiness is spent on real interaction. */}
+      {/* DROP-IN ENTRANCE. The chain starts furled up at the anchor — every
+          segment stacked just below the fixed point, which sits at the top of
+          the frame — so gravity unfurls it downward and the card falls in from
+          above, catching on the rope and bobbing once before it settles.
+          The offsets are stacked VERTICALLY rather than horizontally (as the
+          upstream demo did): a vertical start falls straight down the strap,
+          whereas a horizontal one converts the whole drop into a sideways
+          pendulum swing and flails across the hero.
+          Bodies are separated by a hair rather than perfectly coincident —
+          exactly-overlapping bodies give the solver a degenerate zero-length
+          direction to resolve. */}
       <group position={[anchorX, anchorY, 0]}>
         <RigidBody ref={fixed} {...segmentProps} type="fixed" />
-        <RigidBody position={[0, -effectiveRope, 0]} ref={j1} {...segmentProps} type="dynamic">
+        <RigidBody position={[0, -0.02, 0]} ref={j1} {...segmentProps} type="dynamic">
           <BallCollider args={[0.1]} />
         </RigidBody>
-        <RigidBody position={[0, -2 * effectiveRope, 0]} ref={j2} {...segmentProps} type="dynamic">
+        <RigidBody position={[0, -0.04, 0]} ref={j2} {...segmentProps} type="dynamic">
           <BallCollider args={[0.1]} />
         </RigidBody>
-        <RigidBody position={[0, -3 * effectiveRope, 0]} ref={j3} {...segmentProps} type="dynamic">
+        <RigidBody position={[0, -0.06, 0]} ref={j3} {...segmentProps} type="dynamic">
           <BallCollider args={[0.1]} />
         </RigidBody>
         <RigidBody
-          position={[0, -3 * effectiveRope - 1.5 * k, 0]}
+          // Offset below j3 by exactly the spherical joint's anchor (1.5k), so
+          // the joint starts already satisfied. Any other value would be an
+          // instant constraint violation and the card would snap on frame one
+          // instead of falling.
+          position={[0, -0.06 - 1.5 * k, 0]}
           ref={card}
           {...segmentProps}
           type={dragged ? "kinematicPosition" : "dynamic"}
         >
           <CuboidCollider args={[0.8 * k, 1.125 * k, 0.01]} />
+          {/* Drag is DESKTOP ONLY. On a phone this canvas covers the whole
+              hero, and pointer-capturing the card meant any swipe starting on
+              it dragged the card instead of scrolling the page — the card won,
+              the user lost. Mobile gets tilt control instead (see above), so
+              every touch here stays a scroll. */}
           <group
             scale={cardScale}
             position={[0, -1.2 * k, -0.05]}
-            onPointerOver={() => hover(true)}
-            onPointerOut={() => hover(false)}
-            onPointerUp={(e: any) => {
-              e.target.releasePointerCapture(e.pointerId);
-              // Hand the gesture's momentum to the physics body so the card
-              // flies out of the throw and swings back, instead of resuming
-              // from a standstill.
-              releaseVel.current = dragVel.current.clone();
-              lastDragPos.current = null;
-              dragVel.current.set(0, 0, 0);
-              drag(false);
-            }}
-            onPointerDown={(e: any) => {
-              e.target.setPointerCapture(e.pointerId);
-              lastDragPos.current = null;
-              dragVel.current.set(0, 0, 0);
-              drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current!.translation())));
-            }}
+            {...(isMobile
+              ? {}
+              : {
+                  onPointerOver: () => hover(true),
+                  onPointerOut: () => hover(false),
+                  onPointerUp: (e: any) => {
+                    e.target.releasePointerCapture(e.pointerId);
+                    // Hand the gesture's momentum to the physics body so the
+                    // card flies out of the throw and swings back, instead of
+                    // resuming from a standstill.
+                    releaseVel.current = dragVel.current.clone();
+                    lastDragPos.current = null;
+                    dragVel.current.set(0, 0, 0);
+                    drag(false);
+                  },
+                  onPointerDown: (e: any) => {
+                    e.target.setPointerCapture(e.pointerId);
+                    lastDragPos.current = null;
+                    dragVel.current.set(0, 0, 0);
+                    drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current!.translation())));
+                  },
+                })}
           >
             <mesh geometry={nodes.card.geometry}>
               <meshPhysicalMaterial

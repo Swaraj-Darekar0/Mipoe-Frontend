@@ -39,10 +39,6 @@ const Index = () => {
         {/* 7. Footer */}
         <Footer />
       </main>
-      
-      {/* Decorative Fixed Sidebar Elements */}
-      <div className="fixed top-1/2 left-4 w-1 h-16 bg-primary hidden xl:block mix-blend-difference pointer-events-none transform -translate-y-1/2 z-50"></div>
-      <div className="fixed top-1/2 right-4 w-1 h-16 bg-primary hidden xl:block mix-blend-difference pointer-events-none transform -translate-y-1/2 z-50"></div>
     </div>
   );
 };

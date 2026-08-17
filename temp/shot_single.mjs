@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 const [,, w, h, waitMs, outName] = process.argv;
-const URL = "http://localhost:8081/";
+const URL = "http://localhost:8080/";
 const OUT = "D:/temp/claude/d--Mipoe/3cb70b64-7a70-4f21-b879-bd7cfb433ad6/scratchpad";
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: Number(w), height: Number(h) } });

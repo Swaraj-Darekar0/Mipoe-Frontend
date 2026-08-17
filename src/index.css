@@ -1,7 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&amp;family=Space+Mono:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Mono:wght@300;400;500&amp;display=swap');
+/* The separators here MUST be bare `&`. This URL previously carried `&amp;`,
+   which Google answers with a 200 and a stylesheet containing ONLY the first
+   family — `amp;family=...` is an unknown parameter and is dropped silently.
+   Space Mono and IBM Plex Mono were never actually loading. */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+/* Abril Fatface — the hero display face. Single weight by design; it is a fat
+   didone and has no other cut, so never ask it for a bold. */
+@import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Birthstone&family=Parisienne&display=swap');
 @import "tailwindcss";
 
@@ -134,9 +141,17 @@
   --container-padding: 2rem;
   --container-screens-2xl: 1400px;
 
-  --font-display: "Space Grotesk", "sans-serif";
-  --font-body: "Inter", "sans-serif";
-  --font-HomeDisplay: "Playfair Display", "sans-serif";
+  /* Generic families must stay UNQUOTED. `"sans-serif"` is parsed as a family
+     literally named sans-serif, not the generic keyword, so the fallback chain
+     dead-ended and a missing webfont fell through to the browser default. */
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  /* Serif faces fall back to serif — a display serif landing on Arial is worse
+     than it landing on Georgia. */
+  --font-HomeDisplay: "Playfair Display", Georgia, serif;
+  /* The hero mass. Abril Fatface only — Playfair, even at 900, is a modelled
+     didone with thin hairlines and does not read as one block at size. */
+  --font-fat: "Abril Fatface", "Playfair Display", Georgia, serif;
 
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));

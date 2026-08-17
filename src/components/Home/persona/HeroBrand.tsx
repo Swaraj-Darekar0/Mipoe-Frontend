@@ -56,7 +56,10 @@ const HeroBrand: React.FC = () => {
       <div className="relative z-10 pointer-events-none w-full max-w-7xl mx-auto px-6 md:px-8 py-16 md:py-0 min-h-screen flex flex-col md:flex-row items-center gap-10 md:gap-8">
         <div className="w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left">
 
-          <h1 className="hero-rise font-semibold text-[36px] sm:text-[48px] lg:text-[60px] leading-[1.08] tracking-[-1.5px] text-ink">
+          {/* 30px on the smallest screens keeps this headline to 3 lines. At
+              36px it wrapped to 4, which is a font-size error rather than a
+              copy-length one — the hero should read in one glance. */}
+          <h1 className="hero-rise font-semibold text-[30px] sm:text-[42px] lg:text-[60px] leading-[1.08] tracking-[-1.5px] text-ink">
             {content.hero.headline.map((segment, i) =>
               segment.emphasis ? (
                 <span key={i} className="text-brand-teal">

@@ -2,7 +2,11 @@ export type Persona = "creator" | "brand";
 
 export interface HeadlineSegment {
   text: string;
+  /** Carries the persona accent colour. */
   emphasis?: boolean;
+  /** Set on the phrase the headline should land on: renders in the bold
+   *  grotesque against the serif default, per the creator hero design. */
+  strong?: boolean;
 }
 
 export interface CarouselStep {
@@ -46,6 +50,7 @@ export interface PersonaContent {
     headline: HeadlineSegment[];
     subheadline: string;
     ctaLabel: string;
+    ctaFootnote?: string;
   };
   ctaHref: string;
   carouselLabel: string;
@@ -85,15 +90,18 @@ export const personaContent: Record<Persona, PersonaContent> = {
       headline: [
         { text: "Your " },
         { text: "CONTENT", emphasis: true },
-        { text: " Already Has an Audience. Get " },
+        { text: " Already Has " },
+        { text: "an Audience. Get ", strong: true },
         { text: "PAID", emphasis: true },
         { text: " For It." },
       ],
       subheadline: "No agency. No gatekeepers. No minimum follower count. Just post, earn, repeat.",
       ctaLabel: "Start Earning Today",
+      ctaFootnote: "whats upp!!"
     },
     ctaHref: "/login?role=creator",
     carouselLabel: "HOW CREATORS EARN",
+    
     carouselIntro: "No agency contact. No minimum followers. Just create.",
     steps: [
       {
@@ -222,9 +230,11 @@ export const personaContent: Record<Persona, PersonaContent> = {
       ],
       subheadline: "Set a campaign. Set a budget. Pay only when results hit. Creators do the rest.",
       ctaLabel: "Launch a Campaign",
+      ctaFootnote: "whats upp!!"
     },
     ctaHref: "/login?role=brand",
     carouselLabel: "HOW BRANDS WIN",
+    
     carouselIntro: "Set it. Watch creators run it. Pay for what lands.",
     steps: [
       {
