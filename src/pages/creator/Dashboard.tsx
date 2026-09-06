@@ -7,9 +7,9 @@ import { fetchCreatorCampaigns, Campaign, getCreatorNotifications, deleteCreator
 import { useNavigate } from "react-router-dom";
 import Notifications, { DisplayNotification } from "@/components/creator/Notifications";
 import { useToast } from '@/hooks/use-toast';
-import { Bell, CheckCircle, XCircle, DollarSign, ArrowUpRight } from 'lucide-react';
+import { Bell, CheckCircle, XCircle, DollarSign, ArrowUpRight, Sparkles } from 'lucide-react';
 
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 
 const CreatorDashboard = () => {
   const [yourCampaigns, setYourCampaigns] = useState<Campaign[]>([]);
@@ -35,22 +35,22 @@ const CreatorDashboard = () => {
         let colorClass = "bg-blue-500/10 border-blue-500/20";
         switch (notif.type) {
           case 'clip_approved': 
-            icon = <CheckCircle className="h-4 w-4 text-green-500" />; 
-            colorClass = "bg-green-500/10 border-green-500/20";
+            icon = <CheckCircle className="h-4 w-4 text-emerald-600" />; 
+            colorClass = "bg-emerald-50 border-emerald-200";
             break;
           case 'clip_rejected': 
-            icon = <XCircle className="h-4 w-4 text-red-500" />; 
-            colorClass = "bg-red-500/10 border-red-500/20";
+            icon = <XCircle className="h-4 w-4 text-rose-600" />; 
+            colorClass = "bg-rose-50 border-rose-200";
             break;
           case 'earning_payout': 
             displayMessage = `Payout of ₹${notif.amount?.toFixed(2)} is deposited into your wallet.`; 
-            icon = <DollarSign className="h-4 w-4 text-blue-500" />; 
-            colorClass = "bg-blue-500/10 border-blue-500/20";
+            icon = <DollarSign className="h-4 w-4 text-blue-600" />; 
+            colorClass = "bg-blue-50 border-blue-200";
             break;
           case 'withdrawal_initiated': 
             displayMessage = `Successfully initiated withdrawal of ₹${notif.amount?.toFixed(2)}.`; 
-            icon = <ArrowUpRight className="h-4 w-4 text-purple-500" />; 
-            colorClass = "bg-purple-500/10 border-purple-500/20";
+            icon = <ArrowUpRight className="h-4 w-4 text-purple-600" />; 
+            colorClass = "bg-purple-50 border-purple-200";
             break;
         }
         return { ...notif, id: notif.id || `${notif.type}-${notif.timestamp}-${notif.clip_id || ''}`, displayMessage, icon, colorClass };
@@ -115,7 +115,12 @@ const CreatorDashboard = () => {
   if (loading) {
     return (
       <CreatorLayout>
-        <div className="flex justify-center items-center h-64"><div className="text-gray-400">Loading Hub...</div></div>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-zinc-500 font-medium text-sm flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+            Loading Hub...
+          </div>
+        </div>
       </CreatorLayout>
     );
   }
@@ -123,7 +128,7 @@ const CreatorDashboard = () => {
   if (error) {
     return (
       <CreatorLayout>
-        <div className="text-red-500 text-center p-4">{error}</div>
+        <div className="text-rose-600 text-center p-6 bg-rose-50 rounded-2xl border border-rose-200 font-medium text-sm">{error}</div>
       </CreatorLayout>
     );
   }
@@ -131,12 +136,21 @@ const CreatorDashboard = () => {
   return (
     <CreatorLayout>
       <div className="space-y-8">
-        <header>
-          <h1 className="font-display text-4xl font-bold text-white">Hub</h1>
-          <p className="text-gray-400 mt-2">Welcome back! Here's a summary of your creator activity.</p>
+        <header className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight">
+              Creator Hub
+            </h1>
+            <span className="bg-pink-100 text-pink-700 p-1.5 rounded-full">
+              <Sparkles className="size-4" />
+            </span>
+          </div>
+          <p className="text-zinc-500 text-sm sm:text-base max-w-xl">
+            Welcome back! Track your performance, active submissions, and active brand campaigns.
+          </p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <QuickStats currentEarnings={walletBalance} activeSubmissions={activeSubmissions} loading={loading} />
           </div>
@@ -146,7 +160,15 @@ const CreatorDashboard = () => {
         </div>
 
         <section>
-          <h2 className="text-2xl font-bold mb-6 font-display text-white">Your Campaigns</h2>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-bold font-display text-zinc-900 tracking-tight">Your Joined Campaigns</h2>
+            {yourCampaigns.length > 0 && (
+              <span className="text-xs font-mono font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200">
+                {yourCampaigns.length} Active
+              </span>
+            )}
+          </div>
+
           {yourCampaigns.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {yourCampaigns.map(camp => (
@@ -156,11 +178,15 @@ const CreatorDashboard = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-10 px-6 bg-[#18181B] rounded-lg border border-white/10">
-                <p className="text-gray-400">You haven't joined any campaigns yet.</p>
-                <Button onClick={() => navigate('/creator/campaigns')} variant="default" className="mt-4">
-                    Explore Campaigns
-                </Button>
+            <div className="text-center py-12 px-6 bg-white rounded-2xl border border-zinc-200/80 shadow-xs">
+              <div className="size-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mx-auto mb-3 border border-orange-200">
+                <Sparkles size={20} />
+              </div>
+              <p className="text-zinc-800 font-semibold text-base">You haven't joined any campaigns yet.</p>
+              <p className="text-zinc-500 text-xs mt-1 max-w-md mx-auto">Explore high-payout brand campaigns and start earning for your content today.</p>
+              <Button onClick={() => navigate('/creator/campaigns')} className="mt-5 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-2.5 rounded-xl shadow-xs transition-all">
+                Explore Campaigns
+              </Button>
             </div>
           )}
         </section>
@@ -170,3 +196,4 @@ const CreatorDashboard = () => {
 };
 
 export default CreatorDashboard;
+

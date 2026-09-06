@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { PersonaProvider, usePersona } from "./PersonaContext";
 import PersonaNavbar from "./PersonaNavbar";
 import HeroCreator from "./HeroCreator";
@@ -9,9 +11,24 @@ import EarningsCalculator from "./EarningsCalculator";
 import FAQAccordion from "./FAQAccordion";
 import { personaContent } from "./personaContent";
 
+gsap.registerPlugin(ScrollTrigger);
+
 const PersonaBody: React.FC = () => {
   const { persona } = usePersona();
   const content = personaContent[persona];
+
+  // Switching persona swaps the entire page body, and the two personas are not
+  // the same height — the creator hero is one viewport, the brand hero another,
+  // and the FAQ answers differ in length. ScrollSmoother's scroll range is
+  // measured rather than live, so it has to be told.
+  //
+  // After the crossfade, not during: `mode="wait"` unmounts the outgoing hero
+  // before mounting the incoming one, so measuring on the persona change itself
+  // measures the gap between them.
+  useEffect(() => {
+    const id = window.setTimeout(() => ScrollTrigger.refresh(), 260);
+    return () => window.clearTimeout(id);
+  }, [persona]);
 
   return (
     <AnimatePresence mode="wait">

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   return (
@@ -14,24 +15,25 @@ const Footer: React.FC = () => {
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-snow mb-2 block">Contact</span>
-          <a className="hover:text-primary transition-colors" href="#">
+          <a className="hover:text-primary transition-colors" href="mailto:info@sellr.in">
             info@sellr.in
           </a>
           <a className="hover:text-primary transition-colors" href="#">
             1-800-NO-ALGO
           </a>
-          <a className="hover:text-primary transition-colors" href="#">
-            Mumbai, India
-          </a>
+          <span>Mumbai, India</span>
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-snow mb-2 block">Legals</span>
-          <a className="hover:text-primary transition-colors" href="#">
-            Terms of Service
-          </a>
-          <a className="hover:text-primary transition-colors" href="#">
+          <Link className="hover:text-primary transition-colors" to="/terms">
+            Terms & Conditions
+          </Link>
+          <Link className="hover:text-primary transition-colors" to="/privacy">
             Privacy Policy
-          </a>
+          </Link>
+          <Link className="hover:text-primary transition-colors" to="/cookie-policy">
+            Cookie Policy
+          </Link>
           <span className="mt-4 opacity-50">© 2026 sellr</span>
         </div>
       </div>

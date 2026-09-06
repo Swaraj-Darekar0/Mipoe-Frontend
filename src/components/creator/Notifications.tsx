@@ -7,7 +7,6 @@ import { Bell, CheckCircle, XCircle, MessageSquare, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Notification as ApiNotification } from '@/lib/api';
 
-// This is a re-usable interface that describes a processed notification ready for display
 export interface DisplayNotification extends ApiNotification {
   displayMessage: string;
   icon: React.ReactNode;
@@ -36,46 +35,46 @@ const Notifications = ({ processedNotifications, loading, error, onDismiss }: No
     }
     switch (notif.type) {
       case 'clip_approved':
-        return <CheckCircle className="text-green-400" size={20} />;
+        return <CheckCircle className="text-emerald-600" size={18} />;
       case 'clip_rejected':
-        return <XCircle className="text-red-400" size={20} />;
+        return <XCircle className="text-rose-600" size={18} />;
       case 'earning_payout':
-        return <CheckCircle className="text-blue-400" size={20} />;
+        return <CheckCircle className="text-blue-600" size={18} />;
       case 'withdrawal_initiated':
-        return <MessageSquare className="text-purple-400" size={20} />;
+        return <MessageSquare className="text-purple-600" size={18} />;
       default:
-        return <Bell className="text-gray-400" size={20} />;
+        return <Bell className="text-zinc-500" size={18} />;
     }
   };
 
   const getIconBgClass = (notif: DisplayNotification) => {
     if (notif.clip_thumbnail) {
-      return "bg-transparent border border-[#262626]";
+      return "bg-transparent border border-zinc-200";
     }
     switch (notif.type) {
       case 'clip_approved':
-        return "bg-green-900/50";
+        return "bg-emerald-100/80 border border-emerald-200";
       case 'clip_rejected':
-        return "bg-red-900/50";
+        return "bg-rose-100/80 border border-rose-200";
       case 'earning_payout':
-        return "bg-blue-900/50";
+        return "bg-blue-100/80 border border-blue-200";
       case 'withdrawal_initiated':
-        return "bg-purple-900/50";
+        return "bg-purple-100/80 border border-purple-200";
       default:
-        return "bg-gray-700";
+        return "bg-zinc-100 border border-zinc-200";
     }
   };
 
   if (loading) {
     return (
-      <Card className="bg-raisin-black border border-[#262626] rounded-xl p-6 flex flex-col">
+      <Card className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-sm flex flex-col">
         <CardHeader className='p-0 mb-4'>
-          <CardTitle className="font-display text-snow text-[22px] font-bold leading-tight tracking-[-0.015em]">Notifications Center</CardTitle>
+          <CardTitle className="font-display text-zinc-900 text-xl font-bold tracking-tight">Notification Center</CardTitle>
         </CardHeader>
         <CardContent className='p-0'>
-          <div className="flex items-center justify-center p-4">
-            <Bell className="h-6 w-6 animate-bounce text-dusty-grey" />
-            <span className="ml-2 text-dusty-grey">Loading activities...</span>
+          <div className="flex items-center justify-center p-6">
+            <Bell className="h-5 w-5 animate-bounce text-zinc-400" />
+            <span className="ml-2.5 text-xs text-zinc-500 font-medium">Loading activities...</span>
           </div>
         </CardContent>
       </Card>
@@ -84,33 +83,34 @@ const Notifications = ({ processedNotifications, loading, error, onDismiss }: No
 
   if (error) {
     return (
-      <Card className="bg-raisin-black border border-[#262626] rounded-xl p-6 flex flex-col">
+      <Card className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-sm flex flex-col">
         <CardHeader className='p-0 mb-4'>
-          <CardTitle className="font-display text-snow text-[22px] font-bold leading-tight tracking-[-0.015em]">Notifications Center</CardTitle>
+          <CardTitle className="font-display text-zinc-900 text-xl font-bold tracking-tight">Notification Center</CardTitle>
         </CardHeader>
         <CardContent className='p-0'>
-          <div className="text-sm text-red-500 text-center py-4">{error}</div>
+          <div className="text-xs text-rose-600 text-center py-4">{error}</div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="bg-raisin-black border border-[#262626] rounded-xl p-6 flex flex-col">
-      <CardHeader className='p-0 mb-4'>
-        <CardTitle className="font-display text-snow text-[22px] font-bold leading-tight tracking-[-0.015em]">Notification Center</CardTitle>
+    <Card className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-sm flex flex-col h-full">
+      <CardHeader className='p-0 mb-4 flex-row items-center justify-between'>
+        <CardTitle className="font-display text-zinc-900 text-xl font-bold tracking-tight">Notification Center</CardTitle>
+        <span className="text-[11px] font-mono text-zinc-400">Activity</span>
       </CardHeader>
-      <CardContent className='p-0 flex-1 flex flex-col'>
+      <CardContent className='p-0 flex-1 flex flex-col justify-between'>
         {processedNotifications.length > 0 ? (
-          <div className="flex flex-col gap-4 overflow-y-auto pr-2 flex-1">
+          <div className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1">
             {processedNotifications.slice(0, 3).map((notif) => (
-              <div key={notif.id} className="flex items-start gap-3 relative group">
+              <div key={notif.id} className="flex items-start gap-3 relative group p-2.5 rounded-xl bg-zinc-50/70 border border-zinc-100 hover:bg-zinc-100/60 transition-colors">
                 <div className={`w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center overflow-hidden ${getIconBgClass(notif)}`}>
                   {getIcon(notif)}
                 </div>
                 <div className="flex-1 min-w-0 pr-6">
-                  <p className="text-snow text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: notif.displayMessage }} />
-                  <p className="text-dusty-grey text-xs">
+                  <p className="text-zinc-800 text-xs leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: notif.displayMessage }} />
+                  <p className="text-zinc-400 text-[10px] mt-0.5">
                     {new Date(notif.timestamp).toLocaleString()}
                   </p>
                 </div>
@@ -120,22 +120,22 @@ const Notifications = ({ processedNotifications, loading, error, onDismiss }: No
                       e.stopPropagation();
                       onDismiss(notif.id);
                     }}
-                    className="absolute top-0 right-0 text-dusty-grey hover:text-snow opacity-50 hover:opacity-100 transition-all p-1 bg-transparent border-0 cursor-pointer"
+                    className="absolute top-2 right-2 text-zinc-400 hover:text-zinc-700 opacity-60 hover:opacity-100 transition-all p-1 bg-transparent border-0 cursor-pointer"
                     title="Dismiss notification"
                   >
-                    <X size={14} />
+                    <X size={13} />
                   </button>
                 )}
               </div>
             ))}
              {processedNotifications.length > 3 && (
-              <Button variant="link" size="sm" className="p-0 h-auto text-primary hover:text-primary/80 mt-2" onClick={() => navigate('/creator/notifications')}>
-                View All Activities
+              <Button variant="link" size="sm" className="p-0 h-auto text-xs text-orange-600 hover:text-orange-700 font-semibold mt-2 self-start" onClick={() => navigate('/creator/notifications')}>
+                View All Activities →
               </Button>
             )}
           </div>
         ) : (
-          <div className="text-sm text-dusty-grey text-center py-4">No recent activities.</div>
+          <div className="text-xs text-zinc-400 text-center py-8">No recent activities.</div>
         )}
       </CardContent>
     </Card>
@@ -143,5 +143,6 @@ const Notifications = ({ processedNotifications, loading, error, onDismiss }: No
 };
 
 export default Notifications;
+
 
 

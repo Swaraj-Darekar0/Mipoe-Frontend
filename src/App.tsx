@@ -36,6 +36,9 @@ const CreatorAffiliateAnalyticsPage = React.lazy(() => import("./pages/creator/A
 const AffiliateRedirect = React.lazy(() => import("./pages/AffiliateRedirect"));
 const StoreConfig = React.lazy(() => import("./pages/creator/StoreConfig"));
 const PublicStore = React.lazy(() => import("./pages/PublicStore"));
+const TermsConditions = React.lazy(() => import("./components/policies/TermsConditions"));
+const PrivacyPolicy = React.lazy(() => import("./components/policies/PrivacyPolicy"));
+const CookiePolicy = React.lazy(() => import("./components/policies/CookiePolicy"));
 
 const queryClient = new QueryClient();
 
@@ -80,6 +83,9 @@ const App = () => (
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/AdminLogin" element={<AdminLogin />} />
+            <Route path="/terms" element={<TermsConditions />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

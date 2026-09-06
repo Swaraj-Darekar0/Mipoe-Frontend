@@ -23,6 +23,12 @@ import * as THREE from "three";
 // plain solid colour: no texture, image or logo on the thread, by design.
 import cardGLB from "../../../assets/brand/card.glb";
 import cardFace from "../../../assets/brand/card.png";
+import {
+  ANCHOR_OVERSHOOT,
+  CARD_GEOMETRY,
+  assertCardAspect,
+  cardWidth,
+} from "./lanyardGeometry";
 
 extend({ MeshLineGeometry, MeshLineMaterial });
 
@@ -111,7 +117,9 @@ interface BandProps {
   minSpeed?: number;
   isMobile?: boolean;
   anchorX?: number;
-  ropeLength?: number;
+  // `ropeLength` is gone on purpose: the rope is now solved for from
+  // CARD_GEOMETRY's dropFraction rather than passed in. Setting a length by hand
+  // fought the size, which is what pushed a larger card off the bottom.
   fov?: number;
   camZ?: number;
 }
@@ -162,7 +170,6 @@ function Band({
   minSpeed = 0,
   isMobile = false,
   anchorX = 0,
-  ropeLength = 2.3,
   fov = 40,
   camZ = 30,
 }: BandProps) {
@@ -211,8 +218,19 @@ function Band({
   const lastDragPos = useRef<THREE.Vector3 | null>(null);
   const releaseVel = useRef<THREE.Vector3 | null>(null);
 
-  // Pin the strap's anchor to the top edge of the frame, so the strap always
-  // originates from behind the navbar with no gap at any viewport size.
+  // Pin the strap's anchor just ABOVE the top edge of the frame, so the strap
+  // is CUT by that edge instead of ending inside it.
+  //
+  // This is the difference between "hanging from the top of the screen" and
+  // "floating in mid-air": if the fixed point lands inside the frustum, its
+  // top vertex is visible and the strap plainly starts at a point in space.
+  // Parked outside, the strap runs off the canvas and reads as continuing
+  // behind it. HeroBrand puts the canvas's top edge on the viewport's top
+  // edge, so "off the top of the canvas" IS the top of the display.
+  //
+  // It used to be pinned 0.2 INSIDE the frame and got away with it only
+  // because a full-width navbar covered the top strip. A centred pill covers
+  // the middle and nothing else, which is what exposed the seam.
   //
   // Computed from fov + camera distance rather than read from `viewport`:
   // half the visible world height IS camZ·tan(fov/2), so this is the same
@@ -222,8 +240,7 @@ function Band({
   // once at mount — so the card ended up rendered against a stale transform
   // while the strap drew from raw physics coords, and the two visibly came
   // apart. A value that never changes after mount cannot cause that.
-  // The small 0.2 inset keeps the anchor just inside the frustum.
-  const anchorY = camZ * Math.tan(((fov / 2) * Math.PI) / 180) - 0.2;
+  const anchorY = camZ * Math.tan(((fov / 2) * Math.PI) / 180) + ANCHOR_OVERSHOOT;
 
   const vec = new THREE.Vector3();
   const ang = new THREE.Vector3();
@@ -247,15 +264,21 @@ function Band({
   const { nodes, materials } = useGLTF(cardGLB) as unknown as CardGLTFResult;
   const faceTexture = useTexture(cardFace);
 
-  // Measure the card mesh's true width at scale 1, straight from the GLB, so
+  // Measure the card mesh's true size at scale 1, straight from the GLB, so
   // the responsive sizing below is exact rather than relying on a guessed
   // constant (the collider is a loose bounding box and is noticeably wider
   // than the visible card, so it can't be used for this).
-  const cardUnitWidth = useMemo(() => {
+  const cardUnit = useMemo(() => {
     const geom = nodes.card.geometry;
     geom.computeBoundingBox();
     const bb = geom.boundingBox!;
-    return bb.max.x - bb.min.x;
+    const width = bb.max.x - bb.min.x;
+    const height = bb.max.y - bb.min.y;
+    // HeroBrand cannot measure the mesh — it needs the aspect at module scope to
+    // build a CSS expression — so it trusts a constant. Tell someone if the
+    // model has drifted away from it.
+    assertCardAspect(height / width);
+    return { width, height };
   }, [nodes.card.geometry]);
 
   // The card is a MATCHED SET, authored upstream at scale 2.25: the collider
@@ -265,22 +288,39 @@ function Band({
   // leaves the joint anchor at the old size, so the strap stops meeting the
   // card's clip and visibly detaches.
   //
-  // On mobile the card is sized to one third of the viewport BREADTH and the
-  // height follows automatically (the mesh scales uniformly, so the vertical
-  // rectangle keeps its aspect ratio). `viewport.width` is in world units and
-  // already accounts for the canvas aspect, so this adapts to any phone width.
-  const cardScale = isMobile ? ((1 / 3) * viewport.width) / cardUnitWidth : 6.8;
+  // BOTH layouts are now sized from the viewport rather than only mobile. The
+  // desktop card used to be a fixed 6.8 world units, which is adaptive to
+  // viewport HEIGHT by accident (world units are a constant share of the frame)
+  // and not at all to width, so it came out cramped on a wide monitor and
+  // oversized on a portrait tablet. `cardWidth` takes the smaller of a width
+  // share and a height share, so whichever axis is scarce is the one that binds.
+  // `viewport` is in world units and already accounts for the canvas aspect.
+  const geometry = isMobile ? CARD_GEOMETRY.mobile : CARD_GEOMETRY.desktop;
+  const cardScale =
+    cardWidth(geometry, viewport.width, viewport.height) / cardUnit.width;
   const k = cardScale / 2.25;
 
-  // Mobile: derive the rope length so the card lands in the free space below
-  // the CTA, instead of a fixed length that only suits one phone size. The
-  // card's own scaled offsets (1.5k spherical joint + 1.2k mesh offset) already
-  // carry a two-thirds-width card a long way down, so the rope only makes up
-  // the remainder; clamped so the strap can never collapse to nothing.
-  const targetCentreFraction = 0.78;
-  const effectiveRope = isMobile
-    ? Math.max(0.45, (targetCentreFraction * viewport.height - 0.2 - 2.7 * k) / 3)
-    : ropeLength;
+  // Rope length. Which way round this is derived depends on the layout — see
+  // CardDrop in lanyardGeometry for why solving is right on a phone and wrong at
+  // md+.
+  //
+  // The solved branch works back from the target drop: the card's own scaled
+  // offsets (1.5k spherical joint + 1.2k mesh offset) carry it 2.7k below the
+  // last rope segment, and that term grows with the card, so the rope makes up
+  // only the remainder. ANCHOR_OVERSHOOT is ADDED, not subtracted: the anchor
+  // sits just above the top of the frame, so the fall from the frame edge is
+  // that much longer.
+  //
+  // The 0.6 floor is not decoration. Below roughly that, all four points of the
+  // strap's curve land within a few pixels of each other and the meshline starts
+  // emitting zero-area segments, which reads as a strap with holes in it.
+  const effectiveRope =
+    geometry.drop.kind === "rope"
+      ? geometry.drop.length
+      : Math.max(
+          0.6,
+          (geometry.drop.fraction * viewport.height + ANCHOR_OVERSHOOT - 2.7 * k) / 3
+        );
 
   const getLerped = (body: LanyardRigidBody): THREE.Vector3 => {
     if (!body.lerped) body.lerped = new THREE.Vector3().copy(body.translation());
@@ -426,7 +466,14 @@ function Band({
       [j1, j2].forEach((ref) => {
         const lerped = getLerped(ref.current);
         const clampedDistance = Math.max(0.1, Math.min(1, lerped.distanceTo(ref.current.translation())));
-        lerped.lerp(ref.current.translation(), delta * (minSpeed + clampedDistance * (maxSpeed - minSpeed)));
+        // The alpha MUST be clamped to 1. `delta * 50` is above 1 for any frame
+        // longer than 20ms, and a lerp alpha over 1 does not smooth, it
+        // overshoots: the two middle control points fly past their targets, the
+        // curve whips off screen, and the strap renders as a stub at the anchor
+        // with a hole where the rest of it should be. Invisible at a steady
+        // 60fps, and the first thing you see on a device that drops frames.
+        const alpha = Math.min(1, delta * (minSpeed + clampedDistance * (maxSpeed - minSpeed)));
+        lerped.lerp(ref.current.translation(), alpha);
       });
       curve.points[0].copy(j3.current.translation());
       curve.points[1].copy(getLerped(j2.current));

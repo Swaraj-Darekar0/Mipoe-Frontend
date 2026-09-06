@@ -10,11 +10,6 @@ import { ArrowLeft } from "lucide-react";
 // Import UI components for Dialog (assuming shadcn/ui or similar)
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
-// Policy dialog components
-import CookiePolicy from "@/components/policies/CookiePolicy";
-import PrivacyPolicy from "@/components/policies/PrivacyPolicy";
-import TermsConditions from "@/components/policies/TermsConditions";
-
 const Login = () => {
   const [searchParams] = useSearchParams();
   const queryRole = searchParams.get("role") === "brand" ? "brand" : "creator";
@@ -31,9 +26,6 @@ const Login = () => {
   const [resetMessage, setResetMessage] = useState("");
 
   const [consentGiven, setConsentGiven] = useState(false);
-  const [showCookiePolicy, setShowCookiePolicy] = useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
-  const [showTermsConditions, setShowTermsConditions] = useState(false);
 
   // Sync role state with query param if it changes
   useEffect(() => {
@@ -174,29 +166,29 @@ const handleForgotPassword = async (e: React.FormEvent) => {
             />
             <label htmlFor="consent" className="text-xs text-[#989898] leading-tight select-none">
               I agree to the secure storage of login cookies as detailed in the{" "}
-              <button
-                type="button"
-                onClick={() => setShowCookiePolicy(true)}
+              <Link
+                to="/cookie-policy"
+                target="_blank"
                 className="text-[#FF5C00] hover:underline focus:outline-none font-medium font-sans"
               >
                 Cookie Policy
-              </button>
+              </Link>
               , and agree to the{" "}
-              <button
-                type="button"
-                onClick={() => setShowPrivacyPolicy(true)}
+              <Link
+                to="/privacy"
+                target="_blank"
                 className="text-[#FF5C00] hover:underline focus:outline-none font-medium font-sans"
               >
                 Privacy Policy
-              </button>{" "}
+              </Link>{" "}
               and{" "}
-              <button
-                type="button"
-                onClick={() => setShowTermsConditions(true)}
+              <Link
+                to="/terms"
+                target="_blank"
                 className="text-[#FF5C00] hover:underline focus:outline-none font-medium font-sans"
               >
                 Terms & Conditions
-              </button>
+              </Link>
               .
             </label>
           </div>
@@ -280,10 +272,6 @@ const handleForgotPassword = async (e: React.FormEvent) => {
             )}
           </DialogContent>
         </Dialog>
-
-        <CookiePolicy open={showCookiePolicy} onOpenChange={setShowCookiePolicy} />
-        <PrivacyPolicy open={showPrivacyPolicy} onOpenChange={setShowPrivacyPolicy} />
-        <TermsConditions open={showTermsConditions} onOpenChange={setShowTermsConditions} />
 
       </div>
     </AuthLayout>

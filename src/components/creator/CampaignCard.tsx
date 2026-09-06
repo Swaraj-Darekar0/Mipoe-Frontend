@@ -16,8 +16,8 @@ interface CampaignCardProps {
   campaign_category?: string;
   submitted?: boolean;
   hideStatusActions?: boolean;
-  image_url?: string; // Added image support
-  funds_distributed?: number; // New prop for distributed funds
+  image_url?: string;
+  funds_distributed?: number;
   campaign_type?: 'influencer' | 'clipping';
   follower_range?: string;
 }
@@ -34,21 +34,18 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   hideStatusActions = false,
   image_url,
   campaign_category,
-  funds_distributed = 0, // Default to 0 if not provided
+  funds_distributed = 0,
   campaign_type = 'influencer',
   follower_range,
 }) => {
   const [imgError, setImgError] = useState(false);
 
-  // Math Logic for utilization bar
   const views = total_view_count;
   const totalBudget = budget;
   const amountDistributed = funds_distributed;
   
-  // Calculate percentage: (distributed / budget) * 100
   const payoutPercent = totalBudget > 0 ? Math.min(Math.round((amountDistributed / totalBudget) * 100), 100) : 0;
 
-  // Helper for large numbers (e.g. 1.5k, 1.2M)
   const formatNumber = (num: number) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
@@ -57,12 +54,10 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
 
   return (
     <div
-      className="group bg-zinc-900 rounded-xl overflow-hidden shadow-lg border border-zinc-800 flex flex-col w-full sm:w-[350px] "
+      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md border border-zinc-200/80 hover:border-orange-300 transition-all flex flex-col w-full"
     >
-      {/* --- SECTION 1: THE HOOK (Visual Header) --- */}
-      <div className="relative w-full aspect-video bg-zinc-800 overflow-hidden">
-        
-        {/* 1. The Image */}
+      {/* Visual Header */}
+      <div className="relative w-full aspect-video bg-zinc-100 overflow-hidden">
         {image_url && !imgError ? (
           <img
             src={image_url}
@@ -70,119 +65,101 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
             loading="lazy"
             referrerPolicy="no-referrer"
             onError={() => setImgError(true)}
-            className="w-full h-full object-cover object-top "
+            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          // Fallback: Dark Aesthetic Gradient
-          <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex flex-col items-center justify-center text-zinc-600">
-            <ImageOff size={32} className="mb-2 opacity-20" />
-            <span className="text-[10px] font-medium uppercase tracking-widest opacity-40">
+          <div className="w-full h-full bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 flex flex-col items-center justify-center text-zinc-400">
+            <ImageOff size={28} className="mb-1.5 opacity-40 text-orange-400" />
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-400">
               {name.substring(0, 2)}
             </span>
           </div>
         )}
 
-        {/* 2. Floating Overlay: Platform Icon (Top Right) */}
-        <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-md p-1.5 rounded-full shadow-sm border border-white/10">
+        {/* Platform Badge */}
+        <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-xs border border-zinc-200/80">
           {platform === "Instagram" ? (
-            <Instagram size={16} className="text-pink-500" />
+            <Instagram size={15} className="text-pink-600" />
           ) : platform === "YouTube" ? (
-            <Youtube size={16} className="text-red-500" />
+            <Youtube size={15} className="text-red-600" />
           ) : (
-            <span className="text-[10px] font-bold text-white px-1">{platform[0]}</span>
+            <span className="text-[10px] font-bold text-zinc-700 px-1">{platform[0]}</span>
           )}
         </div>
 
-        {/* 3. Floating Overlay: Status & Campaign Type Badges (Top Left) */}
-        <div className="absolute top-2 left-2 flex gap-1.5 flex-wrap">
+        {/* Status & Type Badges */}
+        <div className="absolute top-2.5 left-2.5 flex gap-1.5 flex-wrap">
           {!hideStatusActions && submitted && (
-            <Badge className="bg-green-500/90 hover:bg-green-500 text-white border-none shadow-md backdrop-blur-sm text-[10px] px-2 py-0.5">
+            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-xs backdrop-blur-sm text-[10px] px-2 py-0.5 font-bold">
               Applied
             </Badge>
           )}
-          {/* <Badge className={`${
-            campaign_type === 'clipping' 
-              ? 'bg-purple-600/95 hover:bg-purple-600 text-purple-100' 
-              : 'bg-pink-600/95 hover:bg-pink-600 text-pink-100'
-          } border-none shadow-md backdrop-blur-sm text-[9px] px-2 py-0.5 uppercase font-bold tracking-wider`}>
-            {campaign_type === 'clipping' ? 'Clipping' : 'Influencer'}
-          </Badge> */}
           {campaign_type === 'influencer' && follower_range && (
-            <Badge className="bg-blue-600/90 hover:bg-blue-600 text-white border-none shadow-md backdrop-blur-sm text-[9px] px-2 py-0.5 font-bold tracking-wide">
-              {follower_range} followers 
+            <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200/80 shadow-xs backdrop-blur-sm text-[10px] px-2 py-0.5 font-bold">
+              {follower_range}
             </Badge>
           )}
         </div>
-        
-        {/* 4. Gradient protection for text legibility (bottom) */}
-        <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-zinc-900 via-zinc-900/50 to-transparent" />
       </div>
 
-
-      {/* --- SECTION 2: THE DETAILS (Data Body) --- */}
+      {/* Content Details */}
       <div className="p-4 flex flex-col gap-3">
-        
-        {/* Row 1: Identity & Price */}
+        {/* Title & Price */}
         <div className="flex justify-between items-start gap-2">
-          <h3 className="font-semibold text-white text-lg leading-tight line-clamp-1" title={name}>
+          <h3 className="font-display font-bold text-zinc-900 text-base leading-snug line-clamp-1 group-hover:text-orange-600 transition-colors" title={name}>
             {name}
           </h3>
-          <Badge variant="secondary" className="bg-blue-600/20 text-blue-200 hover:bg-blue-600/30 border-blue-500/30 whitespace-nowrap">
+          <Badge variant="secondary" className="bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-200/80 whitespace-nowrap font-mono font-bold text-xs">
             ₹{cpv} / 1K
           </Badge>
         </div>
 
-        {/* Row 2: Utilization Bar */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-[10px] uppercase tracking-wider font-medium text-zinc-400">
+        {/* Utilization Progress Bar */}
+        <div className="space-y-1">
+          <div className="flex justify-between text-[10px] uppercase font-mono font-bold tracking-wider text-zinc-400">
             <span>Budget Used</span>
-            <span>{payoutPercent}%</span>
+            <span className="text-orange-600">{payoutPercent}%</span>
           </div>
-          <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-500"
+              className="h-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-500 rounded-full"
               style={{ width: `${payoutPercent}%` }}
             />
           </div>
         </div>
             
-        {/* Row 3: Key Logistics (Grid) */}
-        <div className="grid grid-cols-3 gap-2 pt-2 mt-1 border-t border-zinc-800/50">
-          
-          {/* Metric 1: Budget */}
+        {/* Logistics Grid */}
+        <div className="grid grid-cols-3 gap-2 pt-2.5 mt-0.5 border-t border-zinc-100">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-              <Wallet size={10} /> Budget
+            <span className="text-[10px] text-zinc-400 uppercase font-mono font-semibold flex items-center gap-1">
+              <Wallet size={10} className="text-orange-500" /> Budget
             </span>
-            <span className="text-sm font-medium text-zinc-200">
-              {formatNumber(budget)}
+            <span className="text-xs font-bold text-zinc-800">
+              ₹{formatNumber(budget)}
             </span>
           </div>
 
-          {/* Metric 2: Views */}
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-              <Eye size={10} /> Views
+            <span className="text-[10px] text-zinc-400 uppercase font-mono font-semibold flex items-center gap-1">
+              <Eye size={10} className="text-purple-500" /> Views
             </span>
-            <span className="text-sm font-medium text-zinc-200">
+            <span className="text-xs font-bold text-zinc-800">
               {formatNumber(views)}
             </span>
           </div>
 
-          {/* Metric 3: Deadline */}
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-              <Clock size={10} /> Ends
+            <span className="text-[10px] text-zinc-400 uppercase font-mono font-semibold flex items-center gap-1">
+              <Clock size={10} className="text-pink-500" /> Ends
             </span>
-            <span className="text-sm font-medium text-zinc-200 truncate">
+            <span className="text-xs font-bold text-zinc-800 truncate">
               {new Date(deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
           </div>
-
         </div>
       </div>
     </div>
   );
 };
 
-export default CampaignCard;
+export default CampaignCard;

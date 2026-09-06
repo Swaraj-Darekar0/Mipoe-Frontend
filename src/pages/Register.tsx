@@ -6,11 +6,6 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { ArrowLeft } from "lucide-react";
 
-// Policy dialog components
-import CookiePolicy from "@/components/policies/CookiePolicy";
-import PrivacyPolicy from "@/components/policies/PrivacyPolicy";
-import TermsConditions from "@/components/policies/TermsConditions";
-
 const Register = () => {
   const [searchParams] = useSearchParams();
   const queryRole = searchParams.get("role") === "brand" ? "brand" : "creator";
@@ -24,9 +19,6 @@ const Register = () => {
   const navigate = useNavigate();
 
   const [consentGiven, setConsentGiven] = useState(false);
-  const [showCookiePolicy, setShowCookiePolicy] = useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
-  const [showTermsConditions, setShowTermsConditions] = useState(false);
 
   // Sync role state with query param if it changes
   useEffect(() => {
@@ -163,29 +155,29 @@ const Register = () => {
             />
             <label htmlFor="consent" className="text-xs text-[#989898] leading-tight select-none">
               I agree to the secure storage of login cookies as detailed in the{" "}
-              <button
-                type="button"
-                onClick={() => setShowCookiePolicy(true)}
+              <Link
+                to="/cookie-policy"
+                target="_blank"
                 className="text-[#FF5C00] hover:underline focus:outline-none font-medium font-sans"
               >
                 Cookie Policy
-              </button>
+              </Link>
               , and agree to the{" "}
-              <button
-                type="button"
-                onClick={() => setShowPrivacyPolicy(true)}
+              <Link
+                to="/privacy"
+                target="_blank"
                 className="text-[#FF5C00] hover:underline focus:outline-none font-medium font-sans"
               >
                 Privacy Policy
-              </button>{" "}
+              </Link>{" "}
               and{" "}
-              <button
-                type="button"
-                onClick={() => setShowTermsConditions(true)}
+              <Link
+                to="/terms"
+                target="_blank"
                 className="text-[#FF5C00] hover:underline focus:outline-none font-medium font-sans"
               >
                 Terms & Conditions
-              </button>
+              </Link>
               .
             </label>
           </div>
@@ -221,9 +213,6 @@ const Register = () => {
           </Link>
         </p>
 
-        <CookiePolicy open={showCookiePolicy} onOpenChange={setShowCookiePolicy} />
-        <PrivacyPolicy open={showPrivacyPolicy} onOpenChange={setShowPrivacyPolicy} />
-        <TermsConditions open={showTermsConditions} onOpenChange={setShowTermsConditions} />
       </div>
     </AuthLayout>
   );

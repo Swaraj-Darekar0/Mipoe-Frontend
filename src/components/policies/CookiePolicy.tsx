@@ -1,57 +1,89 @@
 import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Link } from "react-router-dom";
+import LegalLayout, { LegalSection, ShortVersion } from "./LegalLayout";
 
-interface CookiePolicyProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+const Code: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <code className="rounded bg-glucon-grey-2 px-1 py-0.5 text-snow">{children}</code>
+);
 
-export const CookiePolicy: React.FC<CookiePolicyProps> = ({ open, onOpenChange }) => {
+export const CookiePolicy: React.FC = () => {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#1A1A1A] border-[#3A3A3A] text-[#F7F7F7] max-w-lg w-[90vw] rounded-xl p-6 md:p-8">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold font-display text-[#F7F7F7]">Cookie Policy</DialogTitle>
-          <DialogDescription className="text-[#989898] text-sm mt-1">
-            Last Updated: May 2026
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="max-h-[50vh] overflow-y-auto mt-4 pr-2 space-y-4 text-[#C8C8C8] text-sm leading-relaxed scrollbar-thin scrollbar-thumb-[#FF5C00]/20 scrollbar-track-transparent">
-          <p>
-            Welcome to Mipoe. This Cookie Policy explains how we use cookies and similar technologies to recognize you when you visit our marketplace platform.
-          </p>
-          
-          <h3 className="text-base font-semibold text-[#FF5C00] font-display">1. What are Cookies?</h3>
-          <p>
-            Cookies are small data files that are placed on your computer or mobile device when you visit a website. They are widely used by website owners to make their websites work, or work more efficiently, as well as to provide reporting information.
-          </p>
-          
-          <h3 className="text-base font-semibold text-[#FF5C00] font-display">2. Why We Use Cookies</h3>
-          <p>
-            We use cookies to maintain secure sessions and keep you signed in to our platform. Specifically:
-          </p>
-          <ul className="list-disc pl-5 space-y-2">
-            <li>
-              <strong>Essential Session Cookies:</strong> We store a secure, cryptographically-signed <code className="bg-[#2A2A2A] px-1 py-0.5 rounded text-white">access_token</code> cookie in your browser. This cookie is marked as <code className="bg-[#2A2A2A] px-1 py-0.5 rounded text-white">HttpOnly</code>, meaning it cannot be read by JavaScript scripts, keeping your credentials secure from Cross-Site Scripting (XSS) attacks.
-            </li>
-            <li>
-              <strong>Sliding Session Duration:</strong> The cookie maintains your active login state for 30 days. When you interact with the marketplace, the backend automatically renews (slides) this period so you stay signed in seamlessly.
-            </li>
-          </ul>
+    <LegalLayout title="Cookie Policy" lastUpdated="22 August 2026">
+      <ShortVersion>
+        <li>We set exactly one cookie of our own: a secure login cookie. No advertising or analytics cookies.</li>
+        <li>Partners we integrate with (Google sign-in, Cashfree checkout, Meta, Shopify) may set their own cookies during their flows.</li>
+        <li>Affiliate links don't put a Sellr tracking cookie on your browser — clicks are logged on our server instead.</li>
+        <li>Block the login cookie and you simply can't stay signed in; everything else about your browser stays untouched.</li>
+      </ShortVersion>
 
-          <h3 className="text-base font-semibold text-[#FF5C00] font-display">3. Third-Party Cookies</h3>
-          <p>
-            We may integrate with external providers like Supabase (for Google OAuth login) and Cashfree (for payment gateway settlements). These services set secure third-party cookies to verify your identity and process transaction payloads securely.
-          </p>
+      <LegalSection title="1. What Are Cookies?">
+        <p>
+          Cookies are small data files placed on your device when you visit a website. Sites use them to remember who you are
+          between page loads — for example, to keep you signed in. This policy also covers similar technologies we use, such as
+          browser local storage and server-side logging.
+        </p>
+      </LegalSection>
 
-          <h3 className="text-base font-semibold text-[#FF5C00] font-display">4. Controlling Cookies</h3>
-          <p>
-            You have the right to accept or decline cookies. Please note that since our marketplace uses the <code className="bg-[#2A2A2A] px-1 py-0.5 rounded text-white">access_token</code> session cookie for core authentication and security, disabling it will prevent you from logging in or using any authenticated features of Mipoe.
-          </p>
-        </div>
-      </DialogContent>
-    </Dialog>
+      <LegalSection title="2. The One Cookie We Set">
+        <p>
+          Sellr sets a single, essential cookie: <Code>access_token</Code>.
+        </p>
+        <ul className="list-disc space-y-2 pl-5">
+          <li><strong className="text-snow">Purpose:</strong> it holds a cryptographically signed token that authenticates you on every request. Without it, you cannot stay logged in.</li>
+          <li><strong className="text-snow">HttpOnly:</strong> the cookie cannot be read by JavaScript running in the page, which protects your session from cross-site scripting (XSS) attacks.</li>
+          <li><strong className="text-snow">Sliding 30-day duration:</strong> the session lasts 30 days, and using the platform renews it automatically so you stay signed in seamlessly.</li>
+          <li><strong className="text-snow">Logout really logs you out:</strong> logging out deletes the cookie and blocklists the token on our servers, so it cannot be reused even if copied.</li>
+        </ul>
+        <p>We do not set any advertising, analytics or cross-site tracking cookies.</p>
+      </LegalSection>
+
+      <LegalSection title="3. Local Storage">
+        <p>
+          Alongside the cookie, the app keeps non-sensitive display data (such as your username and role) in your browser's local
+          storage so your dashboard renders instantly. It contains no passwords or tokens and is cleared when you log out or when
+          your session expires.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="4. Third-Party Cookies">
+        <p>Some features hand you over briefly to a partner, and that partner may set its own cookies under its own policy:</p>
+        <ul className="list-disc space-y-2 pl-5">
+          <li><strong className="text-snow">Google sign-in (via Supabase):</strong> used to verify your Google identity when you choose "Continue with Google";</li>
+          <li><strong className="text-snow">Cashfree:</strong> used during deposit checkout and payment verification;</li>
+          <li><strong className="text-snow">Meta / Instagram:</strong> used when a creator links an Instagram account through Meta's OAuth flow;</li>
+          <li><strong className="text-snow">Shopify:</strong> used when a brand connects a Shopify store.</li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title="5. Affiliate Links: Tracked on the Server, Not in Your Browser">
+        <p>
+          When you click a Sellr affiliate link (for example from a creator's storefront), we do <strong className="text-snow">not</strong>{" "}
+          place a Sellr tracking cookie on your browser. Instead:
+        </p>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>The click is logged on our server (IP address, browser user-agent, referring page) so the sale can be attributed to the right creator — see our <Link to="/privacy" className="text-[#FF5C00] hover:underline">Privacy Policy</Link>;</li>
+          <li>You are redirected to the brand's own site with campaign (UTM) parameters added to the address;</li>
+          <li>The destination site — for example a brand's Shopify store — operates under its own cookie and privacy policies.</li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title="6. Controlling Cookies">
+        <p>
+          You can block or delete cookies in your browser settings at any time. Because the <Code>access_token</Code> cookie is
+          essential for authentication, blocking it will prevent you from logging in or using any signed-in feature of Sellr —
+          public pages will keep working. The consent checkbox on our login and registration pages records your agreement to this
+          essential cookie.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="7. Changes & Contact">
+        <p>
+          If we introduce new cookies or change how existing ones work, we will update this page and the date above. Questions:{" "}
+          <a href="mailto:info@sellr.in" className="text-[#FF5C00] hover:underline">info@sellr.in</a>.
+        </p>
+      </LegalSection>
+    </LegalLayout>
   );
 };
+
 export default CookiePolicy;

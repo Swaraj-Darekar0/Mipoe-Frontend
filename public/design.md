@@ -84,7 +84,8 @@ semantic-error:     #e03131
 
 ### 1.2 Persona Accent Colors (new — not from Notion, needed for brand/creator differentiation)
 Notion's system has no built-in concept of "two audiences," so we introduce exactly two accent colors, borrowed from Notion's own brand spectrum so they still feel native to the palette rather than bolted on:
-- **Brand persona accent** → `brand-teal` (`#2a9d99`) — used for Brand-mode active states, Brand slider fill, Brand badge
+- **Brand persona accent** → `brand-blue` (`#2b5ce6`) — Brand-mode active states, Brand slider fill, Brand CTA, and the fill of the Brand hero's display type (which is outlined in `ink-deep` via `-webkit-text-stroke`). Replaced `brand-teal` (`#2a9d99`); that token no longer exists.
+- **Highlight** → `highlight` (`#ffe94a`) — the default marker colour behind emphasised display lines, in either persona. Distinct from `tint-yellow` (`#fef7d6`), which is a pale surface wash for cards and is too light to read as a marker stroke.
 - **Creator persona accent** → `brand-pink` (`#ff64c8`) — used for Creator-mode active states, Creator slider fill, Creator badge
 - `primary` purple stays reserved for the ONE universal action that exists regardless of persona (e.g. the main nav CTA, if we keep one neutral "Get Started"). If every CTA is persona-specific, purple can be dropped entirely in favor of the two accents — coordinator's call, but pick one rule and apply it everywhere, don't mix.
 

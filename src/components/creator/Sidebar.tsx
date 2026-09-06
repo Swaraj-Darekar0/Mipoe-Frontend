@@ -13,10 +13,10 @@ const NavLink = ({ to, icon, children }: { to: string; icon: React.ReactNode; ch
   return (
     <Link
       to={to}
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
         isActive
-          ? 'bg-primary/10 text-primary'
-          : 'text-gray-400 hover:bg-white/5 hover:text-white'
+          ? 'bg-orange-500/10 text-orange-600 font-semibold border-r-2 border-orange-500 shadow-xs'
+          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
       }`}
     >
       {icon}
@@ -49,54 +49,61 @@ const Sidebar = () => {
     navigate("/");
   };
 
-
   return (
-    <aside className="fixed top-0 left-0 z-50 h-full w-64 flex-col border-r border-white/10 bg-[#18181B] p-6 hidden md:flex">
-      <div className="flex items-center gap-4 mb-10">
-        <div className="size-8 text-primary">
-          <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z"></path>
-          </svg>
-        </div>
-        <h1 className="font-display text-2xl font-bold text-white">Mipoe</h1>
+    <aside className="fixed top-0 left-0 z-50 h-full w-64 flex-col border-r border-zinc-200/80 bg-[#ffffff] p-6 hidden md:flex">
+      {/* Brand Header */}
+      <div className="flex items-center gap-2.5 mb-8 pt-1">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-zinc-900">
+          SELLR<span className="text-orange-500">.</span>
+        </h1>
+        <span className="bg-pink-100 text-pink-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+          Creator
+        </span>
       </div>
-      <nav className="flex flex-col gap-2 flex-grow">
-        <NavLink to="/creator/dashboard" icon={<LayoutGrid className="w-5 h-5" />}>Hub</NavLink>
-        <div className="mt-4 mb-1 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+
+      <nav className="flex flex-col gap-1.5 flex-grow overflow-y-auto">
+        <NavLink to="/creator/dashboard" icon={<LayoutGrid className="w-4 h-4 text-orange-500" />}>Hub</NavLink>
+        
+        <div className="mt-5 mb-1 px-3 text-[11px] font-mono font-semibold text-zinc-400 uppercase tracking-widest">
           Campaigns
         </div>
-        <div className="flex flex-col gap-1 pl-2 mb-2">
+        <div className="flex flex-col gap-1 pl-1 mb-1">
           <NavLink to="/creator/campaigns?type=influencer" icon={<Flame className="w-4 h-4 text-pink-500" />}>Influencer</NavLink>
           <NavLink to="/creator/campaigns?type=clipping" icon={<Flame className="w-4 h-4 text-purple-500" />}>Clipping</NavLink>
         </div>
-        <div className="mt-4 mb-1 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+
+        <div className="mt-4 mb-1 px-3 text-[11px] font-mono font-semibold text-zinc-400 uppercase tracking-widest">
           Affiliate
         </div>
-        <div className="flex flex-col gap-1 pl-2 mb-2">
+        <div className="flex flex-col gap-1 pl-1 mb-1">
           <NavLink to="/creator/affiliate-campaigns" icon={<Flame className="w-4 h-4 text-orange-500" />}>Campaigns</NavLink>
           <NavLink to="/creator/affiliate-analytics" icon={<LayoutGrid className="w-4 h-4 text-orange-500" />}>Analytics</NavLink>
           <NavLink to="/creator/store" icon={<Store className="w-4 h-4 text-orange-500" />}>My Store</NavLink>
         </div>
-        <NavLink to="/creator/submissions" icon={<Send className="w-5 h-5" />}>Submissions</NavLink>
-        <NavLink to="/creator/wallet" icon={<Wallet className="w-5 h-5" />}>Earnings</NavLink>
+
+        <NavLink to="/creator/submissions" icon={<Send className="w-4 h-4 text-blue-500" />}>Submissions</NavLink>
+        <NavLink to="/creator/wallet" icon={<Wallet className="w-4 h-4 text-emerald-500" />}>Earnings</NavLink>
       </nav>
-      <div className="mt-auto flex flex-col gap-1">
-        <Link to="/creator/profile" className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5">
-          <div className="size-10 rounded-full bg-gray-700 flex items-center justify-center">
+
+      {/* User Footer Card */}
+      <div className="mt-auto pt-4 border-t border-zinc-100 flex flex-col gap-1.5">
+        <Link to="/creator/profile" className="flex items-center gap-3 p-2.5 rounded-xl bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/60 transition-colors">
+          <div className="size-9 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm border border-orange-200">
             {loading ? (
-              <div className="w-5 h-5 rounded-full bg-gray-600 animate-pulse" />
+              <div className="w-4 h-4 rounded-full bg-orange-200 animate-pulse" />
             ) : (
-              <User className="w-5 h-5 text-gray-400" />
+              (user?.username?.[0] || 'C').toUpperCase()
             )}
           </div>
-          <div>
-            <p className="font-body font-semibold text-sm text-white truncate">{user?.username || 'Creator'}</p>
-            <p className="font-body text-xs text-gray-400 truncate">{user?.email || 'creator@email.com'}</p>
+          <div className="overflow-hidden">
+            <p className="font-semibold text-xs text-zinc-900 truncate">{user?.username || 'Creator'}</p>
+            <p className="text-[11px] text-zinc-500 truncate">{user?.email || 'creator@email.com'}</p>
           </div>
         </Link>
-        <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-red-400 transition-colors w-full">
-            <LogOut className="w-5 h-5"/>
-            <span>Logout</span>
+        
+        <button onClick={handleLogout} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-500 hover:bg-rose-50 hover:text-rose-600 transition-colors w-full">
+          <LogOut className="w-4 h-4"/>
+          <span>Logout</span>
         </button>
       </div>
     </aside>
@@ -104,3 +111,4 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
+

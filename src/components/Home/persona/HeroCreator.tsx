@@ -2,7 +2,8 @@ import React, { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { personaContent } from "./personaContent";
 import CreatorRibbon from "./CreatorRibbon";
-import { SerifTag } from "./hero_Creator_comp/Stickers";
+import { opticalScale, type HeadlineLine } from "./heroType";
+
 
 const content = personaContent.creator;
 
@@ -19,55 +20,36 @@ const content = personaContent.creator;
  * This belongs in personaContent once the shape settles. Left here so the
  * relationship between the copy and the sizing rule stays visible.
  */
-const HEADLINE_LINES: readonly { text: string; highlight?: boolean }[] = [
+const HEADLINE_LINES: readonly HeadlineLine[] = [
   { text: "Your content already" },
   { text: "has an audience." },
   { text: "Get paid for it.", highlight: true },
 ];
 
 /**
- * Optical line sizing. Each line is sized toward a common measure — longer line,
- * smaller type — so the lines fuse into one block instead of reading as centred
- * text with a ragged edge.
+ * The headline's type scale. The MECHANISM lives in `heroType` — both personas
+ * size their headline the same way — so what stays here is only the tuning
+ * specific to this hero.
  *
- * Container units, not `vw`, and the swap is a bug fix rather than a
- * refactor. The block's width is capped by `max-w`, so beyond that cap a
- * vw-based size keeps growing while the box it is meant to be filling stops —
- * on a wide monitor the old formula sized the type past its own wrapper. `cqw`
- * measures the thing the type is actually being fitted to, which also means the
- * relationship holds at every width with no resize listener and no breakpoints.
+ * The 84px ceiling is the point of it. The old ceiling was 54px, which was most
+ * of why the block never read as the reference's mass: at 54px this is merely a
+ * large heading rather than a wall of type. The 34px floor applies to the
+ * driver, so the shortest line stays above ~27px.
  *
- * The formula is just `len × CHAR_EM × size = 100cqw` solved for size, where
- * CHAR_EM is Abril Fatface's average mixed-case advance.
- *
- * The old ceiling was 54px, which was most of why the block never read as the
- * reference's mass: at 54px this is merely a large heading. The px floor stays
- * because the face clogs below ~30px — counters fill in, the hairline serifs
- * vanish — so on a phone the optical variation is deliberately given up to keep
- * it legible.
+ * `--hero-line-cap` is a second ceiling, and a HEIGHT one rather than a width
+ * one: see the clearance contract below for how the illustration hands the copy
+ * its remaining room. The lower of the two wins, so the headline runs at its
+ * full 84px wherever there is space and stands down on a short laptop instead
+ * of ploughing through the character.
  */
-const CHAR_EM = 0.5;
-const CAP_PX = 84;
 const LEADING = 0.94;
-
-/**
- * Per-line sizes are a RATIO against the largest line, and one shared driver
- * carries the clamp. Clamping each line independently looks equivalent and is
- * not: as soon as the cap binds, every line lands on the cap, all three come out
- * the same size, and the block collapses back into ragged centred text — the
- * exact look the optical sizing exists to avoid. Scaling proportionally keeps
- * every line on the same measure whether the driver is the container width, the
- * height budget, or the hard ceiling.
- */
-const LINE_CQW = HEADLINE_LINES.map((l) => 100 / (CHAR_EM * l.text.length));
-const MAX_CQW = Math.max(...LINE_CQW);
-/** Height of the whole h1 as a multiple of the driver size. Feeds the budget. */
-const H1_FACTOR = LINE_CQW.reduce((sum, c) => sum + c / MAX_CQW, 0) * LEADING;
-/** The floor applies to the driver, so the shortest line stays above ~27px. */
-const lineSize = (i: number) =>
-  `calc(${(LINE_CQW[i] / MAX_CQW).toFixed(4)} * clamp(34px, min(${MAX_CQW.toFixed(
-    2
-  )}cqw, var(--hero-line-cap)), ${CAP_PX}px))`;
+const { lineSize, h1Factor } = opticalScale(HEADLINE_LINES, {
+  charEm: 0.5,
+  floorPx: 34,
+  capPx: 84,
+  leading: LEADING,
+  capVar: "--hero-line-cap",
+});
 
 /**
  * The clearance contract between the copy and the illustration.
@@ -92,7 +74,7 @@ const lineSize = (i: number) =>
  *              centres inside it, so the gap is structural: the copy cannot
  *              reach the illustration because its container stops short of it.
  *   line-cap   what is left for the headline once the fixed rows are paid for,
- *              divided by H1_FACTOR (the h1's height per unit of driver size).
+ *              divided by h1Factor (the h1's height per unit of driver size).
  *              This is what lets the headline stay at its full 84px wherever
  *              there is room and stand down on a short laptop instead of
  *              ploughing through her.
@@ -104,23 +86,35 @@ const lineSize = (i: number) =>
  * costs headline size rather than correctness.
  */
 const SCENE_CLEARANCE = {
-  "--hero-h": "max(calc(100svh - 3.5rem), 660px)",
+  // The navbar reserves no layout height any more: it is a `fixed` pill
+  // portalled out of the page content, so the hero owns the whole viewport and
+  // the nav OVERLAYS its top strip rather than sitting above it. That strip has
+  // to be paid for explicitly, and it is paid for here — as a token feeding the
+  // budget below — rather than bolted on as padding the budget cannot see.
+  // Measured, not guessed: the pill hangs 12px from the top (`top-3`) and is
+  // 48px tall at md+, so its lower edge lands 60px into the section. 68 leaves
+  // 8px of daylight under it.
+  "--nav-clear": "68px",
+  "--hero-h": "max(100svh, 660px)",
   "--illo-top": "max(calc(var(--hero-h) - 0.2625 * 100vw), calc(0.4569 * var(--hero-h)))",
   "--hero-gap": "clamp(28px, 4svh, 56px)",
-  // Headroom at the TOP of the zone, and it is not decorative. The navbar is a
-  // floating pill whose lower edge sits a few px BELOW the section's top, so a
-  // zone starting at top:0 puts the first headline line under the nav. The green
-  // serif tag then hangs above the headline again on top of that. Reserving the
-  // space here rather than as padding keeps it inside the budget below.
-  // The 40px floor is measured, not guessed: the nav pill's lower edge lands
-  // 16px inside the section, and the green tag hangs ~10px above the headline on
-  // a short window, so a 32px floor left only 8px of daylight. 40 gives ~14.
-  "--copy-top": "clamp(40px, 5svh, 56px)",
+  // Headroom at the TOP of the zone, and it is not decorative: a zone starting
+  // at top:0 puts the first headline line under the nav pill. The floor is
+  // therefore written as the nav clearance plus 16 of daylight, so the
+  // relationship survives the pill being resized — change the pill and only
+  // `--nav-clear` needs re-measuring.
+  // The 16 is also the room the sticker layer wants: `.hero-sticker` elements
+  // hang OUTWARD off the headline wrapper, so anything that lands above the
+  // first line needs somewhere to go that is not the nav.
+  "--copy-top": "clamp(calc(var(--nav-clear) + 16px), 9svh, 104px)",
   // Below lg the scene is a sized block UNDER the copy rather than a layer
-  // behind it, so the room left for copy is whatever the block does not take.
+  // behind it, so the room left for copy is whatever the block does not take —
+  // less the nav strip, which down here is real padding on the section rather
+  // than an offset on an absolute layer.
   // 1.1905 is the aspect-[420/500] the scene box is given, and 46svh its cap —
   // keep these two in step with the scene div's classes.
-  "--flow-zone": "calc(var(--hero-h) - min(1.1905 * 100vw, 46svh) - var(--hero-gap))",
+  "--flow-zone":
+    "calc(var(--hero-h) - var(--nav-clear) - min(1.1905 * 100vw, 46svh) - var(--hero-gap))",
   // Whichever layout is active, the smaller budget is the safe one to size the
   // headline against, so one expression covers both without a breakpoint.
   "--copy-zone":
@@ -128,7 +122,7 @@ const SCENE_CLEARANCE = {
   "--copy-fixed": "128px",
   // Derived from the headline itself rather than hardcoded, so editing
   // HEADLINE_LINES cannot silently invalidate the budget.
-  "--hero-line-cap": `calc((var(--copy-zone) - var(--copy-fixed)) / ${H1_FACTOR.toFixed(3)})`,
+  "--hero-line-cap": `calc((var(--copy-zone) - var(--copy-fixed)) / ${h1Factor.toFixed(3)})`,
 } as React.CSSProperties;
 
 const HeroCreator: React.FC = () => {
@@ -188,7 +182,11 @@ const HeroCreator: React.FC = () => {
       // and 1023 the copy floated over a scene laid out to different geometry,
       // which is why the CTA landed on the character there. Layout mode and
       // scene mode now change on the same line.
-      className="relative w-full h-[calc(100svh-3.5rem)] min-h-[660px] bg-canvas overflow-hidden flex flex-col lg:block"
+      // `pt` is the nav strip, and only below lg: down here the copy is in
+      // normal flow, so the clearance has to be real space. At lg+ the copy is
+      // an absolute layer offset by `--copy-top` instead, so the padding is
+      // dropped and `inset-0` on the scene still means the whole section.
+      className="relative w-full h-[100svh] min-h-[660px] bg-canvas overflow-hidden flex flex-col pt-[var(--nav-clear)] lg:block lg:pt-0"
       style={SCENE_CLEARANCE}
     >
 

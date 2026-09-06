@@ -80,7 +80,7 @@ interface Metrics {
 }
 
 const TextLoop: React.FC<TextLoopProps> = ({
-  text = "React ✦ Bits",
+  text = "Sellr",
   path,
   viewBox = { w: 1200, h: 520 },
   preserveAspectRatio = "xMidYMid meet",

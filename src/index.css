@@ -152,6 +152,15 @@
   /* The hero mass. Abril Fatface only — Playfair, even at 900, is a modelled
      didone with thin hairlines and does not read as one block at size. */
   --font-fat: "Abril Fatface", "Playfair Display", Georgia, serif;
+  /* Helvetica is a SYSTEM face, not a webfont: there is no free licence to
+     self-host it, so this is a stack rather than a download. It resolves to real
+     Helvetica on macOS/iOS, and to Arial on Windows and Liberation Sans on
+     Linux/Android — both metric-compatible, so the line breaks and the optical
+     sizing in heroType hold identically on all three. If you ever want true
+     Helvetica everywhere, the only route is licensing Helvetica Now (or Neue
+     Haas Grotesk) and self-hosting it; drop it at the front of this stack and
+     nothing else has to change. */
+  --font-helvetica: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
 
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
@@ -211,7 +220,12 @@
   --color-notion-purple: #5645d4;
   --color-notion-purple-pressed: #4534b3;
 
-  --color-brand-teal: #2a9d99;
+  /* Brand persona accent. Replaced the old `brand-teal` (#2a9d99), then a short
+     monochrome detour that lost too much contrast to read at speed.
+     Chosen for legibility rather than mood: 5.5:1 against the canvas, so white
+     CTA text clears WCAG AA on it, and it stays distinct from the black stroke
+     that outlines the display type instead of muddying into it. */
+  --color-brand-blue: #2b5ce6;
   --color-creator-pink: #ff64c8;
 
   --color-tint-peach: #ffe8d4;
@@ -220,6 +234,15 @@
   --color-tint-lavender: #e6e0f5;
   --color-tint-sky: #dcecfa;
   --color-tint-yellow: #fef7d6;
+
+  /* THE default highlight. `tint-yellow` above is a surface wash for cards and
+     is far too pale to read as a marker stroke behind display type, so this is
+     the saturated one: the colour a highlighter actually is.
+     It is deliberately the lightest thing in the palette (luminance 0.80), so
+     dark type, the blue accent and the black display stroke all keep their
+     contrast when they land on it. Any persona can highlight with it; it is not
+     a brand accent. */
+  --color-highlight: #ffe94a;
 
   --border-radius-lg: var(--radius);
   --border-radius-md: calc(var(--radius) - 2px);

@@ -9,7 +9,7 @@ interface EarningsCalculatorProps {
 
 const ACCENT: Record<Persona, { text: string; bg: string; ctaText: string }> = {
   creator: { text: "text-creator-pink", bg: "bg-creator-pink", ctaText: "text-ink-deep" },
-  brand: { text: "text-brand-teal", bg: "bg-brand-teal", ctaText: "text-white" },
+  brand: { text: "text-brand-blue", bg: "bg-brand-blue", ctaText: "text-canvas" },
 };
 
 const EarningsCalculator: React.FC<EarningsCalculatorProps> = ({ persona }) => {
