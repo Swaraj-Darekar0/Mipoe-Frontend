@@ -1,10 +1,29 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, ImageOff, Undo, Wallet, BarChart2, ShieldCheck, Clock, XCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Upload,
+  Undo,
+  Wallet,
+  BarChart2,
+  ShieldCheck,
+  Clock,
+  XCircle,
+  Eye,
+  Coins,
+  Target,
+  Crown,
+  Medal,
+  Play,
+  ExternalLink,
+  Sliders,
+  FileText
+} from "lucide-react";
 import { ImageCropInput } from "../../components/ui/ImageCropInput";
 
 // Update import paths to point to frontend/src
 import BrandLayout from "../../layouts/BrandLayout";
+import CampaignSidebar from "../../components/brand/CampaignSidebar";
 import { Button } from "../../components/ui/button";
 import { Switch } from "../../components/ui/switch";
 import { Input } from "../../components/ui/input";
@@ -25,15 +44,14 @@ import {
 // Import API types and functions
 import {
   fetchCampaignById,
-  updateCampaignBudget,
   updateCampaignRequirements,
   updateCampaignDescription,
   updateCampaignStatus,
   updateCampaignViewThreshold,
   updateCampaignDeadline,
-  updateCampaignImage, // ADD THIS
+  updateCampaignImage,
   uploadCampaignImage,
-  deleteCampaignImage, // ADD THIS
+  deleteCampaignImage,
   getWalletBalance,
   allocateBudget,
   reclaimBudget,
@@ -51,12 +69,10 @@ const CampaignAnalytics = () => {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [imgError, setImgError] = useState(false);
   const [isActive, setIsActive] = useState<boolean>(false);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [allocationAmount, setAllocationAmount] = useState<number>(0);
   const [isProcessingFund, setIsProcessingFund] = useState(false);
-  const [budget, setBudget] = useState<number>(0);
   const [requirements, setRequirements] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [viewThresholdInput, setViewThresholdInput] = useState<number>(0);
@@ -65,8 +81,6 @@ const CampaignAnalytics = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-
-
 
   // Content Verification Dashboard states
   const [activeTab, setActiveTab] = useState<"statistics" | "verification">("statistics");
@@ -80,30 +94,25 @@ const CampaignAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState<"24h" | "7d" | "30d">("24h");
   const [isUpdatingClipStatus, setIsUpdatingClipStatus] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const fetchCampaignData = useCallback(async () => {
-    console.log('=== FETCH CAMPAIGN DATA START ===');
     if (!campaignId) return;
     setLoading(true);
     setError(null);
     try {
       const id = parseInt(campaignId);
-      console.log('Fetching campaign with ID:', id);
       const data = await fetchCampaignById(id);
-      console.log('Campaign data fetched:', data);
-      console.log('Funds allocated from campaign:', data.funds_allocated);
-      
+
       setCampaign(data);
       setIsActive(data.is_active);
-      setBudget(data.budget);
       setRequirements(data.requirements || "");
       setDescription(data.description || "");
       setViewThresholdInput(data.view_threshold ?? 0);
       setDeadlineInput(data.deadline ? data.deadline.split("T")[0] : "");
-
-      // ADD THIS LINE to load existing image
       setImagePreview(data.image_url || null);
+
       const walletData = await getWalletBalance();
-      console.log('Wallet data fetched:', walletData);
       setWalletBalance(walletData.balance);
 
       // Load clips for Content Verification
@@ -119,18 +128,16 @@ const CampaignAnalytics = () => {
       } finally {
         setLoadingClips(false);
       }
-
     } catch (err: unknown) {
       if (err instanceof Error) {
-        console.error('fetchCampaignData error:', err);
+        console.error("fetchCampaignData error:", err);
         setError(err.message);
       } else {
-        console.error('Unknown error in fetchCampaignData:', err);
+        console.error("Unknown error in fetchCampaignData:", err);
         setError("An unknown error occurred");
       }
     } finally {
       setLoading(false);
-      console.log('=== FETCH CAMPAIGN DATA END ===');
     }
   }, [campaignId]);
 
@@ -138,83 +145,41 @@ const CampaignAnalytics = () => {
     fetchCampaignData();
   }, [fetchCampaignData]);
 
-const handleAllocate = async () => {
-  console.log('=== ALLOCATE DEBUG START ===');
-  console.log('Campaign ID:', campaign?.id);
-  console.log('Allocation Amount:', allocationAmount);
-  console.log('Current Wallet Balance:', walletBalance);
-  console.log('Current Campaign Funds Allocated:', campaign?.funds_allocated);
-  
-  if (!campaign || allocationAmount <= 0) {
-    console.log('Allocation cancelled: campaign or amount invalid');
-    return;
-  }
-  
-  setIsProcessingFund(true);
-  try {
-    console.log('Calling allocateBudget API with:', { campaignId: campaign.id, amount: allocationAmount });
-    const response = await allocateBudget(campaign.id, allocationAmount);
-    
-    console.log('API Response:', response);
-    console.log('New Wallet Balance from API:', response.new_wallet_balance);
-    console.log('New Funds Allocated from API:', response.new_funds_allocated);
+  const handleAllocate = async () => {
+    if (!campaign || allocationAmount <= 0) return;
 
-    // Use actual returned values from backend
-    setWalletBalance(response.new_wallet_balance);
-    setCampaign(prev => prev ? ({ ...prev, funds_allocated: response.new_funds_allocated }) : null);
-    
-    console.log('State updated - Wallet:', response.new_wallet_balance, 'Allocated:', response.new_funds_allocated);
+    setIsProcessingFund(true);
+    try {
+      const response = await allocateBudget(campaign.id, allocationAmount);
+      setWalletBalance(response.new_wallet_balance);
+      setCampaign(prev => (prev ? { ...prev, funds_allocated: response.new_funds_allocated } : null));
+      alert(`Successfully allocated ₹${response.allocated_amount}`);
+      setAllocationAmount(0);
+    } catch (err: any) {
+      console.error("Allocation Error:", err);
+      alert(`Allocation Failed: ${err.message}`);
+    } finally {
+      setIsProcessingFund(false);
+    }
+  };
 
-    alert(`Successfully allocated ₹${response.allocated_amount}`);
-    setAllocationAmount(0);
-  } catch (err: any) {
-    console.error('Allocation Error:', err);
-    console.error('Error Message:', err.message);
-    alert(`Allocation Failed: ${err.message}`);
-  } finally {
-    setIsProcessingFund(false);
-    console.log('=== ALLOCATE DEBUG END ===');
-  }
-};
+  const handleReclaim = async () => {
+    if (!campaign || allocationAmount <= 0) return;
 
-const handleReclaim = async () => {
-  console.log('=== RECLAIM DEBUG START ===');
-  console.log('Campaign ID:', campaign?.id);
-  console.log('Reclaim Amount:', allocationAmount);
-  console.log('Current Wallet Balance:', walletBalance);
-  console.log('Current Campaign Funds Allocated:', campaign?.funds_allocated);
-  
-  if (!campaign || allocationAmount <= 0) {
-    console.log('Reclaim cancelled: campaign or amount invalid');
-    return;
-  }
-  
-  setIsProcessingFund(true);
-  try {
-    console.log('Calling reclaimBudget API with:', { campaignId: campaign.id, amount: allocationAmount });
-    const response = await reclaimBudget(campaign.id, allocationAmount);
-    
-    console.log('API Response:', response);
-    console.log('New Wallet Balance from API:', response.new_wallet_balance);
-    console.log('New Funds Allocated from API:', response.new_funds_allocated);
-
-    // Use actual returned values from backend
-    setWalletBalance(response.new_wallet_balance);
-    setCampaign(prev => prev ? ({ ...prev, funds_allocated: response.new_funds_allocated }) : null);
-    
-    console.log('State updated - Wallet:', response.new_wallet_balance, 'Allocated:', response.new_funds_allocated);
-
-    alert(`Successfully reclaimed ₹${response.reclaimed_amount}`);
-    setAllocationAmount(0);
-  } catch (err: any) {
-    console.error('Reclaim Error:', err);
-    console.error('Error Message:', err.message);
-    alert(`Reclaim Failed: ${err.message}`);
-  } finally {
-    setIsProcessingFund(false);
-    console.log('=== RECLAIM DEBUG END ===');
-  }
-};
+    setIsProcessingFund(true);
+    try {
+      const response = await reclaimBudget(campaign.id, allocationAmount);
+      setWalletBalance(response.new_wallet_balance);
+      setCampaign(prev => (prev ? { ...prev, funds_allocated: response.new_funds_allocated } : null));
+      alert(`Successfully reclaimed ₹${response.reclaimed_amount}`);
+      setAllocationAmount(0);
+    } catch (err: any) {
+      console.error("Reclaim Error:", err);
+      alert(`Reclaim Failed: ${err.message}`);
+    } finally {
+      setIsProcessingFund(false);
+    }
+  };
 
   const formatViews = (views: number | null | undefined): string => {
     if (views === null || views === undefined || isNaN(views)) {
@@ -223,26 +188,23 @@ const handleReclaim = async () => {
     if (views < 1000) {
       return views.toString();
     } else if (views < 1000000) {
-      // Thousands (K)
       const thousands = views / 1000;
       if (thousands < 10) {
-        return `${Math.round(thousands * 10) / 10}K`; // 1 decimal
+        return `${Math.round(thousands * 10) / 10}K`;
       }
-      return `${Math.round(thousands)}K`; // 0 decimals
+      return `${Math.round(thousands)}K`;
     } else if (views < 1000000000) {
-      // Millions (M)
       const millions = views / 1000000;
       if (millions < 10) {
-        return `${Math.round(millions * 10) / 10}M`; // 1 decimal
+        return `${Math.round(millions * 10) / 10}M`;
       }
-      return `${Math.round(millions)}M`; // 0 decimals
+      return `${Math.round(millions)}M`;
     } else {
-      // Billions (B)
       const billions = views / 1000000000;
       if (billions < 10) {
-        return `${Math.round(billions * 10) / 10}B`; // 1 decimal
+        return `${Math.round(billions * 10) / 10}B`;
       }
-      return `${Math.round(billions)}B`; // 0 decimals
+      return `${Math.round(billions)}B`;
     }
   };
 
@@ -250,13 +212,11 @@ const handleReclaim = async () => {
     if (!campaign) return;
     if (!isActive && (campaign.funds_allocated || 0) <= 0) {
       alert("Cannot activate campaign! Please allocate funds using the Fund Manager first.");
-      return; // Stop execution here
+      return;
     }
     try {
       await updateCampaignStatus(campaign.id, { is_active: !isActive });
       setIsActive(!isActive);
-      // Optionally, refetch campaign data to ensure all states are in sync
-      // fetchCampaignData();
     } catch (err: unknown) {
       if (err instanceof Error) {
         alert(`Failed to update campaign status: ${err.message}`);
@@ -270,79 +230,43 @@ const handleReclaim = async () => {
     if (!campaign || !imageFile) return;
     setIsUploadingImage(true);
 
-    // Store the old URL to delete later
     const oldImageUrl = campaign.image_url;
 
     try {
-      // 1. Compress & Upload NEW Image (Safe Step)
       const compressed = await compressImage(imageFile);
       const newImageUrl = await uploadCampaignImage(compressed);
 
-      // 2. Update Database Reference
       await updateCampaignImage(campaign.id, { image_url: newImageUrl });
 
-      // 3. Delete OLD Image (Cleanup Step)
-      // Only runs if steps 1 & 2 succeeded.
       if (oldImageUrl) {
         await deleteCampaignImage(oldImageUrl);
       }
 
-      // 4. Update Local State
       setCampaign({ ...campaign, image_url: newImageUrl });
       setImagePreview(newImageUrl);
       alert("Campaign image updated successfully!");
       setImageFile(null);
-
     } catch (err: unknown) {
       console.error(err);
       alert("Failed to update image. Please try again.");
-      // Note: If upload failed, old image is still safe in DB.
     } finally {
       setIsUploadingImage(false);
     }
   };
 
-  // ... existing state ...
-
-  // NEW: Reference to the file input element
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // NEW: Handler to revert changes
   const handleRevertImage = () => {
-    // 1. Reset local state
     setImageFile(null);
-    setImgError(false);
-
-    // 2. Restore original image (or null if none existed)
     setImagePreview(campaign?.image_url || null);
-
-    // 3. Clear the HTML input value
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
-
-  // const handleUpdateBudget = async () => {
-  //   if (!campaign) return;
-  //   try {
-  //     await updateCampaignBudget(campaign.id, { budget });
-  //     alert("Budget updated successfully!");
-  //     // fetchCampaignData();
-  //   } catch (err: unknown) {
-  //     if (err instanceof Error) {
-  //       alert(`Failed to update budget: ${err.message}`);
-  //     } else {
-  //       alert("Failed to update budget: An unknown error occurred");
-  //     }
-  //   }
-  // };
 
   const handleUpdateRequirements = async () => {
     if (!campaign) return;
     try {
       await updateCampaignRequirements(campaign.id, { requirements });
       alert("Requirements updated successfully!");
-      // fetchCampaignData();
     } catch (err: unknown) {
       if (err instanceof Error) {
         alert(`Failed to update requirements: ${err.message}`);
@@ -357,7 +281,6 @@ const handleReclaim = async () => {
     try {
       await updateCampaignDescription(campaign.id, { description });
       alert("Description updated successfully!");
-      // fetchCampaignData();
     } catch (err: unknown) {
       if (err instanceof Error) {
         alert(`Failed to update description: ${err.message}`);
@@ -372,7 +295,6 @@ const handleReclaim = async () => {
     try {
       await updateCampaignViewThreshold(campaign.id, { view_threshold: viewThresholdInput });
       alert("View threshold updated successfully!");
-      // fetchCampaignData();
     } catch (err: unknown) {
       if (err instanceof Error) {
         alert(`Failed to update view threshold: ${err.message}`);
@@ -387,7 +309,6 @@ const handleReclaim = async () => {
     try {
       await updateCampaignDeadline(campaign.id, { deadline: deadlineInput });
       alert("Deadline updated successfully!");
-      // fetchCampaignData();
     } catch (err: unknown) {
       if (err instanceof Error) {
         alert(`Failed to update deadline: ${err.message}`);
@@ -442,50 +363,60 @@ const handleReclaim = async () => {
     }
   };
 
-  const calculateExpectedViews = (budget: number, cpv: number, viewThreshold: number) => {
+  const calculateExpectedViews = (budgetVal: number, cpv: number, viewThreshold: number) => {
     if (cpv === 0 || viewThreshold === 0) return 0;
-    return (budget / cpv) * viewThreshold;
+    return (budgetVal / cpv) * viewThreshold;
   };
-
 
   const safeTotalViewCount = campaign?.total_view_count ?? 0;
   const safeViewThreshold = campaign?.view_threshold ?? 0;
   const safeCpv = campaign?.cpv ?? 0;
-  const verificationClipCount = clipsData?.all_clips?.length ?? 0;
   const expectedViews = calculateExpectedViews(campaign?.budget ?? 0, safeCpv, safeViewThreshold);
+
   const getEngagementRate = (clip: { view_count?: number | null; like_count?: number | null; comment_count?: number | null }) => {
     const views = clip.view_count ?? 0;
-    if (views <= 0) {
-      return 0;
-    }
+    if (views <= 0) return 0;
     return (((clip.like_count ?? 0) + (clip.comment_count ?? 0)) / views) * 100;
   };
 
-
-  // Use the pre-sorted accepted clips from the backend
-  const sortedAcceptedClips = React.useMemo(() => {
+  // Pre-sorted accepted clips from the backend
+  const sortedAcceptedClips = useMemo(() => {
     const acceptedClips = Array.isArray(campaign?.accepted_clips) ? campaign.accepted_clips : [];
     return [...acceptedClips].sort((a, b) => {
       const engagementDiff = getEngagementRate(b) - getEngagementRate(a);
       if (engagementDiff !== 0) {
         return engagementDiff;
       }
-
       return (b.view_count ?? 0) - (a.view_count ?? 0);
     });
   }, [campaign?.accepted_clips]);
 
-  // Use the pre-calculated creator rankings from the backend
-  const sortedCreators = (campaign?.creator_rankings || []).map(creator => ({
-    id: creator.creator_id,
-    name: creator.creator_name,
-    views: creator.total_views ?? 0,
-    clipCount: creator.clip_count
-  }));
+  // Pre-calculated creator rankings from the backend
+  const sortedCreators = useMemo(() => {
+    return (campaign?.creator_rankings || []).map(creator => ({
+      id: creator.creator_id,
+      name: creator.creator_name,
+      views: creator.total_views ?? 0,
+      clipCount: creator.clip_count
+    }));
+  }, [campaign?.creator_rankings]);
 
   const displayedCreators = showAllCreators ? sortedCreators : sortedCreators.slice(0, 3);
   const topPerformingClips = sortedAcceptedClips.slice(0, 3);
   const isLive = campaign?.deadline ? new Date() < new Date(campaign.deadline) : false;
+
+  // Pending clips count for verification badge
+  const pendingClipsCount = useMemo(() => {
+    if (!clipsData) return 0;
+    if (clipsData.submitted_clips && clipsData.submitted_clips.length > 0) {
+      return clipsData.submitted_clips.length;
+    }
+    return (clipsData.all_clips || []).filter(
+      (c) => c.status !== "accepted" && c.status !== "rejected" && !c.is_deleted_by_admin
+    ).length;
+  }, [clipsData]);
+
+  const verificationClipCount = pendingClipsCount;
 
   // Derived metrics for Content Verification
   const avgViews = campaign?.accepted_clips?.length
@@ -494,11 +425,6 @@ const handleReclaim = async () => {
       ) || 1000
     : safeViewThreshold || 1000;
 
-  const selectedClipDeviation = !selectedClip
-    ? 100
-    : avgViews > 0
-    ? ((selectedClip.view_count ?? 0) / avgViews) * 100
-    : 100;
   const canModerateSelectedClip = !!selectedClip && selectedClip.status !== "accepted" && selectedClip.status !== "rejected";
   const selectedClipStatusLabel = selectedClip?.status === "accepted"
     ? "Approved"
@@ -506,66 +432,77 @@ const handleReclaim = async () => {
     ? "Rejected"
     : "Pending Review";
 
+  // Rank badge styling helper for Top Performing Clips
+  const getRankBadgeInfo = (index: number) => {
+    switch (index) {
+      case 0:
+        return {
+          label: "Rank #1",
+          Icon: Crown,
+          badgeStyle: "bg-amber-50 text-amber-800 border-amber-200/80 shadow-xs",
+          cardBorder: "border-zinc-200/80 bg-white hover:border-amber-300/70",
+          avatarBg: "bg-amber-100 text-amber-800 border border-amber-200",
+          accentColor: "text-amber-600",
+        };
+      case 1:
+        return {
+          label: "Rank #2",
+          Icon: Medal,
+          badgeStyle: "bg-slate-100 text-slate-700 border-slate-200/80 shadow-xs",
+          cardBorder: "border-zinc-200/80 bg-white hover:border-slate-300",
+          avatarBg: "bg-slate-100 text-slate-700 border border-slate-200",
+          accentColor: "text-slate-600",
+        };
+      case 2:
+        return {
+          label: "Rank #3",
+          Icon: Medal,
+          badgeStyle: "bg-orange-50 text-orange-800 border-orange-200/80 shadow-xs",
+          cardBorder: "border-zinc-200/80 bg-white hover:border-orange-300/70",
+          avatarBg: "bg-orange-100 text-orange-800 border border-orange-200",
+          accentColor: "text-orange-600",
+        };
+      default:
+        return {
+          label: `Rank #${index + 1}`,
+          Icon: Medal,
+          badgeStyle: "bg-gray-100 text-gray-700 border-gray-200 shadow-xs",
+          cardBorder: "border-zinc-200/80 bg-white",
+          avatarBg: "bg-gray-100 text-gray-700 border border-gray-200",
+          accentColor: "text-gray-600",
+        };
+    }
+  };
 
-  const diagnosticSignal = React.useMemo(() => {
-    const dev = selectedClipDeviation;
-    if (dev > 115) {
+  const getEngagementClassification = (rate: number) => {
+    if (rate >= 5) {
       return {
-        status: "🔥 Outperforming",
-        colorClass: "text-emerald-700 bg-emerald-50 border-emerald-200",
-        pillClass: "bg-emerald-100 text-emerald-800",
-        meaning: "The clip is gaining algorithmic traction fast."
-      };
-    } else if (dev >= 85) {
-      return {
-        status: "⚡ On Track",
-        colorClass: "text-blue-700 bg-blue-50 border-blue-200",
-        pillClass: "bg-blue-100 text-blue-800",
-        meaning: "Normal performance; steady organic distribution."
-      };
-    } else {
-      return {
-        status: "📉 Underperforming",
-        colorClass: "text-rose-700 bg-rose-50 border-rose-200",
-        pillClass: "bg-rose-100 text-rose-800",
-        meaning: "Weak hook or poor retention; the algorithm is stalling."
+        label: "Outperforming",
+        pillClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        dotClass: "bg-emerald-500",
+        barClass: "bg-emerald-500",
       };
     }
-  }, [selectedClipDeviation]);
-
-  const chartData = React.useMemo(() => {
-    if (!selectedClip) return [];
-    const views = selectedClip.view_count || 1000;
-    const points = timeFilter === "24h" ? 24 : timeFilter === "7d" ? 7 : 30;
-    const data = [];
-    
-    // Seeded random helper based on clip ID to keep the charts stable when switching tabs/filters
-    let seed = (selectedClip.id || 1) * 31;
-    const random = () => {
-      const x = Math.sin(seed++) * 10000;
-      return x - Math.floor(x);
+    if (rate >= 2.5) {
+      return {
+        label: "On Track",
+        pillClass: "bg-blue-50 text-blue-700 border-blue-200",
+        dotClass: "bg-blue-500",
+        barClass: "bg-blue-500",
+      };
+    }
+    return {
+      label: "Underperforming",
+      pillClass: "bg-rose-50 text-rose-700 border-rose-200",
+      dotClass: "bg-rose-500",
+      barClass: "bg-rose-500",
     };
-
-    for (let i = 1; i <= points; i++) {
-      const label = timeFilter === "24h" ? `${i}h` : timeFilter === "7d" ? `Day ${i}` : `Week ${Math.ceil(i / 7.5)}`;
-      // Views curve: logarithmic accumulation
-      const factor = Math.sin((i / points) * (Math.PI / 2));
-      const pointViews = Math.round(views * factor * (0.9 + random() * 0.2));
-      const engagementRate = Number((5 + random() * 6 + Math.sin(i) * 1.5).toFixed(1));
-      
-      data.push({
-        name: label,
-        Views: pointViews,
-        Engagement: engagementRate
-      });
-    }
-    return data;
-  }, [selectedClip, timeFilter]);
+  };
 
   if (loading) {
     return (
       <BrandLayout>
-        <div className="flex justify-center items-center h-full text-gray-500">
+        <div className="flex justify-center items-center h-96 text-gray-500 font-medium">
           Loading campaign data...
         </div>
       </BrandLayout>
@@ -575,7 +512,7 @@ const handleReclaim = async () => {
   if (error) {
     return (
       <BrandLayout>
-        <div className="flex justify-center items-center h-full text-red-600">
+        <div className="flex justify-center items-center h-96 text-red-600 font-medium">
           Error: {error}
         </div>
       </BrandLayout>
@@ -585,7 +522,7 @@ const handleReclaim = async () => {
   if (!campaign) {
     return (
       <BrandLayout>
-        <div className="flex justify-center items-center h-full text-gray-500">
+        <div className="flex justify-center items-center h-96 text-gray-500 font-medium">
           No campaign data found.
         </div>
       </BrandLayout>
@@ -593,15 +530,26 @@ const handleReclaim = async () => {
   }
 
   return (
-    <BrandLayout>
-      <div className="-mx-4 space-y-6 px-4 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+    <BrandLayout
+      sidebar={
+        <CampaignSidebar
+          campaign={campaign}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          verificationCount={verificationClipCount}
+        />
+      }
+    >
+      <div className="w-full space-y-6">
         {/* Approval Banner Notification */}
         {campaign.campaign_approval === "pending_approval" && (
-          <div className="bg-amber-50 border border-amber-250 text-amber-800 px-4 py-3.5 rounded-xl flex items-center gap-3 shadow-sm">
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3.5 rounded-xl flex items-center gap-3 shadow-sm">
             <Clock className="w-5 h-5 animate-pulse text-amber-600 flex-shrink-0" />
             <div>
               <p className="font-bold text-sm">Campaign Pending Approval</p>
-              <p className="text-xs text-amber-700 mt-0.5">This campaign is currently being reviewed by the admin panel. Editing and budget controls are temporarily locked.</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                This campaign is currently being reviewed by the admin panel. Editing and budget controls are temporarily locked.
+              </p>
             </div>
           </div>
         )}
@@ -613,204 +561,346 @@ const handleReclaim = async () => {
               <p className="text-xs text-red-800 mt-1 font-semibold bg-red-100/50 p-2 rounded-lg border border-red-200/40">
                 Reason: {campaign.rejection_reason || "Does not comply with platform guidelines."}
               </p>
-              <p className="text-xs text-red-650 mt-1.5">Please create a new campaign correcting these details.</p>
+              <p className="text-xs text-red-600 mt-1.5">Please create a new campaign correcting these details.</p>
             </div>
           </div>
         )}
 
         {/* Header Section */}
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-gray-200/80">
           <div>
-            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 items-center">
-              <h2 className="text-2xl font-bold text-gray-800">{campaign.name}</h2>
-              <div className="flex gap-2 items-center flex-wrap">
-                {campaign.campaign_type && (
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border rounded ${
-                    campaign.campaign_type === 'clipping'
-                      ? 'border-purple-500 text-purple-600 bg-purple-50'
-                      : 'border-pink-500 text-pink-600 bg-pink-50'
-                  }`}>
-                    {campaign.campaign_type === 'clipping' ? 'Clipping' : 'Influencer'}
-                  </span>
-                )}
-                {campaign.campaign_type === 'influencer' && campaign.follower_range && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-blue-500 text-blue-600 bg-blue-50 rounded">
-                    Req: {campaign.follower_range} followers
-                  </span>
-                )}
-                {campaign.category && (
-                  <span className="text-sm text-gray-500">
-                    {campaign.category.replace('_', ' / ')}
-                  </span>
-                )}
-              </div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">{campaign.name}</h2>
+              {campaign.campaign_type && (
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 border rounded-full ${
+                    campaign.campaign_type === "clipping"
+                      ? "border-purple-300 text-purple-700 bg-purple-50"
+                      : "border-pink-300 text-pink-700 bg-pink-50"
+                  }`}
+                >
+                  {campaign.campaign_type === "clipping" ? "Clipping" : "Influencer"}
+                </span>
+              )}
+              {campaign.campaign_type === "influencer" && campaign.follower_range && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 border border-blue-300 text-blue-700 bg-blue-50 rounded-full">
+                  Req: {campaign.follower_range} followers
+                </span>
+              )}
+              {campaign.category && (
+                <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                  {campaign.category.replace("_", " / ")}
+                </span>
+              )}
             </div>
-            <span className="text-sm text-gray-400">Campaign ID: {campaign.id}</span>
+            <span className="text-xs text-gray-400 mt-1 block">Campaign ID: #{campaign.id}</span>
           </div>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => navigate("/brand/dashboard")}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto justify-center sm:justify-start rounded-xl border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold"
           >
-            <ArrowLeft size={18} className="mr-1" />
+            <ArrowLeft size={16} />
             Back to Dashboard
           </Button>
         </div>
 
-        {/* Sidebar + Main Content Layout */}
-        <div className="flex flex-col md:flex-row gap-6">
-          
-          {/* Left Sidebar Navigation */}
-          <div className="w-full md:w-64 flex-shrink-0 bg-white border border-gray-200 rounded-2xl p-4 self-start shadow-sm flex flex-col gap-2">
-            <div className="px-2 py-1 mb-1">
-              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Campaign Tabs</span>
-            </div>
-            <button
-              onClick={() => setActiveTab("statistics")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition ${
-                activeTab === "statistics"
-                  ? "bg-indigo-600 text-white shadow-md"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              <BarChart2 className="w-5 h-5" />
-              Statistics
-            </button>
-            <button
-              onClick={() => setActiveTab("verification")}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition ${
-                activeTab === "verification"
-                  ? "bg-indigo-600 text-white shadow-md"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="w-5 h-5" />
-                Content Verification
+        {activeTab === "statistics" ? (
+          <div className="w-full space-y-6">
+            {/* 1. Primary KPI Cards Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Total Eyeballs Gained */}
+              <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs hover:shadow-sm transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Total Eyeballs</span>
+                  <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600">
+                    <Eye className="w-4 h-4" />
+                  </div>
+                </div>
+                <p className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight mt-2">
+                  {safeTotalViewCount.toLocaleString()}
+                </p>
+                <p className="text-[11px] text-gray-400 font-medium mt-0.5">Live verified views gained</p>
               </div>
-              {verificationClipCount > 0 ? (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  activeTab === 'verification' ? 'bg-indigo-700 text-white' : 'bg-indigo-50 text-indigo-600'
-                }`}>
-                  {verificationClipCount}
+
+              {/* Cost per View / CPV */}
+              <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs hover:shadow-sm transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Cost per View</span>
+                  <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600">
+                    <Coins className="w-4 h-4" />
+                  </div>
+                </div>
+                <p className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight mt-2">
+                  ₹{safeCpv.toFixed(2)}
+                </p>
+                <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                  Per {safeViewThreshold.toLocaleString()} eyeballs
+                </p>
+              </div>
+
+              {/* Funds Locked / Spend */}
+              <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs hover:shadow-sm transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Funds Locked</span>
+                  <div className="p-2 rounded-xl bg-amber-50 border border-amber-100 text-amber-600">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                </div>
+                <p className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight mt-2">
+                  ₹{(campaign?.funds_allocated || 0).toLocaleString()}
+                </p>
+                <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                  Wallet: ₹{walletBalance.toLocaleString()}
+                </p>
+              </div>
+
+              {/* Expected ROI / Projected Eyeballs */}
+              <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs hover:shadow-sm transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Expected ROI</span>
+                  <div className="p-2 rounded-xl bg-purple-50 border border-purple-100 text-purple-600">
+                    <Target className="w-4 h-4" />
+                  </div>
+                </div>
+                <p className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight mt-2">
+                  {formatViews(expectedViews)}
+                </p>
+                <p className="text-[11px] text-gray-400 font-medium mt-0.5">Projected eyeballs target</p>
+              </div>
+            </div>
+
+            {/* 2. Top Performing Clips Section */}
+            <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900">Top Performing Clips</h3>
+                  <p className="text-xs text-gray-500">Ranked by live engagement rate using likes + comments against views.</p>
+                </div>
+                <span className="self-start sm:self-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  Showing top {topPerformingClips.length} reels
                 </span>
-              ) : null}
-            </button>
-          </div>
+              </div>
 
-          {/* Right Main Panel */}
-          <div className="flex-1 min-w-0">
-            {activeTab === "statistics" ? (
-              <div className="space-y-6">
-                {/* Top "Bento" Grid Section */}
-                <div className="grid md:grid-cols-3 gap-6 mb-10">
+              {topPerformingClips.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {topPerformingClips.map((clip, index) => {
+                    const rankInfo = getRankBadgeInfo(index);
+                    const RankIcon = rankInfo.Icon;
+                    const engagementRate = getEngagementRate(clip);
+                    const totalInteractions = (clip.like_count ?? 0) + (clip.comment_count ?? 0);
+                    const classification = getEngagementClassification(engagementRate);
 
-                  {/* 4. Campaign Status */}
-                  <div className="bg-white rounded shadow p-6 flex flex-col gap-4">
-                    <label className="font-medium mb-2">Status</label>
-                    <label className="font-medium flex items-center gap-3 h-full cursor-pointer">
-                      <Switch
-                        checked={isActive}
-                        onCheckedChange={handleUpdateStatus}
-                        disabled={(!isActive && (campaign?.funds_allocated || 0) <= 0) || campaign.campaign_approval !== "approved"}
-                      />
-                      <span className={isActive ? "text-green-600" : "text-gray-500"}>
-                        {isActive ? "Campaign Active" : "Paused"}
-                      </span>
-                    </label>
+                    return (
+                      <div
+                        key={`${clip.id}-${clip.clip_url}`}
+                        className={`rounded-xl border p-4 shadow-xs flex flex-col justify-between transition-all hover:shadow-sm ${rankInfo.cardBorder}`}
+                      >
+                        <div>
+                          {/* Rank Header + Views Pill */}
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${rankInfo.badgeStyle}`}
+                            >
+                              <RankIcon className="w-3.5 h-3.5" />
+                              {rankInfo.label}
+                            </span>
+                            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                              {formatViews(clip.view_count ?? 0)} views
+                            </span>
+                          </div>
 
-                    {/* Helper Text */}
-                    {!isActive && (campaign?.funds_allocated || 0) <= 0 && (
-                      <span className="text-xs text-red-500">
-                        Allocate funds to activate.
-                      </span>
-                    )}
-                  </div>
+                          {/* Creator Row */}
+                          <div className="flex items-center gap-2.5 mb-3">
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${rankInfo.avatarBg}`}
+                            >
+                              {(clip.creator_name || "C").slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs sm:text-sm font-bold text-gray-900 truncate">
+                                {clip.creator_name || `Creator #${clip.creator_id}`}
+                              </p>
+                              <p className="text-[11px] text-gray-400 truncate">
+                                {clip.submitted_at
+                                  ? `Submitted ${new Date(clip.submitted_at).toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric"
+                                    })}`
+                                  : "N/A"}
+                              </p>
+                            </div>
+                          </div>
 
-                  {/* 2. Update View Threshold */}
-                  <div className="bg-white rounded shadow p-6 flex flex-col gap-3">
-                    <label className="font-medium mb-2">Update View Threshold</label>
-                    <Input
-                      type="number"
-                      value={viewThresholdInput}
-                      onChange={e => setViewThresholdInput(Number(e.target.value))}
-                      min="0"
-                      className="w-full max-w-[180px]"
-                      disabled={campaign.campaign_approval !== "approved"}
-                    />
-                    <Button className="mt-2 w-fit self-end" variant="secondary" size="sm" onClick={handleUpdateViewThreshold} disabled={campaign.campaign_approval !== "approved"}>
-                      Update Threshold
-                    </Button>
-                  </div>
+                          {/* Compact 4-Metric Grid */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                            <div className="bg-gray-50/80 rounded-lg p-2 border border-gray-100 text-center">
+                              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Views</p>
+                              <p className="text-xs sm:text-sm font-bold text-gray-800 mt-0.5">{formatViews(clip.view_count ?? 0)}</p>
+                            </div>
+                            <div className="bg-gray-50/80 rounded-lg p-2 border border-gray-100 text-center">
+                              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Likes</p>
+                              <p className="text-xs sm:text-sm font-bold text-gray-800 mt-0.5">{formatViews(clip.like_count ?? 0)}</p>
+                            </div>
+                            <div className="bg-gray-50/80 rounded-lg p-2 border border-gray-100 text-center">
+                              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Comments</p>
+                              <p className="text-xs sm:text-sm font-bold text-gray-800 mt-0.5">{formatViews(clip.comment_count ?? 0)}</p>
+                            </div>
+                            <div className="bg-gray-50/80 rounded-lg p-2 border border-gray-100 text-center">
+                              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Interactions</p>
+                              <p className="text-xs sm:text-sm font-bold text-gray-800 mt-0.5">{formatViews(totalInteractions)}</p>
+                            </div>
+                          </div>
 
-                  {/* 3. Update Deadline */}
-                  <div className="bg-white rounded shadow p-6 flex flex-col gap-3">
-                    <label className="font-medium mb-2">Update Deadline</label>
-                    <Input
-                      type="date"
-                      value={deadlineInput}
-                      onChange={e => setDeadlineInput(e.target.value)}
-                      className="w-full max-w-[180px]"
-                      disabled={campaign.campaign_approval !== "approved"}
-                    />
-                    <Button className="mt-2 w-fit self-end" variant="secondary" size="sm" onClick={handleUpdateDeadline} disabled={campaign.campaign_approval !== "approved"}>
-                      Update Deadline
-                    </Button>
-                  </div>
+                          {/* Engagement Rate Pill + Visual Meter - ZERO text collision */}
+                          <div className="rounded-lg bg-gray-50/90 border border-gray-100 p-2.5 space-y-2 mb-3">
+                            {/* Row 1: Label and Value cleanly separated on opposite edges */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                                Engagement Rate
+                              </span>
+                              <span className="text-sm font-extrabold text-gray-900">
+                                {engagementRate.toFixed(2)}%
+                              </span>
+                            </div>
 
-                  {/* 1. FUND MANAGER (Fluid Layout) */}
-                  <div className="bg-white rounded shadow p-6 h-full flex flex-col justify-between gap-4 relative overflow-hidden md:col-span-1">
-                    <div className="flex justify-between items-start shrink-0">
-                      <h3 className="font-medium text-gray-700 flex items-center gap-2">
-                        <Wallet size={18} className="text-blue-600" />
-                        Fund Manager
-                      </h3>
-                      <div className="text-right">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider">Wallet Balance</p>
-                        <p className="font-bold text-green-600">₹{walletBalance.toLocaleString()}</p>
+                            {/* Progress bar */}
+                            <div className="w-full bg-gray-200/80 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${classification.barClass}`}
+                                style={{ width: `${Math.min(100, Math.max(8, (engagementRate / 10) * 100))}%` }}
+                              />
+                            </div>
+
+                            {/* Row 2: Status pill and Interaction count */}
+                            <div className="flex items-center justify-between pt-0.5">
+                              <span
+                                className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${classification.pillClass}`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${classification.dotClass}`} />
+                                {classification.label}
+                              </span>
+
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
+                                  >
+                                    View Split
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent align="end" className="w-64 rounded-xl border-gray-200 p-4 shadow-xl">
+                                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                                    Engagement Distribution
+                                  </p>
+                                  <div className="mt-3 space-y-2 text-sm">
+                                    <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                                      <span className="text-gray-500">Views</span>
+                                      <span className="font-semibold text-gray-900">{formatViews(clip.view_count ?? 0)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                                      <span className="text-gray-500">Likes</span>
+                                      <span className="font-semibold text-gray-900">{formatViews(clip.like_count ?? 0)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                                      <span className="text-gray-500">Comments</span>
+                                      <span className="font-semibold text-gray-900">{formatViews(clip.comment_count ?? 0)}</span>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Direct Action Button */}
+                        <a
+                          href={clip.clip_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 w-full py-2 px-3 rounded-lg text-xs font-semibold bg-gray-900 text-white hover:bg-black transition-colors shadow-xs group"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-white shrink-0" />
+                          <span>Watch Reel / Source</span>
+                          <ExternalLink className="w-3 h-3 text-gray-400 group-hover:text-white transition-colors shrink-0" />
+                        </a>
                       </div>
-                    </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center text-gray-400 text-sm">
+                  No accepted clips for this campaign yet.
+                </div>
+              )}
+            </div>
 
-                    <div className="bg-gray-50 p-4 rounded border border-gray-100 flex-1 flex flex-col justify-center gap-2 min-h-[100px]">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Funds Locked in Campaign</p>
+                {/* 3. Fund Management & Campaign Controls (Balanced 2-Column Grid) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+                  {/* Card 1: Fund Manager */}
+                  <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-4 mb-3 sm:mb-4">
+                        <div>
+                          <h3 className="font-bold text-gray-900 flex items-center gap-2 text-base">
+                            <Wallet className="w-5 h-5 text-blue-600" />
+                            Fund Manager
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-0.5">Manage budget allocation and wallet balance</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">Wallet Balance</p>
+                          <p className="font-extrabold text-emerald-600 text-base sm:text-lg">₹{walletBalance.toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      {/* Funds Locked Box */}
+                      <div className="bg-gray-50/80 border border-gray-100 rounded-xl p-3 sm:p-3.5 mb-3 sm:mb-4">
+                        <p className="text-xs text-gray-500 font-medium mb-1">Funds Locked in Campaign</p>
                         <div className="flex items-baseline gap-2">
-                          <p className="text-3xl font-bold text-gray-800 tracking-tight">
+                          <p className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">
                             ₹{(campaign?.funds_allocated || 0).toLocaleString()}
                           </p>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <label className="text-xs font-medium text-gray-600">Move Funds (₹)</label>
 
                       {isLive && (campaign.funds_allocated || 0) > 0 && (
-                        <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded mb-1 border border-amber-100">
-                          🔒 Reclaiming is disabled while campaign is live (until {new Date(campaign.deadline).toLocaleDateString()}).
+                        <div className="text-xs text-amber-700 bg-amber-50 p-2.5 sm:p-3 rounded-xl mb-3 sm:mb-4 border border-amber-200/70 flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>
+                            🔒 Reclaiming is disabled while campaign is live (until{" "}
+                            {new Date(campaign.deadline).toLocaleDateString()}).
+                          </span>
                         </div>
                       )}
+                    </div>
 
-                      <div className="flex flex-wrap items-stretch gap-2">
-                        <div className="flex-grow min-w-[120px]">
-                          <Input
-                            type="number"
-                            value={allocationAmount}
-                            onChange={e => setAllocationAmount(Number(e.target.value))}
-                            min="0"
-                            placeholder="0"
-                            className="w-full"
-                            disabled={campaign.campaign_approval !== "approved"}
-                          />
-                        </div>
-
-                        <div className="flex gap-2 flex-shrink-0">
+                    <div className="space-y-2 pt-1">
+                      <label className="text-xs font-semibold text-gray-700 block">Move Funds (₹)</label>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <Input
+                          type="number"
+                          value={allocationAmount}
+                          onChange={e => setAllocationAmount(Number(e.target.value))}
+                          min="0"
+                          placeholder="0"
+                          className="h-9 w-full sm:w-auto sm:flex-1 text-sm"
+                          disabled={campaign.campaign_approval !== "approved"}
+                        />
+                        <div className="flex gap-2 shrink-0">
                           <Button
                             size="sm"
                             onClick={handleAllocate}
-                            disabled={isProcessingFund || allocationAmount > walletBalance || campaign.campaign_approval !== "approved"}
-                            className="bg-blue-600 hover:bg-blue-700 px-4"
+                            disabled={
+                              isProcessingFund ||
+                              allocationAmount <= 0 ||
+                              allocationAmount > walletBalance ||
+                              campaign.campaign_approval !== "approved"
+                            }
+                            className="h-9 bg-blue-600 hover:bg-blue-700 text-white px-3.5 sm:px-4 flex-1 sm:flex-initial"
                           >
                             Allocate Funds
                           </Button>
@@ -819,8 +909,14 @@ const handleReclaim = async () => {
                             size="sm"
                             variant="outline"
                             onClick={handleReclaim}
-                            disabled={isProcessingFund || isLive || allocationAmount > (campaign?.funds_allocated || 0) || campaign.campaign_approval !== "approved"}
-                            className={`px-4 ${isLive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={
+                              isProcessingFund ||
+                              isLive ||
+                              allocationAmount <= 0 ||
+                              allocationAmount > (campaign?.funds_allocated || 0) ||
+                              campaign.campaign_approval !== "approved"
+                            }
+                            className={`h-9 px-3.5 sm:px-4 flex-1 sm:flex-initial ${isLive ? "opacity-50 cursor-not-allowed" : ""}`}
                             title={isLive ? "Cannot reclaim funds while campaign is live" : "Return funds to wallet"}
                           >
                             Reclaim Funds
@@ -830,39 +926,139 @@ const handleReclaim = async () => {
                     </div>
                   </div>
 
-                  {/* 5. Update Image (Visual Editor Mode) */}
-                  <div className="bg-white rounded shadow p-6 md:col-span-2 flex flex-col gap-4">
-                    <div className="flex justify-between items-center">
-                      <label className="font-medium">Update Campaign Cover</label>
-                      {imageFile && (
-                        <span className="text-xs text-blue-600 font-medium animate-pulse">
-                          Preview Mode - Unsaved Changes
-                        </span>
-                      )}
+                  {/* Card 2: Quick Settings */}
+                  <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="mb-3 sm:mb-4">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2 text-base">
+                          <Sliders className="w-5 h-5 text-indigo-600" />
+                          Quick Settings & Controls
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-0.5">Campaign activation, view threshold, and timeline</p>
+                      </div>
+
+                      {/* Campaign Active Switch */}
+                      <div className="flex items-center justify-between p-3 sm:p-3.5 bg-gray-50/80 rounded-xl border border-gray-100 mb-3 sm:mb-4 gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-800">Campaign Status</p>
+                          <p className="text-xs text-gray-500 truncate sm:whitespace-normal">
+                            {isActive ? "Campaign is currently active and receiving submissions" : "Campaign is paused"}
+                          </p>
+                          {!isActive && (campaign?.funds_allocated || 0) <= 0 && (
+                            <p className="text-xs text-red-500 font-medium mt-1">Allocate funds using Fund Manager to activate.</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <Switch
+                            checked={isActive}
+                            onCheckedChange={handleUpdateStatus}
+                            disabled={(!isActive && (campaign?.funds_allocated || 0) <= 0) || campaign.campaign_approval !== "approved"}
+                          />
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border transition-colors ${
+                              isActive
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-gray-100 text-gray-600 border-gray-200"
+                            }`}
+                          >
+                            {isActive ? "Active" : "Paused"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Update View Threshold */}
+                      <div className="space-y-1.5 mb-3 sm:mb-4">
+                        <label className="text-xs font-semibold text-gray-700 block">Update View Threshold</label>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <Input
+                            type="number"
+                            value={viewThresholdInput}
+                            onChange={e => setViewThresholdInput(Number(e.target.value))}
+                            min="0"
+                            className="h-9 w-full sm:w-auto sm:flex-1 text-sm"
+                            disabled={campaign.campaign_approval !== "approved"}
+                          />
+                          <Button
+                            className="h-9 w-full sm:w-auto shrink-0"
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleUpdateViewThreshold}
+                            disabled={campaign.campaign_approval !== "approved"}
+                          >
+                            Update Threshold
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Update Deadline */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-gray-700 block">Update Deadline</label>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <Input
+                            type="date"
+                            value={deadlineInput}
+                            onChange={e => setDeadlineInput(e.target.value)}
+                            className="h-9 w-full sm:w-auto sm:flex-1 text-sm"
+                            disabled={campaign.campaign_approval !== "approved"}
+                          />
+                          <Button
+                            className="h-9 w-full sm:w-auto shrink-0"
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleUpdateDeadline}
+                            disabled={campaign.campaign_approval !== "approved"}
+                          >
+                            Update Deadline
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Campaign Creative & Requirements (Balanced 2-Column Grid) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+                  {/* Card 1: Campaign Cover Banner */}
+                  <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-3 sm:mb-4">
+                        <div>
+                          <h3 className="font-bold text-gray-900 flex items-center gap-2 text-base">
+                            <Upload className="w-5 h-5 text-indigo-600" />
+                            Campaign Cover Banner
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-0.5">Crop and replace campaign cover (16:9 ratio)</p>
+                        </div>
+                        {imageFile && (
+                          <span className="text-[11px] bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-0.5 rounded-full font-semibold animate-pulse">
+                            Unsaved Changes
+                          </span>
+                        )}
+                      </div>
+
+                      <ImageCropInput
+                        value={imagePreview || ""}
+                        onChange={(file, previewUrl) => {
+                          setImagePreview(previewUrl);
+                          setImageFile(file);
+                          if (!file && !previewUrl) {
+                            setImagePreview(null);
+                            setImageFile(null);
+                          }
+                        }}
+                        aspectRatio="16:9"
+                        disabled={isUploadingImage || campaign.campaign_approval !== "approved"}
+                        placeholder="Drag and drop or click to upload campaign cover banner"
+                      />
                     </div>
 
-                    <ImageCropInput
-                      value={imagePreview || ""}
-                      onChange={(file, previewUrl) => {
-                        setImagePreview(previewUrl);
-                        setImageFile(file);
-                        if (!file && !previewUrl) {
-                          setImagePreview(null);
-                          setImageFile(null);
-                        }
-                      }}
-                      aspectRatio="16:9"
-                      disabled={isUploadingImage || campaign.campaign_approval !== "approved"}
-                      placeholder="Drag and drop or click to upload campaign cover banner"
-                    />
-
                     {imageFile && (
-                      <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                      <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-gray-100">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={handleRevertImage}
-                          className="px-3 text-gray-600 border-gray-300 hover:bg-gray-100"
+                          className="h-9 px-3 text-gray-600 border-gray-300 hover:bg-gray-100"
                           title="Discard changes"
                         >
                           <Undo size={14} className="mr-1" /> Revert
@@ -872,7 +1068,7 @@ const handleReclaim = async () => {
                           size="sm"
                           onClick={handleUpdateImage}
                           disabled={isUploadingImage}
-                          className="px-4"
+                          className="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white"
                         >
                           {isUploadingImage ? (
                             <span className="flex items-center gap-2">
@@ -886,204 +1082,143 @@ const handleReclaim = async () => {
                     )}
                   </div>
 
-                  {/* 6. Requirements */}
-                  <div className="bg-white rounded shadow p-6 flex flex-col gap-3 md:col-span-3">
-                    <label className="font-medium mb-2">Update Campaign Requirements</label>
-                    <Textarea
-                      value={requirements}
-                      onChange={e => setRequirements(e.target.value)}
-                      rows={4}
-                      className="resize-y"
-                      disabled={campaign.campaign_approval !== "approved"}
-                    />
-                    <Button className="mt-2 w-fit self-end" size="sm" onClick={handleUpdateRequirements} disabled={campaign.campaign_approval !== "approved"}>
-                      Update Requirements
-                    </Button>
-                  </div>
+                  {/* Card 2: Campaign Requirements & Description */}
+                  <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs flex flex-col justify-between gap-4 sm:gap-5">
+                    {/* Requirements */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                          <FileText className="w-4 h-4 text-gray-500" />
+                          Campaign Requirements
+                        </label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleUpdateRequirements}
+                          disabled={campaign.campaign_approval !== "approved"}
+                          className="h-8 text-xs font-medium"
+                        >
+                          Update Requirements
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={requirements}
+                        onChange={e => setRequirements(e.target.value)}
+                        rows={3}
+                        className="resize-y text-sm rounded-lg"
+                        disabled={campaign.campaign_approval !== "approved"}
+                        placeholder="Specify requirements for creators..."
+                      />
+                    </div>
 
-                  {/* 7. Description */}
-                  <div className="bg-white rounded shadow p-6 flex flex-col gap-3 md:col-span-3">
-                    <label className="font-medium mb-2">Update Campaign Description</label>
-                    <Textarea
-                      value={description}
-                      onChange={e => setDescription(e.target.value)}
-                      rows={4}
-                      className="resize-y"
-                      disabled={campaign.campaign_approval !== "approved"}
-                      placeholder="Enter campaign description..."
-                    />
-                    <Button className="mt-2 w-fit self-end" size="sm" onClick={handleUpdateDescription} disabled={campaign.campaign_approval !== "approved"}>
-                      Update Description
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Metrics Section */}
-                <div className="grid md:grid-cols-3 gap-6 mb-10">
-                  <div className="bg-white rounded shadow p-6">
-                    <div className="text-gray-400 text-xs">Total Eyeballs Gained</div>
-                    <div className="text-2xl font-bold">{safeTotalViewCount.toLocaleString()}</div>
-                  </div>
-                  <div className="bg-white rounded shadow p-6">
-                    <div className="text-gray-400 text-xs mb-1">Cost per {safeViewThreshold.toLocaleString()} Eyeballs</div>
-                    <div className="flex gap-3 items-end">
-                      <span className="text-lg font-semibold text-gray-700">₹{safeCpv.toFixed(2)}</span>
+                    {/* Description */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                          <FileText className="w-4 h-4 text-gray-500" />
+                          Campaign Description
+                        </label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleUpdateDescription}
+                          disabled={campaign.campaign_approval !== "approved"}
+                          className="h-8 text-xs font-medium"
+                        >
+                          Update Description
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={description}
+                        onChange={e => setDescription(e.target.value)}
+                        rows={3}
+                        className="resize-y text-sm rounded-lg"
+                        disabled={campaign.campaign_approval !== "approved"}
+                        placeholder="Enter detailed campaign description..."
+                      />
                     </div>
                   </div>
-                  <div className="bg-white rounded shadow p-6">
-                    <div className="text-gray-400 text-xs">Expected ROI</div>
-                    <div className="text-lg font-bold">{formatViews(expectedViews)} eyeballs</div>
-                  </div>
                 </div>
 
-                {/* User-Level Performance Table */}
-                <div className="bg-white rounded shadow p-6 mb-8">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-semibold text-gray-800">User-Level Performance</h3>
+                {/* 5. User-Level Performance Table */}
+                <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-base">User-Level Performance</h3>
+                      <p className="text-xs text-gray-500">Breakdown of creator eyeball contributions</p>
+                    </div>
                     {sortedCreators.length > 3 && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowAllCreators(!showAllCreators)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-indigo-600 hover:text-indigo-800 self-start sm:self-auto text-xs font-semibold"
                       >
-                        {showAllCreators ? 'Show Less' : `View All (${sortedCreators.length})`}
+                        {showAllCreators ? "Show Less" : `View All (${sortedCreators.length})`}
                       </Button>
                     )}
                   </div>
+
                   {displayedCreators.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Rank</TableHead>
-                          <TableHead>Creator</TableHead>
-                          <TableHead className="text-right">Total eyeballs</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {displayedCreators.map((creator, index) => (
-                          <TableRow key={creator.name}>
-                            <TableCell>#{index + 1}</TableCell>
-                            <TableCell className="font-medium">{creator.name}</TableCell>
-                            <TableCell className="text-right">{creator.views.toLocaleString()}</TableCell>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50/70 hover:bg-gray-50/70">
+                            <TableHead className="w-20 font-semibold text-xs text-gray-600">Rank</TableHead>
+                            <TableHead className="font-semibold text-xs text-gray-600">Creator</TableHead>
+                            <TableHead className="font-semibold text-xs text-gray-600">Status</TableHead>
+                            <TableHead className="text-right font-semibold text-xs text-gray-600">Total Eyeballs</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-gray-500">No creator performance data available yet.</p>
-                  )}
-                </div>
-
-                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Top Performing Clips</h3>
-                      <p className="text-sm text-gray-500">Ranked by live engagement rate using likes + comments against views.</p>
-                    </div>
-                    <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                      Showing top 3 reels
-                    </div>
-                  </div>
-
-                  {topPerformingClips.length > 0 ? (
-                    <div className="grid gap-4 lg:grid-cols-3">
-                      {topPerformingClips.map((clip, index) => {
-                        const engagementRate = getEngagementRate(clip);
-                        const totalInteractions = (clip.like_count ?? 0) + (clip.comment_count ?? 0);
-
-                        return (
-                          <div
-                            key={`${clip.id}-${clip.clip_url}`}
-                            className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100/70 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.06)]"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Rank #{index + 1}</p>
-                                <p className="mt-1 truncate text-sm font-semibold text-slate-900">
-                                  {clip.creator_name || `Creator #${clip.creator_id}`}
-                                </p>
-                              </div>
-                              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
-                                {formatViews(clip.view_count ?? 0)} views
-                              </span>
-                            </div>
-
-                            <a
-                              href={clip.clip_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-4 block truncate text-sm font-medium text-blue-600 hover:underline"
-                              title={clip.clip_url}
-                            >
-                              {clip.clip_url}
-                            </a>
-
-                            <div className="mt-4 grid grid-cols-2 gap-3">
-                              <div className="rounded-2xl bg-white/80 p-3 ring-1 ring-slate-200">
-                                <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Submitted</p>
-                                <p className="mt-1 text-sm font-semibold text-slate-800">
-                                  {clip.submitted_at
-                                    ? new Date(clip.submitted_at).toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                        year: "numeric"
-                                      })
-                                    : "N/A"}
-                                </p>
-                              </div>
-                              <div className="rounded-2xl bg-white/80 p-3 ring-1 ring-slate-200">
-                                <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Interactions</p>
-                                <p className="mt-1 text-sm font-semibold text-slate-800">{formatViews(totalInteractions)}</p>
-                              </div>
-                            </div>
-
-                            <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-900 px-4 py-3 text-white">
-                              <div>
-                                <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Engagement Rate</p>
-                                <p className="mt-1 text-lg font-bold">{engagementRate.toFixed(2)}%</p>
-                              </div>
-
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
-                                  >
-                                    View Split
-                                  </button>
-                                </PopoverTrigger>
-                                <PopoverContent align="end" className="w-64 rounded-2xl border-slate-200 p-4 shadow-xl">
-                                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Engagement Distribution</p>
-                                  <div className="mt-3 space-y-2 text-sm">
-                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                                      <span className="text-slate-500">Views</span>
-                                      <span className="font-semibold text-slate-900">{formatViews(clip.view_count ?? 0)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                                      <span className="text-slate-500">Likes</span>
-                                      <span className="font-semibold text-slate-900">{formatViews(clip.like_count ?? 0)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                                      <span className="text-slate-500">Comments</span>
-                                      <span className="font-semibold text-slate-900">{formatViews(clip.comment_count ?? 0)}</span>
-                                    </div>
+                        </TableHeader>
+                        <TableBody>
+                          {displayedCreators.map((creator, index) => (
+                            <TableRow key={creator.id || creator.name} className="hover:bg-gray-50/50">
+                              <TableCell className="font-semibold text-xs text-gray-500">
+                                <span
+                                  className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                                    index === 0
+                                      ? "bg-amber-100 text-amber-800"
+                                      : index === 1
+                                      ? "bg-slate-100 text-slate-700"
+                                      : index === 2
+                                      ? "bg-orange-100 text-orange-800"
+                                      : "text-gray-600"
+                                  }`}
+                                >
+                                  #{index + 1}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
+                                    {(creator.name || "C").slice(0, 2).toUpperCase()}
                                   </div>
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                          </div>
-                        );
-                      })}
+                                  <span className="font-semibold text-sm text-gray-900">{creator.name}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  {creator.clipCount > 0 ? `${creator.clipCount} clips` : "Active"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right font-mono font-semibold text-sm text-gray-800">
+                                {creator.views.toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
                     </div>
                   ) : (
-                    <p className="text-gray-500">No accepted clips for this campaign yet.</p>
+                    <div className="text-center py-8 text-gray-400 text-sm">
+                      No creator performance data available yet.
+                    </div>
                   )}
                 </div>
               </div>
             ) : (
-              // CONTENT VERIFICATION TAB
-              <div className="space-y-6">
+              /* CONTENT VERIFICATION TAB */
+              <div className="w-full space-y-6">
                 <ClipsListTable
                   clips={clipsData?.all_clips || []}
                   selectedClip={selectedClip}
@@ -1091,7 +1226,7 @@ const handleReclaim = async () => {
                   loading={loadingClips}
                 />
 
-                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-xs flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-base font-bold text-gray-900">Reel Decision Panel</h3>
                     <p className="text-sm text-gray-500">
@@ -1100,15 +1235,15 @@ const handleReclaim = async () => {
                         : "Select a reel from the table to approve or reject it."}
                     </p>
                     {selectedClip?.feedback ? (
-                      <p className="mt-2 text-xs text-rose-600">Rejection reason: {selectedClip.feedback}</p>
+                      <p className="mt-2 text-xs text-rose-600 font-semibold">Rejection reason: {selectedClip.feedback}</p>
                     ) : null}
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-3 w-full sm:w-auto">
                     <Button
                       onClick={() => handleClipModeration("accepted")}
                       disabled={!canModerateSelectedClip || isUpdatingClipStatus}
-                      className="bg-emerald-600 hover:bg-emerald-700"
+                      className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
                     >
                       {isUpdatingClipStatus ? "Processing..." : "Approve Reel"}
                     </Button>
@@ -1116,14 +1251,14 @@ const handleReclaim = async () => {
                       variant="outline"
                       onClick={() => handleClipModeration("rejected")}
                       disabled={!canModerateSelectedClip || isUpdatingClipStatus}
-                      className="border-rose-300 text-rose-600 hover:bg-rose-50"
+                      className="w-full sm:w-auto border-rose-300 text-rose-600 hover:bg-rose-50"
                     >
                       Reject Reel
                     </Button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
                   <ReelPlayFrame clip={selectedClip} />
                   <ReelMetricsPanel
                     clip={selectedClip}
@@ -1136,10 +1271,7 @@ const handleReclaim = async () => {
                 </div>
               </div>
             )}
-          </div>
-        </div>
       </div>
-
     </BrandLayout>
   );
 };

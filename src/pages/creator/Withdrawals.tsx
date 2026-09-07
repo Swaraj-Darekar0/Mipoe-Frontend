@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { getTransactions, getWalletBalance, Transaction as ApiTransaction } from '@/lib/api';
 import { Loader2, Wallet, ArrowDown, ArrowUp, Clock } from 'lucide-react';
@@ -115,32 +113,44 @@ export default function CreatorWithdrawals() {
   const getTransactionIcon = (type: string) => {
     switch (type) {
       case 'earning':
-        return <ArrowDown className="h-5 w-5 text-green-600" />;
+        return (
+          <div className="size-9 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200/60 flex items-center justify-center shrink-0">
+            <ArrowDown className="h-4 w-4" />
+          </div>
+        );
       case 'withdrawal':
-        return <ArrowUp className="h-5 w-5 text-red-600" />;
+        return (
+          <div className="size-9 rounded-xl bg-rose-50 text-rose-600 border border-rose-200/60 flex items-center justify-center shrink-0">
+            <ArrowUp className="h-4 w-4" />
+          </div>
+        );
       default:
-        return <Wallet className="h-5 w-5 text-gray-500" />;
+        return (
+          <div className="size-9 rounded-xl bg-zinc-100 text-zinc-600 border border-zinc-200/60 flex items-center justify-center shrink-0">
+            <Wallet className="h-4 w-4" />
+          </div>
+        );
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Success</Badge>;
+        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Success</span>;
       case 'pending':
-        return <Badge variant="secondary">Pending</Badge>;
+        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Pending</span>;
       case 'failed':
-        return <Badge variant="destructive">Failed</Badge>;
+        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">Failed</span>;
       default:
-        return <Badge>{status}</Badge>;
+        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200">{status}</span>;
     }
   };
 
   if (loading) {
     return (
       <CreatorLayout>
-        <div className="flex items-center justify-center h-full">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex items-center justify-center h-64">
+          <div className="w-6 h-6 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
         </div>
       </CreatorLayout>
     );
@@ -148,110 +158,111 @@ export default function CreatorWithdrawals() {
   
   return (
     <CreatorLayout>
-      <>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Transaction History</h1>
-          <p className="text-gray-600 mt-2">Track all your earnings and withdrawals.</p>
+      <div className="max-w-6xl mx-auto w-full flex flex-col">
+        {/* Compact Header */}
+        <div className="mb-3">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-zinc-900 tracking-tight">Transaction History</h1>
+          <p className="text-zinc-500 text-xs sm:text-sm mt-0.5">Track your past campaign earnings, withdrawals, and balance movements.</p>
         </div>
 
-        {/* Main Wallet Balance */}
-        <Card className="mb-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-6 w-6" />
-              Available Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold">₹{stats.wallet_balance.toFixed(2)}</div>
-          </CardContent>
-        </Card>
+        {/* 4-Card Horizontal Stats Ribbon */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <Card className="bg-white border border-zinc-200/80 rounded-2xl p-3 sm:p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">Available Balance</span>
+              <div className="size-6 sm:size-7 rounded-lg bg-orange-50 text-orange-600 border border-orange-200/60 flex items-center justify-center">
+                <Wallet className="h-3.5 w-3.5" />
+              </div>
+            </div>
+            <div className="font-mono text-xl sm:text-2xl font-bold text-zinc-900 mt-1 sm:mt-1.5">₹{stats.wallet_balance.toFixed(2)}</div>
+            <p className="text-[10px] text-zinc-400 mt-0.5">Ready for payout</p>
+          </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <ArrowDown className="h-4 w-4 text-green-600" />
-                Total Earned
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">₹{stats.total_earned.toFixed(2)}</div>
-            </CardContent>
+          <Card className="bg-white border border-zinc-200/80 rounded-2xl p-3 sm:p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">Total Earned</span>
+              <div className="size-6 sm:size-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200/60 flex items-center justify-center">
+                <ArrowDown className="h-3.5 w-3.5" />
+              </div>
+            </div>
+            <div className="font-mono text-xl sm:text-2xl font-bold text-emerald-600 mt-1 sm:mt-1.5">₹{stats.total_earned.toFixed(2)}</div>
+            <p className="text-[10px] text-zinc-400 mt-0.5">Lifetime earnings</p>
           </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <ArrowUp className="h-4 w-4 text-red-600" />
-                Total Withdrawn
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">₹{stats.total_withdrawn.toFixed(2)}</div>
-            </CardContent>
+
+          <Card className="bg-white border border-zinc-200/80 rounded-2xl p-3 sm:p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">Total Withdrawn</span>
+              <div className="size-6 sm:size-7 rounded-lg bg-rose-50 text-rose-600 border border-rose-200/60 flex items-center justify-center">
+                <ArrowUp className="h-3.5 w-3.5" />
+              </div>
+            </div>
+            <div className="font-mono text-xl sm:text-2xl font-bold text-zinc-900 mt-1 sm:mt-1.5">₹{stats.total_withdrawn.toFixed(2)}</div>
+            <p className="text-[10px] text-zinc-400 mt-0.5">Disbursed to date</p>
           </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-yellow-600" />
-                Pending Withdrawals
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">₹{stats.pending_withdrawals.toFixed(2)}</div>
-            </CardContent>
+
+          <Card className="bg-white border border-zinc-200/80 rounded-2xl p-3 sm:p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">Pending Clearances</span>
+              <div className="size-6 sm:size-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-200/60 flex items-center justify-center">
+                <Clock className="h-3.5 w-3.5" />
+              </div>
+            </div>
+            <div className="font-mono text-xl sm:text-2xl font-bold text-amber-600 mt-1 sm:mt-1.5">₹{stats.pending_withdrawals.toFixed(2)}</div>
+            <p className="text-[10px] text-zinc-400 mt-0.5">Under review</p>
           </Card>
         </div>
 
-        {/* Transactions Table */}
-        <Card>
-          <CardHeader className="flex justify-between items-center">
+        {/* Viewport-locked Transactions Pane */}
+        <div className="h-[calc(100vh-230px)] min-h-[360px] flex flex-col bg-white border border-zinc-200/80 rounded-2xl shadow-xs overflow-hidden">
+          {/* Compact Header */}
+          <div className="flex flex-row items-center justify-between gap-3 border-b border-zinc-100 px-4 sm:px-5 py-3 shrink-0">
             <div>
-              <CardTitle>History</CardTitle>
-              <CardDescription>Your recent transaction history.</CardDescription>
+              <h2 className="font-display text-base sm:text-lg font-bold text-zinc-900">Transaction History</h2>
+              <p className="text-[11px] text-zinc-400">A complete record of your campaign credits and disbursements.</p>
             </div>
             <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as any)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by type..." />
+              <SelectTrigger className="w-[140px] sm:w-[170px] bg-white border-zinc-200 rounded-xl text-xs font-semibold text-zinc-700 shadow-xs h-8 sm:h-9">
+                <SelectValue placeholder="Filter transactions" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-xl border-zinc-200 shadow-lg">
                 <SelectItem value="all">All Transactions</SelectItem>
-                <SelectItem value="earning">Earnings</SelectItem>
-                <SelectItem value="withdrawal">Withdrawals (All)</SelectItem>
-                <SelectItem value="pending_withdrawal">Pending Withdrawals</SelectItem>
+                <SelectItem value="earning">Earnings Only</SelectItem>
+                <SelectItem value="withdrawal">Withdrawals Only</SelectItem>
+                <SelectItem value="pending_withdrawal">Pending Only</SelectItem>
               </SelectContent>
             </Select>
-          </CardHeader>
-          <CardContent>
+          </div>
+
+          {/* Internal scrollable list */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {filteredTransactions.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No transactions found for this filter.</p>
+              <div className="text-center py-16 text-zinc-400">
+                <Wallet className="h-9 w-9 text-zinc-300 mx-auto mb-2" />
+                <p className="font-semibold text-xs sm:text-sm text-zinc-700">No transactions found</p>
+                <p className="text-[11px] text-zinc-400 mt-0.5">Transactions matching this filter will appear here.</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {filteredTransactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                    <div className="flex items-center gap-4">
-                      {getTransactionIcon(tx.type)}
-                      <div>
-                        <p className="font-semibold">{tx.description || tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}</p>
-                        <p className="text-sm text-gray-500">{new Date(tx.created_at).toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-bold ${tx.type === 'earning' ? 'text-green-600' : 'text-red-600'}`}>
-                        {tx.type === 'earning' ? '+' : '-'} ₹{tx.amount.toFixed(2)}
-                      </p>
-                      {getStatusBadge(tx.status)}
+              filteredTransactions.map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-3 sm:p-3.5 border border-zinc-100 bg-zinc-50/40 hover:bg-zinc-50 rounded-xl transition-colors">
+                  <div className="flex items-center gap-3">
+                    {getTransactionIcon(tx.type)}
+                    <div>
+                      <p className="font-semibold text-xs sm:text-sm text-zinc-900">{tx.description || tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}</p>
+                      <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-0.5">{new Date(tx.created_at).toLocaleString()}</p>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <p className={`font-mono font-bold text-xs sm:text-sm ${tx.type === 'earning' ? 'text-emerald-600' : 'text-zinc-900'}`}>
+                      {tx.type === 'earning' ? '+' : '-'} ₹{tx.amount.toFixed(2)}
+                    </p>
+                    {getStatusBadge(tx.status)}
+                  </div>
+                </div>
+              ))
             )}
-          </CardContent>
-        </Card>
-      </>
+          </div>
+        </div>
+      </div>
     </CreatorLayout>
   );
 }

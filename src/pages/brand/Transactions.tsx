@@ -375,13 +375,13 @@ const BrandTransactions = () => {
   const columns = getColumnsForType(typeFilter, navigate);
 
   return (
-    <BrandLayout>
+    <BrandLayout sidebar="none">
       <div className="space-y-8">
         {/* Page Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-            <p className="text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="space-y-1 sm:space-y-2">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Transactions</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Manage and track all your campaign payments and refunds
             </p>
           </div>
@@ -389,7 +389,7 @@ const BrandTransactions = () => {
             variant="ghost"
             size="sm"
             onClick={() => navigate("/brand/dashboard")}
-            className="gap-2"
+            className="gap-2 self-start sm:self-auto w-full sm:w-auto justify-center sm:justify-start"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
@@ -397,7 +397,7 @@ const BrandTransactions = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Allocated</CardTitle>
@@ -507,7 +507,7 @@ const BrandTransactions = () => {
                 variant="outline"
                 size="sm"
                 onClick={exportToCSV}
-                className="gap-2"
+                className="w-full sm:w-auto gap-2"
               >
                 <Download className="w-4 h-4" />
                 Export CSV

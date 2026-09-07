@@ -77,17 +77,17 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
     >
       <div 
         className={cn(
-          "border rounded-2xl p-4 shadow-xl select-none",
+          "border rounded-2xl p-4 shadow-sm select-none",
           isDark 
             ? "bg-zinc-950/90 backdrop-blur-md border-zinc-800/80 text-white" 
-            : "bg-white/95 backdrop-blur-md border-slate-200 text-slate-800"
+            : "bg-white backdrop-blur-md border-zinc-200 text-zinc-800"
         )}
       >
         {/* Header inside Panel */}
         <div className="flex justify-between items-center mb-3">
           <span className={cn(
             "text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5",
-            isDark ? "text-zinc-400" : "text-slate-500"
+            isDark ? "text-zinc-400" : "text-zinc-500"
           )}>
             <SlidersHorizontal size={10} />
             Filter by Category
@@ -97,7 +97,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
               onClick={() => onSelectCategory("all")}
               className={cn(
                 "text-xs font-semibold cursor-pointer transition-colors hover:underline",
-                isDark ? "text-primary" : "text-indigo-600 hover:text-indigo-700"
+                isDark ? "text-primary" : "text-orange-600 hover:text-orange-700"
               )}
             >
               Clear Filter
@@ -146,10 +146,10 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
                     isSelected
                       ? (isDark 
                           ? "bg-primary text-black font-bold shadow-md shadow-primary/20 scale-105" 
-                          : "bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20 scale-105")
+                          : "bg-orange-500 text-white font-bold shadow-xs scale-105")
                       : (isDark 
                           ? "bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800/80 hover:border-zinc-700" 
-                          : "bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-350")
+                          : "bg-zinc-50 border border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:border-zinc-300")
                   )}
                 >
                   {cat.label}

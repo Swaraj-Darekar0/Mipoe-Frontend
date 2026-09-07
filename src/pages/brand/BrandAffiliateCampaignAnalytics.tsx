@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import BrandLayout from "@/layouts/BrandLayout";
+import AffiliateCampaignSidebar from "@/components/brand/AffiliateCampaignSidebar";
 import { 
   getAffiliateCampaignDetails, 
   getBrandConversions, 
@@ -449,7 +450,16 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
   const approvedPartners = partners.filter((p: any) => p.status === "active");
 
   return (
-    <BrandLayout>
+    <BrandLayout
+      sidebar={
+        <AffiliateCampaignSidebar
+          campaign={campaign}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          pendingPartnersCount={pendingPartners.length}
+        />
+      }
+    >
       <div className="space-y-6">
         
         {/* Back Link */}
@@ -462,7 +472,7 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
         </Link>
 
         {/* Campaign Header Card */}
-        <div className="bg-white border border-gray-150 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
+        <div className="bg-white border border-gray-150 p-4 sm:p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-[10px] bg-indigo-50 border border-indigo-150 text-indigo-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
@@ -569,37 +579,6 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Tab switcher */}
-        <div className="border-b border-gray-200">
-          <div className="flex gap-6 -mb-px">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`pb-3 font-bold text-xs border-b-2 uppercase tracking-wide transition-all ${
-                activeTab === "overview" 
-                  ? "border-indigo-600 text-indigo-600" 
-                  : "border-transparent text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              Overview & Campaign Rules
-            </button>
-            <button
-              onClick={() => setActiveTab("partners")}
-              className={`pb-3 font-bold text-xs border-b-2 uppercase tracking-wide transition-all flex items-center gap-1.5 ${
-                activeTab === "partners" 
-                  ? "border-indigo-600 text-indigo-600" 
-                  : "border-transparent text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              Creators & Applications
-              {pendingPartners.length > 0 && (
-                <span className="bg-orange-500 text-white rounded-full text-[9px] w-4.5 h-4.5 flex items-center justify-center font-bold">
-                  {pendingPartners.length}
-                </span>
-              )}
-            </button>
-          </div>
         </div>
 
         {/* Tab Contents */}
@@ -923,13 +902,13 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
               </div>
 
               {/* Form Actions Footer */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-100">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setIsEditing(false)}
-                  className="text-xs h-9 px-4 rounded-xl"
+                  className="w-full sm:w-auto text-xs h-9 px-4 rounded-xl"
                 >
                   Cancel
                 </Button>
@@ -937,7 +916,7 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                   type="submit"
                   disabled={submittingEdit}
                   size="sm"
-                  className="text-xs h-9 px-4 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl"
+                  className="w-full sm:w-auto text-xs h-9 px-4 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl"
                 >
                   {submittingEdit ? "Saving Changes..." : "Save Changes"}
                 </Button>

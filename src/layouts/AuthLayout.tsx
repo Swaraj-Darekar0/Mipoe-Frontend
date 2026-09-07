@@ -1,71 +1,102 @@
 
-import React, { useState } from "react";
-import TextType from "@/components/TextType";
+import React, { useRef, useEffect } from "react";
 
-import heroImage from '../assets/BG1 (2).png';
-import AnimatedGrainyBackground from '../components/ui/Grainy_bg'; // Adjust path as needed
+interface AuthLayoutProps {
+  children: React.ReactNode;
+  isSuccessVideoPlaying?: boolean;
+  onVideoEnded?: () => void;
+  avatarState?: string;
+  formBehaviorState?: any;
+  targetElementRect?: DOMRect | null;
+  lookTarget?: { x: number; y: number } | null;
+}
 
-const AuthLayout = ({ children }: { children: React.ReactNode }) => {
-  const heroImageUrl = heroImage;
-  const [showLoopingRepeat, setShowLoopingRepeat] = useState(false);
+const AuthLayout = ({
+  children,
+  isSuccessVideoPlaying = false,
+  onVideoEnded,
+}: AuthLayoutProps) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hasTriggeredEnded = useRef(false);
+
+  // Trigger video playback strictly on successful sign-in / registration
+  useEffect(() => {
+    if (!isSuccessVideoPlaying) {
+      hasTriggeredEnded.current = false;
+      return;
+    }
+
+    // On screens < 1024px (mobile and portrait tablets), the video is hidden.
+    // Transition cleanly without forcing the user to wait for a hidden video.
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      const mobileTimer = setTimeout(() => {
+        if (!hasTriggeredEnded.current) {
+          hasTriggeredEnded.current = true;
+          onVideoEnded?.();
+        }
+      }, 400);
+      return () => clearTimeout(mobileTimer);
+    }
+
+    const video = videoRef.current;
+    if (video) {
+      video.currentTime = 0;
+      // Play on sign-in event. Try unmuted, fallback to muted if blocked by browser
+      video.muted = false;
+      video.play().catch(() => {
+        if (video) {
+          video.muted = true;
+          video.play().catch((err) => {
+            console.error("Video playback error:", err);
+          });
+        }
+      });
+    }
+
+    // Fallback safety timer: video is ~3.93s. If onEnded does not fire within 4.5s, trigger callback
+    const fallbackTimer = setTimeout(() => {
+      if (!hasTriggeredEnded.current) {
+        hasTriggeredEnded.current = true;
+        onVideoEnded?.();
+      }
+    }, 4500);
+
+    return () => {
+      clearTimeout(fallbackTimer);
+    };
+  }, [isSuccessVideoPlaying, onVideoEnded]);
+
+  const handleEnded = () => {
+    if (!hasTriggeredEnded.current) {
+      hasTriggeredEnded.current = true;
+      onVideoEnded?.();
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#202020] text-white">
-      <div className="grid grid-cols-1 md:grid-cols-2 min-h-screen">
-        {/* Left Panel - Hero Image (Visible on Medium screens and up) */}
-        <div className="hidden md:flex flex-col justify-end bg-black relative overflow-hidden">
-          <img
-            src={heroImageUrl}
-            alt="Creator with a camera"
-            className="absolute inset-0 w-full h-full object-cover z-[1]"
-          />
-          
-          {/* <div className="absolute inset-0 z-[2] pointer-events-none">
-            <AnimatedGrainryBackground className="w-full h-full pointer-events-none" />
-          </div> */}
-          {/* <CrossStitchBloom /> */}
-          <div className="absolute align-items-center justify-content-center  inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-[2]"></div>
-          <div className="relative z-[3] p-10">
-            <TextType 
-              as="h1"
-              className="font-display text-4xl lg:text-5xl font-bold text-white leading-tight"
-              text={[
-                'Create.<br/><span class="text-primary">Earn.</span><br />'
-              ]}
-              typingSpeed={100}
-              pauseDuration={100}
-              showCursor={!showLoopingRepeat}
-              cursorCharacter="_"
-              loop={false}
-              deletingSpeed = {0}
-              onTypingComplete={() => setShowLoopingRepeat(true)}
-            />
-            {showLoopingRepeat && (
-              <div>
-                <TextType
-                  as="h1"
-                  className="font-display text-4xl lg:text-5xl font-bold text-secondary-200 leading-tight"
-                  text={['Repeat.']}
-                  typingSpeed={150}
-                  pauseDuration={500}
-                  showCursor={true}
-                  cursorCharacter="_"
-                  loop={true}
-                  deletingSpeed={50}
-                  delayBeforeStartTyping={100}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-        {/* Right Panel - Form Content */}
-        <div className="flex flex-col items-center justify-center p-6 sm:p-12 overflow-y-auto relative overflow-hidden">
-          <div className="absolute inset-0 z-[0] pointer-events-none">
-            <AnimatedGrainyBackground className="pointer-events-none" />
-          </div>
-          <div className="relative z-[1] w-full max-w-xl mx-auto">
-            {children}
-          </div>
+    <div className="min-h-screen w-full bg-white text-zinc-900 flex">
+      {/* Left Panel - Hidden on mobile & portrait tablets (< 1024px); flexible width full-height column on desktop */}
+      <div className="hidden lg:block lg:w-[42%] xl:w-[45%] max-w-[680px] shrink-0 relative bg-black select-none overflow-hidden h-screen sticky top-0">
+        <video
+          ref={videoRef}
+          src="/REFER.mp4"
+          poster="/refer_poster.jpg"
+          preload="auto"
+          muted
+          playsInline
+          onEnded={handleEnded}
+          className="h-full w-full object-cover select-none block"
+        />
+      </div>
+
+      {/* Right Panel - Clean, responsive, high-taste plain white form area */}
+      <div
+        className={`flex-1 min-w-0 flex flex-col items-center justify-center px-4 py-8 sm:px-8 md:px-12 lg:px-16 overflow-y-auto min-h-screen bg-white transition-opacity duration-300 ${
+          isSuccessVideoPlaying ? "pointer-events-none select-none opacity-90" : ""
+        }`}
+      >
+        <div className="w-full max-w-[420px] mx-auto">
+          {children}
         </div>
       </div>
     </div>

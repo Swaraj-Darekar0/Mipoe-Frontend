@@ -66,22 +66,22 @@ const WalletOverview: React.FC<WalletOverviewProps> = ({ balance, onRefresh }) =
 
   return (
     <Card className="bg-black text-white border-none shadow-xl mb-8">
-      <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6">
         {/* Left: Balance Info */}
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
-            <Wallet size={32} className="text-green-400" />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="p-2.5 sm:p-3 bg-white/10 rounded-full backdrop-blur-sm shrink-0">
+            <Wallet className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
           </div>
-          <div>
-            <p className="text-zinc-400 text-sm font-medium uppercase tracking-wider">Available Funds</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-zinc-400 text-xs sm:text-sm font-medium uppercase tracking-wider">Available Funds</p>
             <div className="flex items-baseline gap-2">
-              <h2 className="text-4xl font-bold">
+              <h2 className="text-2xl sm:text-4xl font-bold truncate">
                 ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </h2>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-6 w-6 text-zinc-500 hover:text-white hover:bg-white/10 rounded-full"
+                className="h-6 w-6 text-zinc-500 hover:text-white hover:bg-white/10 rounded-full shrink-0"
                 onClick={onRefresh}
                 disabled={loading}
               >
@@ -94,7 +94,7 @@ const WalletOverview: React.FC<WalletOverviewProps> = ({ balance, onRefresh }) =
         {/* Right: Add Funds Action */}
         <Dialog open={showAddFundsDialog} onOpenChange={setShowAddFundsDialog}>
           <Button 
-            className="bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-6 text-lg shadow-lg shadow-green-900/20 transition-all hover:scale-105"
+            className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 sm:py-6 text-base sm:text-lg shadow-lg shadow-green-900/20 transition-all hover:scale-105"
             onClick={handleAddFundsClick}
             disabled={loading}
           >
