@@ -225,10 +225,10 @@ export const personaContent: Record<Persona, PersonaContent> = {
         { text: "Stop " },
         { text: "BURNING", emphasis: true },
         { text: " Budget on Ads Nobody Trusts. Start " },
-        { text: "BUYING", emphasis: true },
-        { text: " Real Reach." },
+        { text: "No wasted spend", emphasis: true },
+        { text: " No wasted spend." },
       ],
-      subheadline: "Set a campaign. Set a budget. Pay only when results hit. Creators do the rest.",
+      subheadline: "No wasted spend. Just verified results.",
       ctaLabel: "Launch a Campaign",
       ctaFootnote: "whats upp!!"
     },

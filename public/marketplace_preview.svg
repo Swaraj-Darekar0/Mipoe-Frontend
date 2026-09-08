@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 80" width="600" height="80">
+  <g fill="none" stroke="#09090b" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- M -->
+    <path d="M 10 65 L 10 25 A 14 14 0 0 1 38 25 L 38 65 M 38 25 A 14 14 0 0 1 66 25 L 66 65" />
+    <!-- A -->
+    <path transform="translate(80, 0)" d="M 0 65 L 0 22 A 18 18 0 0 1 36 22 L 36 65 M 0 40 L 36 40" />
+    <!-- R -->
+    <path transform="translate(130, 0)" d="M 0 65 L 0 10 M 0 10 L 18 10 A 14 14 0 0 1 18 36 L 0 36 M 14 36 L 32 65" />
+    <!-- K -->
+    <path transform="translate(180, 0)" d="M 0 65 L 0 10 M 30 10 L 4 36 L 32 65" />
+    <!-- E -->
+    <path transform="translate(225, 0)" d="M 32 10 L 12 10 A 12 12 0 0 0 0 22 L 0 53 A 12 12 0 0 0 12 65 L 32 65 M 0 37 L 24 37" />
+    <!-- T -->
+    <path transform="translate(270, 0)" d="M 0 10 L 36 10 M 18 10 L 18 65" />
+    <!-- P -->
+    <path transform="translate(320, 0)" d="M 0 65 L 0 10 M 0 10 L 18 10 A 14 14 0 0 1 18 36 L 0 36" />
+    <!-- L -->
+    <path transform="translate(365, 0)" d="M 0 10 L 0 53 A 12 12 0 0 0 12 65 L 32 65" />
+    <!-- A -->
+    <path transform="translate(410, 0)" d="M 0 65 L 0 22 A 18 18 0 0 1 36 22 L 36 65 M 0 40 L 36 40" />
+    <!-- C -->
+    <path transform="translate(460, 0)" d="M 32 10 L 12 10 A 14 14 0 0 0 0 24 L 0 51 A 14 14 0 0 0 12 65 L 32 65" />
+    <!-- E -->
+    <path transform="translate(505, 0)" d="M 32 10 L 12 10 A 12 12 0 0 0 0 22 L 0 53 A 12 12 0 0 0 12 65 L 32 65 M 0 37 L 24 37" />
+  </g>
+</svg>

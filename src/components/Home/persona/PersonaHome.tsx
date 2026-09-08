@@ -40,7 +40,7 @@ const PersonaBody: React.FC = () => {
         transition={{ duration: 0.18, ease: "easeOut" }}
       >
         {persona === "creator" ? <HeroCreator /> : <HeroBrand />}
-        <SignalingCarousel label={content.carouselLabel} intro={content.carouselIntro} steps={content.steps} />
+        <SignalingCarousel persona={persona} label={content.carouselLabel} intro={content.carouselIntro} steps={content.steps} />
         <EarningsCalculator persona={persona} />
         <FAQAccordion persona={persona} />
       </motion.div>
