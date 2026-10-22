@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Wallet, CreditCard, Building2, Copy, CheckCircle2, QrCode } from "lucide-react";
-import { loadCashfreeScript } from "@/utils/cashfree";
-import { createDepositOrder, getVirtualAccount, VirtualAccountResponse } from "@/lib/api";
+import { loadGatewayScript } from "@/utils/payments";
+import { createDepositOrder, getVirtualAccount, verifyDeposit, VirtualAccountResponse } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 const AddFunds: React.FC = () => {
@@ -36,22 +36,87 @@ const AddFunds: React.FC = () => {
 
     setLoading(true);
     try {
-      // A. Load SDK
-      const isLoaded = await loadCashfreeScript();
-      if (!isLoaded) throw new Error("Failed to load Cashfree SDK");
-
-      const cashfree = new (window as any).Cashfree({ mode: "sandbox" }); // Change to "production" when live
-
-      // B. Create Session
       const orderData = await createDepositOrder(value);
 
-      // C. Redirect to Checkout
-      cashfree.checkout({
-        paymentSessionId: orderData.payment_session_id,
-        returnUrl: `https://mipoe.vercel.app/brand/dashboard?order_id={order_id}`, // Ensure this matches your route
-        redirectTarget: "_self" // Redirects current tab
-      });
+      if (orderData.gateway === "razorpay") {
+        const isLoaded = await loadGatewayScript("razorpay");
+        if (!isLoaded) throw new Error("Failed to load Razorpay SDK");
 
+        // If simulated dev environment without live keys
+        if (orderData.simulated) {
+          const mockVerify = await verifyDeposit({
+            gateway: "razorpay",
+            order_id: orderData.order_id,
+            razorpay_order_id: orderData.order_id,
+            razorpay_payment_id: `pay_sim_${Date.now()}`,
+            razorpay_signature: "simulated_signature",
+            amount: value,
+          });
+          toast({
+            title: "Deposit Successful!",
+            description: `₹${value} deposited. New balance: ₹${mockVerify.new_balance}`,
+            className: "bg-green-50 border-green-200",
+          });
+          setLoading(false);
+          setAmount("");
+          setTimeout(() => window.location.reload(), 1200);
+          return;
+        }
+
+        const options = {
+          key: orderData.key_id,
+          amount: Math.round(orderData.amount * 100),
+          currency: orderData.currency || "INR",
+          name: "Mipoe Wallet Deposit",
+          description: `Add ₹${orderData.amount} to platform wallet`,
+          order_id: orderData.order_id,
+          handler: async (response: any) => {
+            try {
+              setLoading(true);
+              const verifyRes = await verifyDeposit({
+                gateway: "razorpay",
+                razorpay_order_id: response.razorpay_order_id || orderData.order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                amount: value,
+              });
+              toast({
+                title: "Deposit Verified!",
+                description: `₹${value} added. New balance: ₹${verifyRes.new_balance}`,
+                className: "bg-green-50 border-green-200",
+              });
+              setAmount("");
+              setTimeout(() => window.location.reload(), 1200);
+            } catch (verErr: any) {
+              toast({ title: "Verification Failed", description: verErr.message, variant: "destructive" });
+            } finally {
+              setLoading(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setLoading(false);
+            },
+          },
+          theme: {
+            color: "#2563eb",
+          },
+        };
+
+        const razorpayInstance = new (window as any).Razorpay(options);
+        razorpayInstance.open();
+      } else {
+        // Cashfree flow
+        const isLoaded = await loadGatewayScript("cashfree");
+        if (!isLoaded) throw new Error("Failed to load Cashfree SDK");
+
+        const cashfree = new (window as any).Cashfree({ mode: "sandbox" });
+        cashfree.checkout({
+          paymentSessionId: orderData.payment_session_id,
+          returnUrl: `${window.location.origin}/brand/dashboard?order_id=${orderData.order_id}`,
+          redirectTarget: "_self",
+        });
+      }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
       setLoading(false);
@@ -105,7 +170,7 @@ const AddFunds: React.FC = () => {
             {loading ? "Processing..." : "Pay Now"}
           </Button>
           <p className="text-xs text-gray-400 text-center">
-            Secured by Cashfree Payments
+            Secured by 256-bit Encrypted Banking & Payment Gateway
           </p>
         </CardContent>
       </Card>

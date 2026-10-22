@@ -14,9 +14,11 @@ import {
   savePayoutDetails,
   getWithdrawalHistory,
   creatorWithdraw,
-  revertFailedWithdrawal
+  revertFailedWithdrawal,
+  getCreatorVirtualAccount,
+  VirtualAccountResponse
 } from '@/lib/api';
-import { Loader2, Wallet, Send, Edit2, CheckCircle2, AlertCircle, RotateCcw, RefreshCw } from 'lucide-react';
+import { Loader2, Wallet, Send, Edit2, CheckCircle2, AlertCircle, RotateCcw, RefreshCw, Copy, Building2, QrCode } from 'lucide-react';
 
 import {
   CreditCard,
@@ -56,6 +58,7 @@ export default function CreatorWallet() {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [payoutDetails, setPayoutDetails] = useState<PayoutDetailsState>({ payout_method: null });
+  const [virtualAccount, setVirtualAccount] = useState<VirtualAccountResponse | null>(null);
   const [editingPayoutDetails, setEditingPayoutDetails] = useState(false);
   const [verifiedPayoutDetails, setVerifiedPayoutDetails] = useState(false);
   const [creatorDisplayName, setCreatorDisplayName] = useState('Creator');
@@ -74,19 +77,31 @@ export default function CreatorWallet() {
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRecord[]>([]);
   const [revertingId, setRevertingId] = useState<number | null>(null);
   const [refreshingHistory, setRefreshingHistory] = useState(false);
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: 'Copied!',
+      description: `${label} copied to clipboard`,
+    });
+  };
   
   const loadWalletData = async (isInitialLoad = false) => {
     try {
       if (isInitialLoad) setLoading(true);
       else setRefreshingHistory(true);
       
-      const [balanceRes, payoutRes, historyRes] = await Promise.all([
+      const [balanceRes, payoutRes, historyRes, vaRes] = await Promise.all([
         getWalletBalance(),
         getPayoutDetails(),
-        getWithdrawalHistory(undefined, 10)
+        getWithdrawalHistory(undefined, 10),
+        getCreatorVirtualAccount().catch(() => null)
       ]);
       
       setWalletBalance(balanceRes.balance);
+      if (vaRes) {
+        setVirtualAccount(vaRes);
+      }
 
       // Only update state if data has actually changed to prevent unnecessary re-renders
       if (JSON.stringify(payoutRes) !== JSON.stringify(payoutDetails)) {
@@ -465,6 +480,101 @@ export default function CreatorWallet() {
                   )}
                 </span>
               </div>
+            </div>
+
+            {/* Inward Virtual Bank Account Card */}
+            <div className="bg-white border border-zinc-200/80 rounded-2xl p-4 shadow-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-200/60 flex items-center justify-center text-orange-600">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-zinc-900 leading-tight">Virtual Bank Account</h3>
+                    <p className="text-[10px] text-zinc-400">Receive Direct Inward Payments</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-semibold">
+                  <span className="size-1 rounded-full bg-emerald-500 animate-pulse" />
+                  Auto-Credit
+                </span>
+              </div>
+
+              {virtualAccount ? (
+                <div className="pt-3 space-y-2.5">
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Transfer funds via NEFT, RTGS, IMPS, or UPI to this dedicated account to instantly top up your Sellr wallet.
+                  </p>
+
+                  <div className="space-y-2">
+                    <div className="bg-zinc-50 border border-zinc-200/70 rounded-xl p-2.5 flex items-center justify-between">
+                      <div>
+                        <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-400 font-semibold block">Account Number</span>
+                        <span className="font-mono font-bold text-xs sm:text-sm text-zinc-900">{virtualAccount.account_number}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 rounded-lg"
+                        onClick={() => copyToClipboard(virtualAccount.account_number, 'Account Number')}
+                        title="Copy Account Number"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-zinc-50 border border-zinc-200/70 rounded-xl p-2.5 flex items-center justify-between">
+                        <div>
+                          <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-400 font-semibold block">IFSC Code</span>
+                          <span className="font-mono font-bold text-xs text-zinc-900">{virtualAccount.ifsc}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 rounded-lg"
+                          onClick={() => copyToClipboard(virtualAccount.ifsc, 'IFSC Code')}
+                          title="Copy IFSC Code"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+
+                      <div className="bg-zinc-50 border border-zinc-200/70 rounded-xl p-2.5 flex items-center justify-between">
+                        <div className="min-w-0 pr-1">
+                          <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-400 font-semibold block">Bank Name</span>
+                          <span className="font-mono font-semibold text-xs text-zinc-800 truncate block">{virtualAccount.bank_name || 'Virtual Banking'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {virtualAccount.upi_id && (
+                      <div className="bg-emerald-50/60 border border-emerald-200/70 rounded-xl p-2.5 flex items-center justify-between">
+                        <div className="min-w-0 pr-2">
+                          <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-700 font-semibold flex items-center gap-1 block">
+                            <QrCode className="h-3 w-3" /> UPI VPA
+                          </span>
+                          <span className="font-mono font-semibold text-xs text-emerald-900 truncate block">{virtualAccount.upi_id}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-lg shrink-0"
+                          onClick={() => copyToClipboard(virtualAccount.upi_id!, 'UPI ID')}
+                          title="Copy UPI ID"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-4 text-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-zinc-400 mx-auto mb-1.5" />
+                  <p className="text-[11px] text-zinc-400">Loading virtual account details...</p>
+                </div>
+              )}
             </div>
           </div>
 

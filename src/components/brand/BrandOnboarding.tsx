@@ -39,16 +39,23 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
 
   // Determine current step index for visual stepper
   const getStepIndex = () => {
-    if (!profile) return 2;
+    if (!profile) return 1;
     const status = profile.onboarding_status;
-    if (status === "not_started" || status === "pan_failed" || status === "verifying_pan") return 2;
+    if (status === "not_started") return 1;
+    if (status === "pan_failed" || status === "verifying_pan") return 2;
     if (status === "pan_verified") return 3;
     if (status === "pending_verification" || status === "rejected") return 4;
     if (status === "verified") return 4;
-    return 2;
+    return 1;
   };
 
   const [activeStep, setActiveStep] = useState(getStepIndex());
+
+  // Step 1 (Account Confirmation) States
+  const [brandUsername, setBrandUsername] = useState(profile?.username || "");
+  const [brandEmail, setBrandEmail] = useState(profile?.email || "");
+  const [savingStep1, setSavingStep1] = useState(false);
+  const [step1Error, setStep1Error] = useState("");
 
   // Step 2 (Verification) States
   const [panNumber, setPanNumber] = useState("");
@@ -96,6 +103,8 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
   // Initialize values from profile
   useEffect(() => {
     if (profile) {
+      if (profile.username) setBrandUsername(profile.username);
+      if (profile.email) setBrandEmail(profile.email);
       if (profile.pan_holder_name) setPanHolderName(profile.pan_holder_name);
       if (profile.business_address) setBusinessAddress(profile.business_address);
       if (profile.category) setCategory(profile.category);
@@ -114,6 +123,40 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
       setActiveStep(calculatedStep);
     }
   }, [profile]);
+
+  const handleStep1Submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStep1Error("");
+    setSavingStep1(true);
+    try {
+      const trimmedUser = brandUsername.trim();
+      const trimmedEmail = brandEmail.trim();
+      if (!trimmedUser) {
+        setStep1Error("Brand name cannot be empty.");
+        setSavingStep1(false);
+        return;
+      }
+      if (!trimmedEmail) {
+        setStep1Error("Business email cannot be empty.");
+        setSavingStep1(false);
+        return;
+      }
+
+      if (trimmedUser !== profile?.username || trimmedEmail !== profile?.email) {
+        const { updateBrandProfile } = await import("@/lib/api");
+        await updateBrandProfile({
+          username: trimmedUser,
+          email: trimmedEmail,
+        });
+        await onProfileUpdated(true);
+      }
+      setActiveStep(2);
+    } catch (err: any) {
+      setStep1Error(err.message || "Failed to update brand profile credentials.");
+    } finally {
+      setSavingStep1(false);
+    }
+  };
 
   const handleVerifyPanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -285,35 +328,96 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-150 text-sm">
-              <div>
-                <span className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Brand Name / Username</span>
-                <span className="font-bold text-slate-800">{profile?.username || "Authenticated User"}</span>
-              </div>
-              <div>
-                <span className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Contact Email</span>
-                <span className="font-bold text-slate-800">{profile?.email || "—"}</span>
-              </div>
-            </div>
+            <form onSubmit={handleStep1Submit} className="space-y-5">
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Brand Name / Username <span className="text-red-500">*</span>
+                    </label>
+                    {profile?.username && brandUsername !== profile.username && (
+                      <button
+                        type="button"
+                        onClick={() => setBrandUsername(profile.username)}
+                        className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold hover:underline"
+                      >
+                        Use default ({profile.username})
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      value={brandUsername}
+                      placeholder={profile?.username || "Enter brand name"}
+                      onChange={(e) => setBrandUsername(e.target.value)}
+                      className="text-sm font-medium bg-white"
+                      required
+                    />
+                    {brandUsername && brandUsername === profile?.username && (
+                      <span className="absolute right-3 top-2.5 text-[11px] font-medium text-slate-400 select-none bg-slate-100 px-2 py-0.5 rounded">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Your brand name displayed to creators across campaigns and contracts.
+                  </p>
+                </div>
 
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3 text-emerald-800 text-xs">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <div>
-                <p className="font-bold">Authentication Completed</p>
-                <p className="text-emerald-700">Account status active. Click next to begin business verification.</p>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Business Contact Email <span className="text-red-500">*</span>
+                    </label>
+                    {profile?.email && brandEmail !== profile.email && (
+                      <button
+                        type="button"
+                        onClick={() => setBrandEmail(profile.email)}
+                        className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold hover:underline"
+                      >
+                        Use registered email ({profile.email})
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Input
+                      type="email"
+                      value={brandEmail}
+                      placeholder={profile?.email || "business@brand.com"}
+                      onChange={(e) => setBrandEmail(e.target.value)}
+                      className="text-sm font-medium bg-white"
+                      required
+                    />
+                    {brandEmail && brandEmail === profile?.email && (
+                      <span className="absolute right-3 top-2.5 text-[11px] font-medium text-slate-400 select-none bg-slate-100 px-2 py-0.5 rounded">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Direct email for invoice receipts, tax documents, and compliance updates.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="flex justify-end pt-2">
-              <Button
-                type="button"
-                onClick={() => setActiveStep(2)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-lg flex items-center gap-2 shadow-md transition-all text-sm"
-              >
-                Proceed to Business Verification
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+              {step1Error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-medium">
+                  {step1Error}
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="submit"
+                  disabled={savingStep1}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-lg flex items-center gap-2 shadow-md transition-all text-sm"
+                >
+                  {savingStep1 ? "Saving..." : "Save & Proceed to Verification"}
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </form>
           </div>
         </Step>
 

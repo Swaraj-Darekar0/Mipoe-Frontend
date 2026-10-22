@@ -99,7 +99,7 @@ export const personaContent: Record<Persona, PersonaContent> = {
       ctaLabel: "Start Earning Today",
       ctaFootnote: "whats upp!!"
     },
-    ctaHref: "/login?role=creator",
+    ctaHref: "/creator/campaigns",
     carouselLabel: "HOW CREATORS EARN",
     
     carouselIntro: "No agency contact. No minimum followers. Just create.",

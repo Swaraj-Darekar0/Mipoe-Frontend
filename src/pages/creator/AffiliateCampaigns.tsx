@@ -5,7 +5,8 @@ import {
   getCreatorAffiliateCampaigns, 
   joinAffiliateCampaign, 
   getWalletBalance, 
-  CreatorAffiliateCampaign 
+  CreatorAffiliateCampaign,
+  getUserId 
 } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +60,13 @@ const CreatorAffiliateCampaignsPage: React.FC = () => {
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
+      const userId = getUserId();
+      if (!userId) {
+        const campsData = await getCreatorAffiliateCampaigns();
+        setCampaigns(campsData);
+        setWalletBalance(0);
+        return;
+      }
       const [campsData, walletData] = await Promise.all([
         getCreatorAffiliateCampaigns(),
         getWalletBalance()
@@ -81,6 +89,11 @@ const CreatorAffiliateCampaignsPage: React.FC = () => {
   }, []);
 
   const handleJoinCampaign = async (id: number) => {
+    const userId = getUserId();
+    if (!userId) {
+      navigate(`/login?role=creator&redirect=${encodeURIComponent("/creator/affiliate-campaigns")}`);
+      return;
+    }
     setJoiningId(id);
     try {
       await joinAffiliateCampaign(id);

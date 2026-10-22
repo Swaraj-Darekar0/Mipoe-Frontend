@@ -24,6 +24,7 @@ import {
   ClipData,
   fetchCreatorProfile,
   CreatorProfile,
+  getUserId,
 } from "@/lib/api";
 
 // Extract media code from various Instagram Reels URL formats
@@ -95,6 +96,17 @@ const CampaignView = () => {
     try {
       setLoading(true);
       setError("");
+      const userId = getUserId();
+
+      if (!userId) {
+        const campaignData = await fetchCampaignById(Number(campaign_id));
+        setCampaign(campaignData);
+        setSubmittedClips([]);
+        setAcceptedClips([]);
+        setRejectedClips([]);
+        return;
+      }
+
       const [camp, clips, profile] = await Promise.allSettled([
         fetchCampaignById(Number(campaign_id)),
         fetchCreatorClipsForCampaign(Number(campaign_id)),
@@ -104,16 +116,15 @@ const CampaignView = () => {
       if (camp.status === "rejected") {
         throw new Error(`Failed to load campaign: ${camp.reason.message}`);
       }
-      if (clips.status === "rejected") {
-        throw new Error(`Failed to load clips: ${clips.reason.message}`);
-      }
 
       const campaignData = camp.value;
-      const clipsData = clips.value;
-      const processedClips = clipsData.map((clip: ClipData) => ({
-        ...clip,
-        view_count: clip.view_count ?? 0,
-      }));
+      let processedClips: ClipData[] = [];
+      if (clips.status === "fulfilled" && Array.isArray(clips.value)) {
+        processedClips = clips.value.map((clip: ClipData) => ({
+          ...clip,
+          view_count: clip.view_count ?? 0,
+        }));
+      }
 
       if (profile.status === "fulfilled") {
         setCreatorProfile(profile.value);
@@ -193,11 +204,31 @@ const CampaignView = () => {
     !campaign.follower_range || 
     (!!hasInstagram && checkFollowerRangeMatch(followerCount, campaign.follower_range));
 
-  useEffect(() => {
-    if (searchParams.get("submit") === "true" && qualifies) {
-      setIsSubmitDialogOpen(true);
+  const handleOpenSubmitDialog = () => {
+    const userId = getUserId();
+    if (!userId) {
+      const returnUrl = `/creator/dashboard/${campaign_id}?submit=true`;
+      navigate(`/login?role=creator&redirect=${encodeURIComponent(returnUrl)}`);
+      return;
     }
-  }, [searchParams, qualifies]);
+    setSubmitError("");
+    setClipUrlInput("");
+    setIsSubmitDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (searchParams.get("submit") === "true") {
+      const userId = getUserId();
+      if (!userId) {
+        const returnUrl = `/creator/dashboard/${campaign_id}?submit=true`;
+        navigate(`/login?role=creator&redirect=${encodeURIComponent(returnUrl)}`);
+        return;
+      }
+      if (qualifies) {
+        setIsSubmitDialogOpen(true);
+      }
+    }
+  }, [searchParams, qualifies, campaign_id, navigate]);
 
   const handleSubmitClip = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -444,11 +475,7 @@ const CampaignView = () => {
                 {allClips.length > 0 && qualifies && (
                   <Button
                     size="sm"
-                    onClick={() => {
-                      setSubmitError("");
-                      setClipUrlInput("");
-                      setIsSubmitDialogOpen(true);
-                    }}
+                    onClick={handleOpenSubmitDialog}
                     className="bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-xl h-8 shadow-xs"
                   >
                     Submit Another Clip
@@ -573,11 +600,7 @@ const CampaignView = () => {
               {/* Primary Action Button */}
               <div className="space-y-2">
                 <Button
-                  onClick={() => {
-                    setSubmitError("");
-                    setClipUrlInput("");
-                    setIsSubmitDialogOpen(true);
-                  }}
+                  onClick={handleOpenSubmitDialog}
                   disabled={!qualifies}
                   className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide transition-all shadow-xs ${
                     qualifies 

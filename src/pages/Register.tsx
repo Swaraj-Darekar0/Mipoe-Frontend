@@ -63,6 +63,12 @@ const Register = () => {
   }, [searchParams]);
 
   const navigateAfterAuth = (registeredRole: string, profileCompleted?: boolean) => {
+    const redirectParam = searchParams.get("redirect");
+    if (redirectParam) {
+      navigate(decodeURIComponent(redirectParam));
+      return;
+    }
+
     if (registeredRole === "brand") {
       navigate("/brand/dashboard");
       return;
@@ -75,10 +81,12 @@ const Register = () => {
 
   const handleGoogleLogin = async () => {
     try {
+      const redirectParam = searchParams.get("redirect");
+      const redirectQuery = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : "";
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `https://mipoe.vercel.app/auth/callback?role=${role}`,
+          redirectTo: `${window.location.origin}/auth/callback?role=${role}${redirectQuery}`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -300,7 +308,10 @@ const Register = () => {
 
         <p className="text-center text-sm text-zinc-500 mt-6">
           Already have an account?{" "}
-          <Link to={`/login?role=${role}`} className="font-semibold text-[#FF5C00] hover:underline">
+          <Link
+            to={`/login?role=${role}${searchParams.get("redirect") ? `&redirect=${encodeURIComponent(searchParams.get("redirect")!)}` : ""}`}
+            className="font-semibold text-[#FF5C00] hover:underline"
+          >
             Sign In
           </Link>
         </p>

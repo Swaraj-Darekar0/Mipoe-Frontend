@@ -57,8 +57,10 @@ const CampaignsPage = () => {
     navigate(`/creator/dashboard/${id}`);
   };
 
+  const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
   const filteredCampaigns = campaigns.filter(
     (campaign) => 
+      (!campaign.deadline || new Date(campaign.deadline) >= todayStart) &&
       (!campaignType || campaign.campaign_type === campaignType) &&
       (selectedCategory === "all" || campaign.category === selectedCategory)
   );

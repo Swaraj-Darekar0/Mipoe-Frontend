@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from '@/components/Home/Header';
 import Hero from '@/components/Home/Hero';
 import PersonaHome from '@/components/Home/persona/PersonaHome';
@@ -8,8 +9,32 @@ import IllustratedGuide from '@/components/Home/illustrationGuide';
 import ComparisonMatrix from "@/components/Home/ComparisonTable";
 import Footer from '@/components/Home/Footer';
 import SmoothScroll from '@/components/SmoothScroll';
+import { getRole, getUserId, checkAuthStatus } from "@/lib/api";
 
 const Index = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkUserSession = async () => {
+      let role = getRole();
+      let userId = getUserId();
+
+      if (!role || !userId) {
+        const session = await checkAuthStatus();
+        if (session.authenticated && session.role) {
+          role = session.role;
+        }
+      }
+
+      if (role === "creator") {
+        navigate("/creator/dashboard", { replace: true });
+      } else if (role === "brand") {
+        navigate("/brand/dashboard", { replace: true });
+      }
+    };
+
+    checkUserSession();
+  }, [navigate]);
   return (
     <div className="bg-background-light dark:bg-background-dark text-dark-void dark:text-snow font-mono transition-colors duration-300 antialiased selection:bg-primary selection:text-snow min-h-screen">
       {/* ScrollSmoother owns the page's scrolling from here down. Note what

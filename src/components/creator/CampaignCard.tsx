@@ -20,6 +20,8 @@ interface CampaignCardProps {
   funds_distributed?: number;
   campaign_type?: 'influencer' | 'clipping';
   follower_range?: string;
+  is_deadline_ended?: boolean;
+  earned?: number;
 }
 
 const CampaignCard: React.FC<CampaignCardProps> = ({
@@ -37,6 +39,8 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   funds_distributed = 0,
   campaign_type = 'influencer',
   follower_range,
+  is_deadline_ended = false,
+  earned,
 }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -89,6 +93,11 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
 
         {/* Status & Type Badges */}
         <div className="absolute top-2.5 left-2.5 flex gap-1.5 flex-wrap">
+          {is_deadline_ended && (
+            <Badge className="bg-zinc-800 text-zinc-100 border-none shadow-xs text-[10px] px-2 py-0.5 font-bold">
+              Deadline Ended
+            </Badge>
+          )}
           {!hideStatusActions && submitted && (
             <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-xs backdrop-blur-sm text-[10px] px-2 py-0.5 font-bold">
               Applied
@@ -113,6 +122,13 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
             ₹{cpv} / 1K
           </Badge>
         </div>
+
+        {earned !== undefined && (
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-xs font-semibold text-emerald-800">
+            <span className="text-[11px] font-medium text-emerald-700">Your Profit Earned</span>
+            <span className="font-mono font-bold text-emerald-900">₹{earned.toLocaleString()}</span>
+          </div>
+        )}
 
         {/* Utilization Progress Bar */}
         <div className="space-y-1">

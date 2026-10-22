@@ -15,10 +15,15 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
     let isMounted = true;
     const loadProfile = async () => {
       try {
+        const { getUserId } = await import('@/lib/api');
+        if (!getUserId()) {
+          if (isMounted) setLoading(false);
+          return;
+        }
         const profile = await fetchCreatorProfile();
         if (isMounted) setUser(profile);
       } catch (error) {
-        console.error("Failed to fetch creator profile for layout:", error);
+        // Guest mode or unauthenticated
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -43,7 +48,7 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
 
         {/* Center (col 2) */}
         <div className="flex items-center justify-center">
-          <Link to="/creator/dashboard" className="flex items-center gap-1.5">
+          <Link to="/creator/campaigns" className="flex items-center gap-1.5">
             <h1 className="font-display text-lg font-extrabold tracking-tight text-zinc-900">
               SELLR<span className="text-orange-500">.</span>
             </h1>
@@ -55,19 +60,28 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
 
         {/* Right (col 3) */}
         <div className="flex items-center justify-end">
-          <Link
-            to="/creator/profile"
-            aria-label="Creator profile"
-            className="size-9 flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500"
-          >
-            <div className="size-8 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs border border-orange-200 hover:ring-2 hover:ring-orange-400 transition-all">
-              {loading ? (
-                <div className="w-3.5 h-3.5 rounded-full bg-orange-200 animate-pulse" />
-              ) : (
-                (user?.username?.[0] || 'C').toUpperCase()
-              )}
-            </div>
-          </Link>
+          {user ? (
+            <Link
+              to="/creator/profile"
+              aria-label="Creator profile"
+              className="size-9 flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <div className="size-8 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs border border-orange-200 hover:ring-2 hover:ring-orange-400 transition-all">
+                {loading ? (
+                  <div className="w-3.5 h-3.5 rounded-full bg-orange-200 animate-pulse" />
+                ) : (
+                  (user?.username?.[0] || 'C').toUpperCase()
+                )}
+              </div>
+            </Link>
+          ) : (
+            <Link
+              to="/login?role=creator"
+              className="text-xs font-bold text-orange-600 hover:text-orange-700 px-2.5 py-1 rounded-lg bg-orange-50 border border-orange-200"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </header>
 

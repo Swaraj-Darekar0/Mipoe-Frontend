@@ -24,4 +24,4 @@
 - **layouts/**: Auth, Brand, and Creator layout wrappers
 - **lib/**: API communication, Supabase client, shared utilities
 - **pages/**: Route entry points (login, register, dashboards, creator `CompleteProfile.tsx`)
-- **utils/**: Helper functions for payments, images, and routing
+- **utils/**: Helper functions for payments (`src/utils/payments/` with modular `razorpay/` and `cashfree/` SDK loaders), image compression, and route preloading

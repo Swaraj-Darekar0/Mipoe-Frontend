@@ -171,11 +171,33 @@ const CreatorDashboard = () => {
 
           {yourCampaigns.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {yourCampaigns.map(camp => (
-                <div key={camp.id} onClick={() => handleCardClick(camp.id)} className="cursor-pointer">
-                  <CampaignCard {...camp} submitted={true} hideStatusActions={true} total_view_count={camp.total_view_count} />
-                </div>
-              ))}
+              {yourCampaigns.map(camp => {
+                const isEnded = Boolean(
+                  camp.is_deadline_ended ||
+                  (camp.deadline && new Date(camp.deadline) < new Date(new Date().setHours(0, 0, 0, 0)))
+                );
+                return (
+                  <div
+                    key={camp.id}
+                    onClick={() => {
+                      if (!isEnded) {
+                        handleCardClick(camp.id);
+                      }
+                    }}
+                    className={isEnded ? "cursor-default select-none" : "cursor-pointer"}
+                    title={isEnded ? "Campaign deadline has ended. You cannot open this campaign." : "Click to view campaign"}
+                  >
+                    <CampaignCard
+                      {...camp}
+                      is_deadline_ended={isEnded}
+                      earned={camp.earned}
+                      submitted={true}
+                      hideStatusActions={true}
+                      total_view_count={camp.total_view_count}
+                    />
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-12 px-6 bg-white rounded-2xl border border-zinc-200/80 shadow-xs">

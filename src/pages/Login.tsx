@@ -89,6 +89,12 @@ const Login = () => {
 
       // Store destination to navigate strictly after video completes
       pendingNavigationRef.current = () => {
+        const redirectParam = searchParams.get("redirect");
+        if (redirectParam) {
+          navigate(decodeURIComponent(redirectParam));
+          return;
+        }
+
         if (data.role === "brand") {
           navigate("/brand/dashboard");
         } else if (data.role === "creator") {
@@ -116,10 +122,12 @@ const Login = () => {
   };
 const handleGoogleLogin = async () => {
     try {
+      const redirectParam = searchParams.get("redirect");
+      const redirectQuery = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : "";
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `https://mipoe.vercel.app/auth/callback?role=${role}`, // Your frontend callback route
+          redirectTo: `${window.location.origin}/auth/callback?role=${role}${redirectQuery}`, // Your frontend callback route
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -294,7 +302,10 @@ const handleForgotPassword = async (e: React.FormEvent) => {
 
         <p className="text-center text-sm text-zinc-500 mt-6">
           Don't have an account?{" "}
-          <Link to={`/register?role=${role}`} className="font-semibold text-[#FF5C00] hover:underline">
+          <Link
+            to={`/register?role=${role}${searchParams.get("redirect") ? `&redirect=${encodeURIComponent(searchParams.get("redirect")!)}` : ""}`}
+            className="font-semibold text-[#FF5C00] hover:underline"
+          >
             Register
           </Link>
         </p>

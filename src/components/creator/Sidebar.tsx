@@ -112,8 +112,11 @@ export const CreatorSidebarContent: React.FC<CreatorSidebarContentProps> = ({ on
           Campaigns
         </div>
         <div className="flex flex-col gap-1 pl-1 mb-1">
+          <NavLink to="/creator/campaigns" icon={<LayoutGrid className="w-4 h-4 text-orange-500" />} onClick={onNavigate}>
+            All Campaigns
+          </NavLink>
           <NavLink to="/creator/campaigns?type=influencer" icon={<Flame className="w-4 h-4 text-pink-500" />} onClick={onNavigate}>
-            Influencer
+            Influencer / UGC
           </NavLink>
           <NavLink to="/creator/campaigns?type=clipping" icon={<Flame className="w-4 h-4 text-purple-500" />} onClick={onNavigate}>
             Clipping
@@ -145,32 +148,53 @@ export const CreatorSidebarContent: React.FC<CreatorSidebarContentProps> = ({ on
 
       {/* Bottom User Profile Card & Logout */}
       <div className="mt-auto pt-4 border-t border-zinc-100 flex flex-col gap-1.5">
-        <Link
-          to="/creator/profile"
-          onClick={onNavigate}
-          className="flex items-center gap-3 p-2.5 rounded-xl bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/60 transition-colors min-h-[44px]"
-        >
-          <div className="size-9 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm border border-orange-200 shrink-0">
-            {loading ? (
-              <div className="w-4 h-4 rounded-full bg-orange-200 animate-pulse" />
-            ) : (
-              (user?.username?.[0] || 'C').toUpperCase()
-            )}
-          </div>
-          <div className="overflow-hidden min-w-0 flex-1">
-            <p className="font-semibold text-xs text-zinc-900 truncate">{user?.username || 'Creator'}</p>
-            <p className="text-[11px] text-zinc-500 truncate">{user?.email || 'creator@email.com'}</p>
-          </div>
-        </Link>
+        {!user && !loading ? (
+          <Link
+            to="/login?role=creator"
+            onClick={onNavigate}
+            className="flex items-center justify-between p-2.5 rounded-xl bg-orange-50 hover:bg-orange-100/80 border border-orange-200 transition-colors min-h-[44px]"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center text-xs">
+                ?
+              </div>
+              <div className="overflow-hidden min-w-0">
+                <p className="font-semibold text-xs text-orange-950">Guest Explorer</p>
+                <p className="text-[10px] text-orange-700">Sign in to earn</p>
+              </div>
+            </div>
+            <span className="text-[11px] font-bold text-orange-600">Login →</span>
+          </Link>
+        ) : (
+          <Link
+            to="/creator/profile"
+            onClick={onNavigate}
+            className="flex items-center gap-3 p-2.5 rounded-xl bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/60 transition-colors min-h-[44px]"
+          >
+            <div className="size-9 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm border border-orange-200 shrink-0">
+              {loading ? (
+                <div className="w-4 h-4 rounded-full bg-orange-200 animate-pulse" />
+              ) : (
+                (user?.username?.[0] || 'C').toUpperCase()
+              )}
+            </div>
+            <div className="overflow-hidden min-w-0 flex-1">
+              <p className="font-semibold text-xs text-zinc-900 truncate">{user?.username || 'Creator'}</p>
+              <p className="text-[11px] text-zinc-500 truncate">{user?.email || 'creator@email.com'}</p>
+            </div>
+          </Link>
+        )}
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-500 hover:bg-rose-50 hover:text-rose-600 transition-colors w-full min-h-[44px]"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Logout</span>
-        </button>
+        {user && (
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-500 hover:bg-rose-50 hover:text-rose-600 transition-colors w-full min-h-[44px]"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </button>
+        )}
       </div>
     </div>
   );

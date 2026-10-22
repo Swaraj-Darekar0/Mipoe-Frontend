@@ -59,12 +59,14 @@ const AuthCallback = () => {
 
         toast.success("Successfully signed in with Google!");
         
-        // 7. Redirect based on the role returned from the BACKEND
-        // We trust the backend's response for the final role.
-        if (response.role === "brand") {
+        // 7. Redirect based on the role returned from the BACKEND or redirect param
+        const redirectFromQuery = queryParams.get("redirect");
+        if (redirectFromQuery) {
+          navigate(decodeURIComponent(redirectFromQuery));
+        } else if (response.role === "brand") {
           navigate("/brand/dashboard");
         } else if (response.profile_completed) {
-            navigate("/creator/dashboard");
+          navigate("/creator/dashboard");
         } else {
           navigate("/creator/complete-profile");
         }

@@ -7,19 +7,38 @@ export const API_BASE =
     ? 'http://localhost:5000' 
     : 'https://enrich-prominent-backspace.ngrok-free.dev');
 
-// --- NEW: Token Management ---
+// --- Token Management ---
 export const setAuthTokens = (userId: string, role: string) => {
   sessionStorage.setItem('user_id', userId); 
   sessionStorage.setItem('role', role);
+  localStorage.setItem('user_id', userId);
+  localStorage.setItem('role', role);
 };
 
-export const getUserId = () => sessionStorage.getItem('user_id');
-export const getRole = () => sessionStorage.getItem('role');
+export const getUserId = () => sessionStorage.getItem('user_id') || localStorage.getItem('user_id');
+export const getRole = () => sessionStorage.getItem('role') || localStorage.getItem('role');
 
 export const clearAuthTokens = () => {
   sessionStorage.removeItem('user_id');
   sessionStorage.removeItem('role');
+  localStorage.removeItem('user_id');
+  localStorage.removeItem('role');
 };
+
+export async function checkAuthStatus(): Promise<{ authenticated: boolean; user_id?: string; role?: string; username?: string }> {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/auth/me`);
+    if (!res.ok) return { authenticated: false };
+    const data = await res.json();
+    if (data.authenticated && data.user_id && data.role) {
+      setAuthTokens(data.user_id, data.role);
+      return data;
+    }
+    return { authenticated: false };
+  } catch {
+    return { authenticated: false };
+  }
+}
 
 export async function logout(): Promise<void> {
     try {
@@ -102,8 +121,10 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
   const response = await fetch(url, options);
 
   if (response.status === 401) {
-    const isAuthRoute = url.endsWith('/login') || url.endsWith('/register') || url.endsWith('/api/auth/google-sync');
-    if (!isAuthRoute) {
+    const isAuthRoute = url.endsWith('/login') || url.endsWith('/register') || url.endsWith('/api/auth/google-sync') || url.endsWith('/api/auth/me');
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    const isPublicPage = path === '/' || path.startsWith('/creator/campaigns') || path.startsWith('/creator/affiliate-campaigns') || path.startsWith('/creator/dashboard/');
+    if (!isAuthRoute && !isPublicPage) {
       clearAuthTokens();
       window.location.href = '/login';
     }
@@ -193,6 +214,8 @@ export interface Campaign {
   asset_link: string;
   image_url: string;
   follower_range?: string;
+  is_deadline_ended?: boolean;
+  earned?: number;
   submitted_clips?: SubmittedClipData[]; // Changed from ClipData[]
   accepted_clips?: Array<{
     id: number;
@@ -785,7 +808,7 @@ export async function getBrandProfile(nocache = false): Promise<BrandProfile> {
   }
 }
 
-export async function updateBrandProfile(profileData: { username?: string; phone?: string }): Promise<UpdateClipResponse> {
+export async function updateBrandProfile(profileData: { username?: string; email?: string; phone?: string }): Promise<UpdateClipResponse> {
   try {
     const res = await apiFetch(`${API_BASE}/api/brand/profile`, {
       method: 'PUT',
@@ -907,21 +930,29 @@ export async function verifyBrandCompliance(brandId: number, payload: { action: 
 
 // --- PAYMENT ENDPOINTS ---
 
-export interface CashfreeOrderResponse {
-  payment_session_id: string;
+export interface DepositOrderResponse {
+  gateway: 'cashfree' | 'razorpay';
   order_id: string;
+  amount: number;
+  currency?: string;
+  payment_session_id?: string; // Cashfree
+  key_id?: string;             // Razorpay
+  simulated?: boolean;
 }
+
+export type CashfreeOrderResponse = DepositOrderResponse;
 
 export interface VirtualAccountResponse {
   account_number: string;
   ifsc: string;
   vpa_id: string;
+  bank_name?: string;
+  gateway?: string;
 }
 
-export async function createDepositOrder(amount: number): Promise<CashfreeOrderResponse> {
+export async function createDepositOrder(amount: number): Promise<DepositOrderResponse> {
   const res = await apiFetch(`${API_BASE}/api/payments/create-deposit-order`, {
     method: 'POST',
-    
     body: JSON.stringify({ amount })
   });
   const data = await res.json();
@@ -929,11 +960,22 @@ export async function createDepositOrder(amount: number): Promise<CashfreeOrderR
   return data;
 }
 
-export async function verifyDeposit(orderId: string): Promise<{ msg: string; new_balance: number }> {
+export interface VerifyDepositPayload {
+  order_id?: string;
+  gateway?: string;
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  razorpay_signature?: string;
+  amount?: number;
+}
+
+export async function verifyDeposit(
+  payload: string | VerifyDepositPayload
+): Promise<{ msg: string; new_balance: number; gateway?: string }> {
+  const body = typeof payload === 'string' ? { order_id: payload } : payload;
   const res = await apiFetch(`${API_BASE}/api/payments/verify-deposit`, {
     method: 'POST',
-    
-    body: JSON.stringify({ order_id: orderId })
+    body: JSON.stringify(body)
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Payment verification failed');
@@ -941,10 +983,16 @@ export async function verifyDeposit(orderId: string): Promise<{ msg: string; new
 }
 
 export async function getVirtualAccount(): Promise<VirtualAccountResponse> {
-  const res = await apiFetch(`${API_BASE}/api/payments/virtual-account`, {
-      });
+  const res = await apiFetch(`${API_BASE}/api/payments/virtual-account`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch virtual account');
+  return data;
+}
+
+export async function getCreatorVirtualAccount(): Promise<VirtualAccountResponse> {
+  const res = await apiFetch(`${API_BASE}/api/payments/creator/virtual-account`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || 'Failed to fetch creator virtual account');
   return data;
 }
 
