@@ -3,7 +3,7 @@ import CreatorLayout from "@/layouts/CreatorLayout";
 import CampaignCard from "@/components/creator/CampaignCard";
 import QuickStats from "@/components/creator/QuickStats";
 import { Button } from "@/components/ui/button";
-import { fetchCreatorCampaigns, Campaign, getCreatorNotifications, deleteCreatorNotification, Notification as ApiNotification, getWalletBalance, getUserId } from "@/lib/api";
+import { fetchCreatorCampaigns, Campaign, getCreatorNotifications, deleteCreatorNotification, Notification as ApiNotification, getWalletBalance, getUserId, getCachedCreatorCampaigns } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import Notifications, { DisplayNotification } from "@/components/creator/Notifications";
 import { useToast } from '@/hooks/use-toast';
@@ -12,11 +12,17 @@ import { Bell, CheckCircle, XCircle, DollarSign, ArrowUpRight, Sparkles } from '
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 
 const CreatorDashboard = () => {
-  const [yourCampaigns, setYourCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedCampaigns = getCachedCreatorCampaigns();
+  const [yourCampaigns, setYourCampaigns] = useState<Campaign[]>(() => cachedCampaigns || []);
+  const [loading, setLoading] = useState(() => !cachedCampaigns);
   const [error, setError] = useState("");
   const [walletBalance, setWalletBalance] = useState<number>(0);
-  const [activeSubmissions, setActiveSubmissions] = useState<number>(0);
+  const [activeSubmissions, setActiveSubmissions] = useState<number>(() => {
+    if (!cachedCampaigns) return 0;
+    return cachedCampaigns.reduce((acc, campaign) => {
+      return acc + (campaign.submitted_clips?.length || 0) + (campaign.accepted_clips?.length || 0);
+    }, 0);
+  });
   const navigate = useNavigate();
   const creatorId = getUserId();
   const { toast } = useToast();
@@ -59,8 +65,11 @@ const CreatorDashboard = () => {
   };
 
   useEffect(() => {
-    setLoading(true);
-    const dataFetches = Promise.all([fetchCreatorCampaigns(), getWalletBalance()])
+    if (!cachedCampaigns) setLoading(true);
+    const dataFetches = (creatorId 
+      ? Promise.all([fetchCreatorCampaigns(), getWalletBalance()])
+      : Promise.resolve([[], { balance: 0 }] as [Campaign[], { balance: number }])
+    )
       .then(([yours, walletRes]) => {
         setYourCampaigns(yours);
         setWalletBalance(walletRes.balance);
@@ -73,6 +82,9 @@ const CreatorDashboard = () => {
       .catch((err: unknown) => {
         console.error('Error fetching dashboard data:', err);
         setError(err instanceof Error ? err.message : "An unknown error occurred");
+      })
+      .finally(() => {
+        setLoading(false);
       });
 
     const notificationFetches = async () => {
@@ -149,6 +161,23 @@ const CreatorDashboard = () => {
             Welcome back! Track your performance, active submissions, and active brand campaigns.
           </p>
         </header>
+
+        {!creatorId && (
+          <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-transparent border border-orange-500/20 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-orange-500 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-zinc-900">Browsing Creator Hub in Guest Mode</p>
+                <p className="text-xs text-zinc-500">Explore open campaigns and reward rates. Sign in anytime to claim slots and withdraw instant UPI earnings.</p>
+              </div>
+            </div>
+            <Button onClick={() => navigate('/login?role=creator&redirect=/creator/dashboard')} className="bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs px-4 py-2 rounded-xl shrink-0 shadow-sm">
+              Sign In with Google →
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">

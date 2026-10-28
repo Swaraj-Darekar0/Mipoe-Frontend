@@ -694,7 +694,7 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
           {/* Traditional Stressed Mascot (working hard on ads) */}
           <image
             ref={tradMascotRef}
-            href="/brand_mascot_traditional.png"
+            href="/brand_mascot_traditional.webp"
             x={tradX}
             y={tradY}
             width={tradW}
@@ -707,7 +707,7 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
           {/* sellr. Relaxed Mascot (chill, hands behind head, eyes closed) */}
           <image
             ref={sellrMascotRef}
-            href="/brand_mascot_sellr.png"
+            href="/brand_mascot_sellr.webp"
             x={sellrX}
             y={sellrY}
             width={sellrW}

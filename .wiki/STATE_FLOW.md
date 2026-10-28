@@ -34,5 +34,34 @@
   - Connecting Instagram and YouTube channels is **mandatory** for completing profile setup.
   - **Developer Sandbox Mode**: Connect buttons open a sandbox simulation modal allowing the user to select "Simulate OAuth Success" (which populates the profile fields with `@brand_instagram` / `Brand Official Channel` handles and saves them to the database) or "Simulate OAuth Failure" (resulting in connection cancel notifications).
 
+- **Web 2.5 Authentication & Embedded Smart Account Flow:**
+  - Login/Register pages (`Login.tsx`, `Register.tsx`) provide 1-click "Continue with Google" powered by Privy (`@privy-io/react-auth`).
+  - Upon Google OAuth completion, Privy provisions a non-custodial MPC smart account on Base L2 (`user.wallet.address`).
+  - The client extracts the Privy verification token and dispatches `syncPrivyUser()` (`POST /api/auth/privy-sync`), passing role, email, and wallet address.
+  - The FastAPI backend validates the token, upserts the `Creator` or `Brand` record in PostgreSQL, links the EVM wallet address, issues an HttpOnly session cookie (`access_token`), and returns user session metadata.
+  - The user is seamlessly routed to the appropriate dashboard without exposure to crypto seed phrases or gas fees.
+
+- **Brand Zero-Fee Deposit Flow (Option B):**
+  - Brands navigate to `src/pages/brand/AddFunds.tsx` featuring a 2-column Bento layout.
+  - The left column handles instant UPI deposits via `onramp.money`. The brand enters INR amount and clicks "Proceed to UPI Payment".
+  - The frontend calls `api.createDepositOrder({ amount, gateway: "onramp" })`. Under Option B, Mipoe absorbs onramp processing fees, guaranteeing 100% budget credit (`platform_fee: 0.0`).
+  - The returned hosted widget URL is launched in a modal using `src/utils/payments/onramp/index.ts`. On completion, Onramp emits a webhook and callback, crediting the brand's wallet balance.
+  - The right column provides the brand's embedded Base L2 EVM address and QR code for direct USDC transfers.
+
+- **Creator Just-In-Time (JIT) Dynamic TDS Withdrawal Flow:**
+  - Zero upfront bank account or PAN friction during creator onboarding (`CompleteProfile.tsx` takes under 10 seconds).
+  - When withdrawing from `src/pages/creator/Wallet.tsx`, the creator enters their payout amount and UPI ID.
+  - A real-time **Dynamic Tax Card** evaluates PAN status:
+    - If PAN is unverified: Discloses 20% penalty TDS deduction under Section 206AA, prompting the creator to add PAN to save 19% tax.
+    - An inline action allows creators to enter and verify their PAN on-the-fly (`POST /api/auth/verify-pan`), immediately dropping TDS to 1% under Section 194S.
+  - The creator confirms the transaction breakdown and submits `api.creatorWithdraw({ amount, upi_id, pan_number })`.
+  - The backend records gross amount, TDS deduction, and net amount in `creator_transactions`, updates the ledger atomically, and triggers off-ramp disbursement.
+
+- **DPDP Act / GDPR PII Scrubbing Flow:**
+  - Users can delete their account via profile settings or `DELETE /api/auth/account`.
+  - The backend marks `is_deleted = TRUE`, timestamps `deleted_at`, and pseudonymizes personal PII (`deleted_{id}_{timestamp}@anonymized.mipoe`).
+  - The session JWT `jti` is blocklisted in Redis DB 2, while financial transaction ledger records are retained intact to meet the 6-year statutory audit retention requirement.
+  - Subsequent API requests using deleted credentials return `HTTP 401/403 Forbidden`.
+
 ## Maintenance
 - Any new API endpoint or stateful feature must update this file with its data flow pattern.

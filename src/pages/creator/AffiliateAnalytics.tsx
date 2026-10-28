@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
 import CreatorLayout from "@/layouts/CreatorLayout";
+import GuestLockedView from "@/components/creator/GuestLockedView";
 import { 
   getCreatorAffiliateCampaigns, 
   getCreatorConversions, 
   getWalletBalance,
-  CreatorAffiliateCampaign 
+  CreatorAffiliateCampaign,
+  getUserId 
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +33,10 @@ const CreatorAffiliateAnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
+    if (!getUserId()) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const [campsData, conversionsData, walletData] = await Promise.all([
@@ -55,6 +61,20 @@ const CreatorAffiliateAnalyticsPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  if (!getUserId()) {
+    return (
+      <CreatorLayout>
+        <GuestLockedView
+          title="Affiliate Performance & Commission Tracking"
+          subtitle="Real-Time Clicks, Conversions & Earnings"
+          description="Sign in to monitor your affiliate link traffic, active attribution conversions, and unlock direct commission payouts."
+          returnUrl="/creator/affiliate-analytics"
+          icon={<TrendingUp className="w-8 h-8 text-orange-500" />}
+        />
+      </CreatorLayout>
+    );
+  }
 
   if (loading) {
     return (

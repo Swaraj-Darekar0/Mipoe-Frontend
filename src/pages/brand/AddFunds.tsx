@@ -2,35 +2,44 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Wallet, CreditCard, Building2, Copy, CheckCircle2, QrCode } from "lucide-react";
-import { loadGatewayScript } from "@/utils/payments";
+import { CreditCard, Copy, CheckCircle2, QrCode, ShieldCheck, Zap, Sparkles, ExternalLink } from "lucide-react";
 import { createDepositOrder, getVirtualAccount, verifyDeposit, VirtualAccountResponse } from "@/lib/api";
+import { openOnrampWidget } from "@/utils/payments/onramp";
 import { useToast } from "@/hooks/use-toast";
 
 const AddFunds: React.FC = () => {
-  const [amount, setAmount] = useState<string>("");
+  const [amount, setAmount] = useState<string>("10000");
   const [loading, setLoading] = useState(false);
   const [vaDetails, setVaDetails] = useState<VirtualAccountResponse | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch VA details on load
     fetchVirtualAccount();
+    const storedWallet = localStorage.getItem("wallet_address") || "";
+    setWalletAddress(storedWallet);
   }, []);
 
   const fetchVirtualAccount = async () => {
     try {
       const data = await getVirtualAccount();
       setVaDetails(data);
+      if (data?.account_number && data.account_number.startsWith("0x")) {
+        setWalletAddress(data.account_number);
+      }
     } catch (err) {
-      console.error("Failed to load VA details", err);
+      console.error("Failed to load account details", err);
     }
   };
 
-  const handlePayment = async () => {
+  const handleDeposit = async () => {
     const value = parseFloat(amount);
-    if (!value || value < 1) {
-      toast({ title: "Invalid Amount", description: "Minimum deposit is ₹1", variant: "destructive" });
+    if (!value || value < 100) {
+      toast({
+        title: "Minimum Deposit",
+        description: "Minimum deposit is ₹100 for instant UPI settlement.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -38,190 +47,201 @@ const AddFunds: React.FC = () => {
     try {
       const orderData = await createDepositOrder(value);
 
-      if (orderData.gateway === "razorpay") {
-        const isLoaded = await loadGatewayScript("razorpay");
-        if (!isLoaded) throw new Error("Failed to load Razorpay SDK");
-
-        // If simulated dev environment without live keys
-        if (orderData.simulated) {
-          const mockVerify = await verifyDeposit({
-            gateway: "razorpay",
-            order_id: orderData.order_id,
-            razorpay_order_id: orderData.order_id,
-            razorpay_payment_id: `pay_sim_${Date.now()}`,
-            razorpay_signature: "simulated_signature",
-            amount: value,
-          });
-          toast({
-            title: "Deposit Successful!",
-            description: `₹${value} deposited. New balance: ₹${mockVerify.new_balance}`,
-            className: "bg-green-50 border-green-200",
-          });
+      // Launch Onramp.money widget with Option B Zero-Fee model
+      openOnrampWidget({
+        appId: orderData?.params?.appId || import.meta.env.VITE_ONRAMP_APP_ID || "2695737",
+        walletAddress: orderData?.destination_wallet || walletAddress || "0x0000000000000000000000000000000000000000",
+        fiatAmount: value,
+        fiatType: 1, // INR
+        coinCode: orderData?.coin_code || "usdc",
+        network: orderData?.network || "base",
+        paymentMethod: 1, // UPI
+        onSuccess: async (eventData: any) => {
+          try {
+            const verifyRes = await verifyDeposit({
+              gateway: "onramp",
+              order_id: eventData?.orderId || orderData?.order_id,
+              amount: value,
+            });
+            toast({
+              title: "Deposit Completed!",
+              description: `₹${value.toLocaleString()} credited with ₹0 platform fee. New balance: ₹${verifyRes.new_balance?.toLocaleString()}`,
+              className: "bg-emerald-50 border-emerald-200 text-emerald-900",
+            });
+            setTimeout(() => window.location.reload(), 1200);
+          } catch (e: any) {
+            toast({ title: "Settlement Notice", description: e.message || "Deposit is being confirmed in background." });
+          }
+        },
+        onClose: () => {
           setLoading(false);
-          setAmount("");
-          setTimeout(() => window.location.reload(), 1200);
-          return;
-        }
+        },
+      });
 
-        const options = {
-          key: orderData.key_id,
-          amount: Math.round(orderData.amount * 100),
-          currency: orderData.currency || "INR",
-          name: "Mipoe Wallet Deposit",
-          description: `Add ₹${orderData.amount} to platform wallet`,
-          order_id: orderData.order_id,
-          handler: async (response: any) => {
-            try {
-              setLoading(true);
-              const verifyRes = await verifyDeposit({
-                gateway: "razorpay",
-                razorpay_order_id: response.razorpay_order_id || orderData.order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                amount: value,
-              });
-              toast({
-                title: "Deposit Verified!",
-                description: `₹${value} added. New balance: ₹${verifyRes.new_balance}`,
-                className: "bg-green-50 border-green-200",
-              });
-              setAmount("");
-              setTimeout(() => window.location.reload(), 1200);
-            } catch (verErr: any) {
-              toast({ title: "Verification Failed", description: verErr.message, variant: "destructive" });
-            } finally {
-              setLoading(false);
-            }
-          },
-          modal: {
-            ondismiss: () => {
-              setLoading(false);
-            },
-          },
-          theme: {
-            color: "#2563eb",
-          },
-        };
-
-        const razorpayInstance = new (window as any).Razorpay(options);
-        razorpayInstance.open();
-      } else {
-        // Cashfree flow
-        const isLoaded = await loadGatewayScript("cashfree");
-        if (!isLoaded) throw new Error("Failed to load Cashfree SDK");
-
-        const cashfree = new (window as any).Cashfree({ mode: "sandbox" });
-        cashfree.checkout({
-          paymentSessionId: orderData.payment_session_id,
-          returnUrl: `${window.location.origin}/brand/dashboard?order_id=${orderData.order_id}`,
-          redirectTarget: "_self",
-        });
+      // In sandbox / simulated dev, auto-verify for smooth testing
+      if (orderData?.simulated || !import.meta.env.PROD) {
+        setTimeout(async () => {
+          try {
+            const verifyRes = await verifyDeposit({
+              gateway: "onramp",
+              order_id: orderData.order_id,
+              amount: value,
+            });
+            toast({
+              title: "Sandbox Deposit Settled",
+              description: `₹${value.toLocaleString()} credited to your campaign wallet balance.`,
+              className: "bg-emerald-50 border-emerald-200 text-emerald-900",
+            });
+            setLoading(false);
+            setTimeout(() => window.location.reload(), 1500);
+          } catch {
+            setLoading(false);
+          }
+        }, 3000);
       }
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Deposit Error", description: err.message, variant: "destructive" });
       setLoading(false);
     }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ description: "Copied to clipboard" });
+    toast({ description: "Address copied to clipboard" });
   };
+
+  const displayWallet = walletAddress || vaDetails?.account_number || "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      {/* LEFT: Instant Payment Gateway */}
-      <Card className="h-full bg-white shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2 text-gray-800">
-            <CreditCard className="w-5 h-5 text-blue-600" />
-            Instant Deposit
-          </CardTitle>
+      {/* LEFT: Option B Zero-Fee UPI Onramp */}
+      <Card className="h-full bg-white shadow-sm border border-zinc-200">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-900">
+              <CreditCard className="w-4 h-4 text-indigo-600" />
+              Instant UPI Deposit (Zero Fee)
+            </CardTitle>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" /> 0% Platform Fee
+            </span>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="relative">
-            <span className="absolute left-3 top-2.5 text-gray-500 font-semibold">₹</span>
-            <Input 
-              type="number" 
-              placeholder="10000" 
-              className="pl-8 font-medium text-lg"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-zinc-600">Enter Deposit Amount (INR)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-2.5 text-zinc-400 font-bold text-base">₹</span>
+              <Input
+                type="number"
+                placeholder="10000"
+                className="pl-8 font-semibold text-base tabular-nums"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
           </div>
-          
-          <div className="flex gap-2 text-sm flex-wrap">
-            {[5000, 20000, 50000].map((val) => (
+
+          <div className="flex gap-2 text-xs flex-wrap">
+            {[5000, 10000, 25000, 50000].map((val) => (
               <button
                 key={val}
+                type="button"
                 onClick={() => setAmount(val.toString())}
-                className="px-3 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-full text-gray-600 transition-colors"
+                className="px-2.5 py-1 bg-zinc-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-zinc-700 font-medium transition-colors tabular-nums"
               >
                 +₹{val.toLocaleString()}
               </button>
             ))}
           </div>
 
-          <Button 
-            className="w-full bg-blue-600 hover:bg-blue-700" 
-            onClick={handlePayment}
+          {/* Option B Zero-Fee Explanation Card */}
+          <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-1 text-xs text-indigo-950">
+            <div className="flex items-center gap-1.5 font-bold text-indigo-900">
+              <Zap className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Option B: 100% Budget Guarantee</span>
+            </div>
+            <p className="text-[11px] text-indigo-800/90 leading-relaxed">
+              Mipoe absorbs all onramp conversion fees. Your full deposit of <strong className="tabular-nums">₹{parseFloat(amount || "0").toLocaleString()}</strong> is credited directly to your campaign budget.
+            </p>
+          </div>
+
+          <Button
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5"
+            onClick={handleDeposit}
             disabled={loading}
           >
-            {loading ? "Processing..." : "Pay Now"}
+            {loading ? "Launching UPI Checkout..." : `Deposit ₹${parseFloat(amount || "0").toLocaleString()} via UPI`}
           </Button>
-          <p className="text-xs text-gray-400 text-center">
-            Secured by 256-bit Encrypted Banking & Payment Gateway
-          </p>
+
+          <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-400">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Supported apps: GPay, PhonePe, Paytm, BHIM UPI</span>
+          </div>
         </CardContent>
       </Card>
 
-      {/* RIGHT: Auto Collect (Virtual Account) */}
-      <Card className="h-full bg-gradient-to-br from-gray-50 to-white shadow-sm border-dashed border-2">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2 text-gray-800">
-            <Building2 className="w-5 h-5 text-green-600" />
-            Large Transfer (NEFT/RTGS)
+      {/* RIGHT: Direct Base L2 Smart Account */}
+      <Card className="h-full bg-gradient-to-br from-zinc-50 to-white shadow-sm border border-zinc-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold flex items-center gap-2 text-zinc-900">
+            <QrCode className="w-4 h-4 text-zinc-700" />
+            Direct Base L2 USDC Deposit
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {vaDetails ? (
-            <div className="space-y-3">
-              <div className="bg-white p-3 rounded border">
-                <p className="text-xs text-gray-500 mb-1">Beneficiary Account Number</p>
-                <div className="flex justify-between items-center">
-                  <span className="font-mono font-bold text-lg">{vaDetails.account_number}</span>
-                  <Copy size={14} className="cursor-pointer text-gray-400 hover:text-black" onClick={() => copyToClipboard(vaDetails.account_number)} />
-                </div>
+          <div className="space-y-3">
+            <div className="bg-white p-3.5 rounded-xl border border-zinc-200 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Your Non-Custodial Base Address
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">
+                  Base Network
+                </span>
               </div>
-              
-              <div className="flex gap-3">
-                <div className="bg-white p-3 rounded border flex-1">
-                  <p className="text-xs text-gray-500 mb-1">IFSC Code</p>
-                  <div className="flex justify-between items-center">
-                    <span className="font-mono font-medium">{vaDetails.ifsc}</span>
-                    <Copy size={14} className="cursor-pointer text-gray-400 hover:text-black" onClick={() => copyToClipboard(vaDetails.ifsc)} />
-                  </div>
-                </div>
+              <div className="flex justify-between items-center pt-1">
+                <span className="font-mono text-xs font-semibold text-zinc-800 break-all select-all">
+                  {displayWallet}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(displayWallet)}
+                  className="p-1.5 hover:bg-zinc-100 rounded-md text-zinc-500 hover:text-zinc-900 transition-colors ml-2 flex-shrink-0"
+                  title="Copy address"
+                >
+                  <Copy size={14} />
+                </button>
               </div>
+              {displayWallet && displayWallet.startsWith("0x") && (
+                <div className="pt-1">
+                  <a
+                    href={`https://sepolia.basescan.org/address/${displayWallet}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    View on BaseScan Sepolia Explorer
+                    <ExternalLink size={10} />
+                  </a>
+                </div>
+              )}
+            </div>
 
-              <div className="bg-green-50 p-3 rounded border border-green-100 flex items-start gap-3">
-                <QrCode className="text-green-700 mt-1" size={20} />
-                <div>
-                  <p className="text-xs font-bold text-green-800 mb-0.5">Or Pay via UPI</p>
-                  <p className="text-sm font-mono text-green-700 break-all">{vaDetails.vpa_id}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
-                <CheckCircle2 size={12} className="text-green-600" />
-                <span>Funds are auto-credited instantly.</span>
-              </div>
+            <div className="p-3 bg-zinc-100/70 border border-zinc-200 rounded-xl space-y-1 text-xs text-zinc-700">
+              <p className="font-semibold text-zinc-900">Direct Crypto Transfer Instructions:</p>
+              <ul className="text-[11px] text-zinc-600 space-y-1 list-disc pl-4">
+                <li>Send only <strong>USDC</strong> on the <strong>Base Network</strong>.</li>
+                <li>Deposits settle on-chain in 2 seconds with sub-cent gas fees.</li>
+                <li>Balance auto-credits to your INR dashboard at spot conversion.</li>
+              </ul>
             </div>
-          ) : (
-            <div className="h-40 flex items-center justify-center text-sm text-gray-400">
-              Loading banking details...
+
+            <div className="flex items-center gap-2 text-xs text-zinc-500 pt-1">
+              <CheckCircle2 size={13} className="text-emerald-600 flex-shrink-0" />
+              <span>Secured by ERC-4337 Smart Account on Base.</span>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     </div>

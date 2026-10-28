@@ -17,11 +17,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import BrandLayout from "@/layouts/BrandLayout";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowDownRight, ArrowUpRight, Download, MoreVertical, Wallet, TrendingUp, DollarSign, Clock, ArrowLeft } from "lucide-react";
-import { getTransactions, getUserId, getRole } from "@/lib/api";
+import { ArrowDownRight, ArrowUpRight, Download, MoreVertical, Wallet, TrendingUp, DollarSign, Clock, ArrowLeft, ShieldCheck, Building2, QrCode } from "lucide-react";
+import { getTransactions, getUserId, getRole, getBrandRefundableSummary, brandWithdrawFunds, BrandRefundableSummary } from "@/lib/api";
 
 // 1. UPDATE INTERFACE TO MATCH API.TS (String IDs)
 interface Transaction {
@@ -62,60 +72,156 @@ const BrandTransactions = () => {
   const userId = getUserId();
   const role = getRole();
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        setLoading(true);
+  // Refund / Withdraw modal state
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [refundableSummary, setRefundableSummary] = useState<BrandRefundableSummary | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [refundAmount, setRefundAmount] = useState<string>("");
+  const [refundPayoutMethod, setRefundPayoutMethod] = useState<"upi" | "bank">("upi");
+  const [refundUpiId, setRefundUpiId] = useState<string>("");
+  const [refundBankAccount, setRefundBankAccount] = useState<string>("");
+  const [refundIfsc, setRefundIfsc] = useState<string>("");
+  const [refundAccountHolder, setRefundAccountHolder] = useState<string>("");
+  const [submittingRefund, setSubmittingRefund] = useState(false);
 
-        console.log("Fetching transactions for:", { userId, role });
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
 
-        // Verify user is authenticated as brand
-        if (!userId || role !== "brand") {
-          console.warn("Auth check failed:", { userId, role });
-          navigate("/login");
-          return;
-        }
-
-        // 3. Call API with string ID
-        // @ts-ignore (Temporary ignore if api.ts hasn't updated types yet)
-        const response = await getTransactions('brand', userId);
-        console.log("Transactions response:", response);
-        
-        // Map database flat fields, status, and campaign_funding type to the frontend interface structure
-        const processed = (response.transactions || []).map((t: any) => {
-          const rawStatus = (t.status || "").toLowerCase();
-          const mappedStatus = (rawStatus === "completed" || rawStatus === "success" || rawStatus === "paid")
-            ? "success"
-            : rawStatus;
-          return {
-            ...t,
-            type: t.type === "campaign_funding" ? "allocation" : t.type,
-            status: mappedStatus,
-            campaign: t.campaign_name && t.campaign_name !== "N/A" ? { name: t.campaign_name } : undefined,
-            creator: t.creator_username && t.creator_username !== "N/A" ? { username: t.creator_username } : undefined,
-          };
-        });
-        setTransactions(processed);
-      } catch (error) {
-        console.error("Error fetching transactions:", error);
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load transactions",
-          variant: "destructive",
-        });
-        setTransactions([]);
-      } finally {
-        setLoading(false);
+      // Verify user is authenticated as brand
+      if (!userId || role !== "brand") {
+        console.warn("Auth check failed:", { userId, role });
+        navigate("/login");
+        return;
       }
-    };
 
+      // 3. Call API with string ID
+      // @ts-ignore (Temporary ignore if api.ts hasn't updated types yet)
+      const response = await getTransactions('brand', userId);
+      
+      // Map database flat fields, status, and campaign_funding type to the frontend interface structure
+      const processed = (response.transactions || []).map((t: any) => {
+        const rawStatus = (t.status || "").toLowerCase();
+        const mappedStatus = (rawStatus === "completed" || rawStatus === "success" || rawStatus === "paid")
+          ? "success"
+          : rawStatus;
+        return {
+          ...t,
+          type: t.type === "campaign_funding" ? "allocation" : t.type,
+          status: mappedStatus,
+          campaign: t.campaign_name && t.campaign_name !== "N/A" ? { name: t.campaign_name } : undefined,
+          creator: t.creator_username && t.creator_username !== "N/A" ? { username: t.creator_username } : undefined,
+        };
+      });
+      setTransactions(processed);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load transactions",
+        variant: "destructive",
+      });
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (userId) {
       fetchTransactions();
     } else {
       console.warn("No user ID found, redirecting to login");
       navigate("/login");
     }
-  }, [userId, role, navigate, toast]);
+  }, [userId, role]);
+
+  const openRefundModal = async () => {
+    setIsRefundModalOpen(true);
+    setLoadingSummary(true);
+    try {
+      const summary = await getBrandRefundableSummary();
+      setRefundableSummary(summary);
+      if (summary.max_refundable_amount > 0) {
+        setRefundAmount(summary.max_refundable_amount.toString());
+      }
+    } catch (err: any) {
+      toast({
+        title: "Could not fetch balance details",
+        description: err.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  const handleWithdrawFunds = async () => {
+    const amountVal = parseFloat(refundAmount);
+    if (!amountVal || amountVal <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid refund amount greater than ₹0.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (refundableSummary && amountVal > refundableSummary.max_refundable_amount) {
+      toast({
+        title: "Exceeds Refundable Balance",
+        description: `Maximum refundable amount is ₹${refundableSummary.max_refundable_amount.toLocaleString("en-IN")}. Active campaign allocations cannot be refunded until reclaimed.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (refundPayoutMethod === "upi") {
+      if (!refundUpiId || !refundUpiId.includes("@")) {
+        toast({
+          title: "Invalid UPI ID",
+          description: "Please provide a valid UPI ID (e.g., brand@okaxis).",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      if (!refundBankAccount || !refundIfsc) {
+        toast({
+          title: "Missing Bank Details",
+          description: "Please provide both Bank Account Number and IFSC Code.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    setSubmittingRefund(true);
+    try {
+      const res = await brandWithdrawFunds({
+        amount: amountVal,
+        payout_method: refundPayoutMethod,
+        upi_id: refundPayoutMethod === "upi" ? refundUpiId : undefined,
+        bank_account: refundPayoutMethod === "bank" ? refundBankAccount : undefined,
+        ifsc: refundPayoutMethod === "bank" ? refundIfsc : undefined,
+        account_holder_name: refundPayoutMethod === "bank" ? refundAccountHolder : undefined,
+      });
+
+      toast({
+        title: "Refund Initiated Successfully",
+        description: `₹${amountVal.toLocaleString("en-IN")} refund processed (0% TDS - Capital Return). Tx ID: #${res.transaction_id}`,
+      });
+      setIsRefundModalOpen(false);
+      fetchTransactions();
+    } catch (err: any) {
+      toast({
+        title: "Refund Failed",
+        description: err.message || "Failed to process withdrawal.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingRefund(false);
+    }
+  };
 
   const isDeletedCampaignTransaction = (t: Transaction) => {
     const isCampaignRelated = ["allocation", "refund", "distribution"].includes(t.type);
@@ -385,15 +491,26 @@ const BrandTransactions = () => {
               Manage and track all your campaign payments and refunds
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/brand/dashboard")}
-            className="gap-2 self-start sm:self-auto w-full sm:w-auto justify-center sm:justify-start"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </Button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={openRefundModal}
+              className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex-1 sm:flex-initial"
+            >
+              <ArrowUpRight className="w-4 h-4" />
+              Refund / Withdraw Funds
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/brand/dashboard")}
+              className="gap-2 flex-1 sm:flex-initial"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -561,6 +678,219 @@ const BrandTransactions = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Brand Unspent Budget Refund Modal */}
+        <Dialog open={isRefundModalOpen} onOpenChange={setIsRefundModalOpen}>
+          <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+              <div className="flex items-center justify-between pr-4">
+                <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-indigo-600" />
+                  Withdraw Unspent Funds
+                </DialogTitle>
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-semibold">
+                  0% TDS (Capital Return)
+                </Badge>
+              </div>
+              <DialogDescription className="text-xs text-muted-foreground pt-1">
+                Transfer unallocated funds from your brand wallet back to your verified Indian bank account or corporate UPI ID.
+              </DialogDescription>
+            </DialogHeader>
+
+            {loadingSummary ? (
+              <div className="py-8 text-center space-y-2">
+                <Clock className="w-6 h-6 animate-spin text-indigo-600 mx-auto" />
+                <p className="text-xs text-muted-foreground">Calculating locked campaign allocations...</p>
+              </div>
+            ) : (
+              <div className="space-y-4 py-2">
+                {/* Balances Card */}
+                <div className="bg-zinc-50 border border-zinc-200/80 rounded-xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Total Wallet Balance:</span>
+                    <span className="font-semibold text-zinc-900 tabular-nums">
+                      ₹{(refundableSummary?.wallet_balance || 0).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      Locked in Active Campaigns ({refundableSummary?.active_campaign_count || 0}):
+                    </span>
+                    <span className="font-semibold text-amber-600 tabular-nums">
+                      -₹{(refundableSummary?.active_campaign_locks || 0).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-zinc-200 flex items-center justify-between text-sm font-bold">
+                    <span className="text-indigo-950">Max Refundable Now:</span>
+                    <span className="text-indigo-600 font-mono text-base tabular-nums">
+                      ₹{(refundableSummary?.max_refundable_amount || 0).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Amount Input */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="refund-amount" className="text-xs font-semibold">
+                      Refund Amount (INR)
+                    </Label>
+                    {refundableSummary && refundableSummary.max_refundable_amount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setRefundAmount(refundableSummary.max_refundable_amount.toString())}
+                        className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
+                      >
+                        Max (₹{refundableSummary.max_refundable_amount.toLocaleString("en-IN")})
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-zinc-400 font-bold text-base">₹</span>
+                    <Input
+                      id="refund-amount"
+                      type="number"
+                      min="1"
+                      max={refundableSummary?.max_refundable_amount || undefined}
+                      placeholder="e.g. 5000"
+                      value={refundAmount}
+                      onChange={(e) => setRefundAmount(e.target.value)}
+                      className="pl-8 font-semibold tabular-nums"
+                    />
+                  </div>
+                </div>
+
+                {/* Payout Rails Tabs */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Disbursement Rail</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRefundPayoutMethod("upi")}
+                      className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                        refundPayoutMethod === "upi"
+                          ? "border-indigo-600 bg-indigo-50/50 text-indigo-700"
+                          : "border-zinc-200 hover:bg-zinc-50 text-zinc-600"
+                      }`}
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                      Instant UPI
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRefundPayoutMethod("bank")}
+                      className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                        refundPayoutMethod === "bank"
+                          ? "border-indigo-600 bg-indigo-50/50 text-indigo-700"
+                          : "border-zinc-200 hover:bg-zinc-50 text-zinc-600"
+                      }`}
+                    >
+                      <Building2 className="w-3.5 h-3.5" />
+                      Bank IMPS / NEFT
+                    </button>
+                  </div>
+                </div>
+
+                {/* Conditional Inputs */}
+                {refundPayoutMethod === "upi" ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="refund-upi" className="text-xs font-semibold">
+                      Corporate / Business UPI ID
+                    </Label>
+                    <Input
+                      id="refund-upi"
+                      placeholder="company@hdfcbank"
+                      value={refundUpiId}
+                      onChange={(e) => setRefundUpiId(e.target.value)}
+                      className="font-mono text-xs"
+                    />
+                    <p className="text-[11px] text-zinc-500">
+                      Funds will be instantly dispatched to this VPA via domestic banking rails.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="refund-holder" className="text-xs font-semibold">
+                        Account Holder Name
+                      </Label>
+                      <Input
+                        id="refund-holder"
+                        placeholder="Company Legal Name"
+                        value={refundAccountHolder}
+                        onChange={(e) => setRefundAccountHolder(e.target.value)}
+                        className="text-xs"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="refund-acc" className="text-xs font-semibold">
+                          Account Number
+                        </Label>
+                        <Input
+                          id="refund-acc"
+                          placeholder="000123456789"
+                          value={refundBankAccount}
+                          onChange={(e) => setRefundBankAccount(e.target.value)}
+                          className="font-mono text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="refund-ifsc" className="text-xs font-semibold">
+                          IFSC Code
+                        </Label>
+                        <Input
+                          id="refund-ifsc"
+                          placeholder="HDFC0000001"
+                          value={refundIfsc}
+                          onChange={(e) => setRefundIfsc(e.target.value.toUpperCase())}
+                          className="font-mono text-xs uppercase"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Legal & Tax Banner */}
+                <div className="p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-xl space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>0% TDS Applied (TDS-Exempt Capital Return)</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-800 leading-relaxed">
+                    Under Indian Income Tax provisions, returning unspent advertising deposit funds is classified as a capital return and is completely exempt from Section 194S TDS.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsRefundModalOpen(false)}
+                disabled={submittingRefund}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleWithdrawFunds}
+                disabled={
+                  submittingRefund ||
+                  loadingSummary ||
+                  !refundableSummary ||
+                  refundableSummary.max_refundable_amount <= 0 ||
+                  !refundAmount ||
+                  parseFloat(refundAmount) <= 0 ||
+                  parseFloat(refundAmount) > refundableSummary.max_refundable_amount
+                }
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {submittingRefund ? "Processing Refund..." : `Confirm Withdrawal (₹${parseFloat(refundAmount || "0").toLocaleString("en-IN")})`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </BrandLayout>
   );

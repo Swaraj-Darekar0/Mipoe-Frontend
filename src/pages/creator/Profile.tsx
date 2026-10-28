@@ -1,15 +1,18 @@
 
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pencil, CheckCircle2, XCircle } from "lucide-react";
-import { fetchCreatorProfile, updateCreatorProfile, verifyInstagram, type CreatorProfile as ApiCreatorProfile } from "@/lib/api";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Pencil, CheckCircle2, XCircle, Trash2, AlertTriangle, ShieldAlert } from "lucide-react";
+import { fetchCreatorProfile, updateCreatorProfile, verifyInstagram, deleteAccount, getUserId, type CreatorProfile as ApiCreatorProfile } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import CreatorLayout from '@/layouts/CreatorLayout';
+import GuestLockedView from '@/components/creator/GuestLockedView';
 import Images from '@/assets/bg31.png';
 import { Badge } from "@/components/ui/badge";
 
@@ -25,9 +28,48 @@ const Profile = () => {
   const [instagramUsername, setInstagramUsername] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
+  const navigate = useNavigate();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
+
   const { toast } = useToast();
 
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== "DELETE") {
+      toast({
+        title: "Confirmation Required",
+        description: "Please type DELETE to confirm permanent account deletion.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await deleteAccount(deleteReason || "User requested self-service erasure via Profile");
+      toast({
+        title: "Account Permanently Deleted",
+        description: "Your personal data has been scrubbed under the DPDP Act 2023.",
+      });
+      setShowDeleteModal(false);
+      navigate("/login");
+    } catch (err: any) {
+      toast({
+        title: "Deletion Failed",
+        description: err.message || "Failed to process account deletion request",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   useEffect(() => {
+    if (!getUserId()) {
+      setLoadingProfile(false);
+      return;
+    }
     const getProfileData = async () => {
       try {
         const data = await fetchCreatorProfile();
@@ -131,6 +173,20 @@ const Profile = () => {
     }
   };
 
+
+  if (!getUserId()) {
+    return (
+      <CreatorLayout>
+        <GuestLockedView
+          title="Creator Identity & Socials"
+          subtitle="Verified Channels & Audience Insights"
+          description="Sign in to link your Instagram, YouTube channels, and manage your public creator profile."
+          returnUrl="/creator/profile"
+          icon={<Pencil className="w-8 h-8 text-orange-500" />}
+        />
+      </CreatorLayout>
+    );
+  }
 
   if (loadingProfile) {
     return <div>Loading profile...</div>;
@@ -286,6 +342,96 @@ const Profile = () => {
             <Button onClick={handleSave}>Save Profile</Button>
           </div>
         )}
+
+        {/* Danger Zone: DPDP Act 2023 Account Erasure */}
+        <Card className="border-red-200 bg-red-50/30">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold text-red-900 flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-red-600" />
+                  Account Privacy & DPDP Erasure
+                </CardTitle>
+                <CardDescription className="text-xs text-red-700/80 mt-1">
+                  Exercise your right to erasure under India's Digital Personal Data Protection Act, 2023.
+                </CardDescription>
+              </div>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => setShowDeleteModal(true)}
+                className="bg-red-600 hover:bg-red-700 text-xs font-semibold gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Account
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              Deleting your account immediately and permanently overwrites your personal identifiers (name, email, phone, Instagram handle, and PAN) with pseudonymized hashes in our active database. Blockchain ledger transactions on Base L2 remain immutable by mathematical design.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Delete Account Confirmation Dialog */}
+        <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+          <DialogContent className="bg-white border-zinc-200 text-zinc-900 sm:max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-2 text-red-600 mb-1">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <DialogTitle className="text-lg font-bold text-zinc-900">Permanently Delete Account?</DialogTitle>
+              </div>
+              <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
+                This action is permanent and cannot be undone. All your personal data, profile settings, and social links will be scrubbed under India's DPDP Act, 2023.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2 text-xs">
+              <div className="space-y-1.5">
+                <Label htmlFor="deleteReason" className="text-xs font-semibold text-zinc-700">Optional Reason for Leaving</Label>
+                <Input
+                  id="deleteReason"
+                  placeholder="Tell us why you are leaving (optional)"
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-900">
+                <p className="font-semibold text-xs">Please type <span className="font-mono font-bold text-red-600">DELETE</span> to confirm:</p>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Type DELETE"
+                  className="h-9 bg-white border-red-300 font-mono text-xs uppercase"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={handleDeleteAccount}
+                disabled={isDeleting || deleteConfirmText.trim().toUpperCase() !== "DELETE"}
+                className="bg-red-600 hover:bg-red-700 text-xs font-bold"
+              >
+                {isDeleting ? "Scrubbing Data..." : "Confirm Permanent Deletion"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </CreatorLayout>
   );

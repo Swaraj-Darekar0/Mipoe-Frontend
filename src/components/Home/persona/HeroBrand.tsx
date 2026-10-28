@@ -50,19 +50,12 @@ const HeroBrand: React.FC = () => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const ctx = gsap.context(() => {
       gsap.from(".hero-rise", {
-        y: 24,
+        y: 14,
         opacity: 0,
-        duration: 0.85,
-        ease: "power3.out",
-        stagger: 0.1,
-        clearProps: "transform,opacity",
-      });
-      gsap.from(".hero-scene", {
-        opacity: 0,
-        duration: 1.1,
-        delay: 0.2,
+        duration: 0.38,
         ease: "power2.out",
-        clearProps: "opacity",
+        stagger: 0.04,
+        clearProps: "transform,opacity",
       });
     }, rootRef);
     return () => ctx.revert();

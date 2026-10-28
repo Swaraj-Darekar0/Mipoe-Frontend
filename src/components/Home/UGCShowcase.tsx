@@ -25,7 +25,7 @@ export const DEFAULT_CLIPS: UGCClip[] = [
     likes: '34.2K',
     title: 'clock it - Beauty & different perfume ✨',
     tag: 'Beauty & Fragrance',
-    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtWD9rHRb5-p37mcBab97RmHl6BEv2temcCLh98YYZq9qNsyIHsL0kqlg&s=10',
+    imageUrl: '/thumbnails/real_clip_1.webp',
     storeUsername: 'riaunfiltered',
     audioTrack: 'Original Audio - @aarav.fits'
   },
@@ -37,7 +37,7 @@ export const DEFAULT_CLIPS: UGCClip[] = [
     likes: '89.1K',
     title: 'Monochrome aesthetics review',
     tag: 'Gen-Z Fashion',
-    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa0YO8bAujXXIatFG0psIns6JxrnVU2-mlvqZYAJ9n-Q&s=10',
+    imageUrl: '/thumbnails/real_clip_2.webp',
     storeUsername: 'ashokvibes',
     audioTrack: 'Viral Sound - Synth Swell'
   },
@@ -49,7 +49,7 @@ export const DEFAULT_CLIPS: UGCClip[] = [
     likes: '22.8K',
     title: 'Nico sure x Mipoe ',
     tag: 'Tech & Lifestyle',
-    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQjOkn7mZideRyVVUawYaEaqmLnqFhBtyYBLL2tTrm1bw&s=10',
+    imageUrl: '/thumbnails/real_clip_3.webp',
     storeUsername: 'karanvibe',
     audioTrack: 'Ambient Beats #4'
   },
@@ -61,7 +61,7 @@ export const DEFAULT_CLIPS: UGCClip[] = [
     likes: '61.5K',
     title: 'Pay on reach campaign highlight',
     tag: 'Beauty & Skincare',
-    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSc2G8iZHTiGSzCj7yU46F6YaPJzCeXIOx_1XM_F4RDTw&s=10',
+    imageUrl: '/thumbnails/real_clip_4.webp',
     storeUsername: 'ananyaglow',
     audioTrack: 'Original Sound - Ananya'
   },
@@ -73,7 +73,7 @@ export const DEFAULT_CLIPS: UGCClip[] = [
     likes: '72.4K',
     title: 'Desk setup that makes edits feel faster',
     tag: 'Creator Gear',
-    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIREDGMPj24GIVlUR8m4W_8PdlBnLNpVpdS3Po-gocRA&s=10',
+    imageUrl: '/thumbnails/real_clip_5.webp',
     storeUsername: 'meeraedits',
     audioTrack: 'Lo-fi Cut - Meera'
   },
@@ -85,7 +85,7 @@ export const DEFAULT_CLIPS: UGCClip[] = [
     likes: '48.6K',
     title: 'Budget tech I use for every shoot',
     tag: 'Tech Finds',
-    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT480dOKYn2bDFC3UAjhxUEA7fz9brk_RE-SHvPlBjYeQ&s=10',
+    imageUrl: '/thumbnails/real_clip_6.webp',
     storeUsername: 'devanshdesk',
     audioTrack: 'Creator Desk Mix'
   },
@@ -97,7 +97,7 @@ export const DEFAULT_CLIPS: UGCClip[] = [
     likes: '39.7K',
     title: 'No-filter skincare prep before filming',
     tag: 'Skincare Routine',
-    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMjyaGQp-BpXvA_oExMBb57e0pqqLyg2HRIiYqmPGSHg&s=10',
+    imageUrl: '/thumbnails/real_clip_7.webp',
     storeUsername: 'ishaglowfile',
     audioTrack: 'Soft Pop Loop'
   },
@@ -109,7 +109,7 @@ export const DEFAULT_CLIPS: UGCClip[] = [
     likes: '104.8K',
     title: 'Three fits, one tiny creator bag',
     tag: 'Fashion Finds',
-    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKVeT38KlCmGbltySDiAx5AZ5OK3jsF0p8xnFvYwki8w&s',
+    imageUrl: '/thumbnails/real_clip_8.webp',
     storeUsername: 'zoyafits',
     audioTrack: 'Runway Snap'
   },
@@ -121,7 +121,7 @@ export const DEFAULT_CLIPS: UGCClip[] = [
     likes: '27.9K',
     title: 'Travel kit that survives long shoot days',
     tag: 'Travel Essentials',
-    imageUrl:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSa-FpM--txkczbZ5h6SzBjIr6S0rw0MRmIx6NeM0Sswg&s=10',
+    imageUrl: '/thumbnails/real_clip_9.webp',
     storeUsername: 'nikhilnomad',
     audioTrack: 'Street Reel Audio'
   }

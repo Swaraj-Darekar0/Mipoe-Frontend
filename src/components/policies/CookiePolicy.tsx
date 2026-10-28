@@ -11,7 +11,7 @@ export const CookiePolicy: React.FC = () => {
     <LegalLayout title="Cookie Policy" lastUpdated="22 August 2026">
       <ShortVersion>
         <li>We set exactly one cookie of our own: a secure login cookie. No advertising or analytics cookies.</li>
-        <li>Partners we integrate with (Google sign-in, Cashfree checkout, Meta, Shopify) may set their own cookies during their flows.</li>
+        <li>Partners we integrate with (Google sign-in, Okto smart accounts, Onramp.money checkout, Meta, Shopify) may set their own cookies during their flows.</li>
         <li>Affiliate links don't put a Sellr tracking cookie on your browser — clicks are logged on our server instead.</li>
         <li>Block the login cookie and you simply can't stay signed in; everything else about your browser stays untouched.</li>
       </ShortVersion>
@@ -49,7 +49,7 @@ export const CookiePolicy: React.FC = () => {
         <p>Some features hand you over briefly to a partner, and that partner may set its own cookies under its own policy:</p>
         <ul className="list-disc space-y-2 pl-5">
           <li><strong className="text-snow">Google sign-in (via Supabase):</strong> used to verify your Google identity when you choose "Continue with Google";</li>
-          <li><strong className="text-snow">Cashfree:</strong> used during deposit checkout and payment verification;</li>
+          <li><strong className="text-snow">Okto & Onramp.money:</strong> used during Web 2.5 smart account provisioning, deposit checkout, and payment settlement;</li>
           <li><strong className="text-snow">Meta / Instagram:</strong> used when a creator links an Instagram account through Meta's OAuth flow;</li>
           <li><strong className="text-snow">Shopify:</strong> used when a brand connects a Shopify store.</li>
         </ul>

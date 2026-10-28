@@ -1,12 +1,6 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Header from '@/components/Home/Header';
-import Hero from '@/components/Home/Hero';
 import PersonaHome from '@/components/Home/persona/PersonaHome';
-import UGCShowcase from '@/components/Home/UGCShowcase';
-import FeatureSplit from '@/components/Home/FeatureSplit';
-import IllustratedGuide from '@/components/Home/illustrationGuide';
-import ComparisonMatrix from "@/components/Home/ComparisonTable";
 import Footer from '@/components/Home/Footer';
 import SmoothScroll from '@/components/SmoothScroll';
 import { getRole, getUserId, checkAuthStatus } from "@/lib/api";

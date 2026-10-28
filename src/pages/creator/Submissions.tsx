@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import CreatorLayout from "@/layouts/CreatorLayout";
-import { fetchCreatorCampaigns, Campaign, SubmittedClipData, AcceptedClipData, deleteClip } from "@/lib/api";
+import GuestLockedView from "@/components/creator/GuestLockedView";
+import { fetchCreatorCampaigns, Campaign, SubmittedClipData, AcceptedClipData, deleteClip, getUserId } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,8 @@ import {
   Link as LinkIcon,
   Loader2,
   Trash2,
-  XCircle
+  XCircle,
+  Send
 } from "lucide-react";
 
 type Clip = (SubmittedClipData | AcceptedClipData) & { campaignName: string; isAccepted?: boolean };
@@ -47,6 +49,10 @@ const SubmissionsPage = () => {
   const { toast } = useToast();
 
   const loadClips = async () => {
+    if (!getUserId()) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const campaigns = await fetchCreatorCampaigns();
@@ -144,6 +150,20 @@ const SubmissionsPage = () => {
       setDeletingClipId(null);
     }
   };
+
+  if (!getUserId()) {
+    return (
+      <CreatorLayout>
+        <GuestLockedView
+          title="Submitted Clips & Performance"
+          subtitle="Real-Time View Tracking & Milestone Payouts"
+          description="Sign in to submit your UGC clips, track verified reel view counts, and claim automatic milestone earnings."
+          returnUrl="/creator/submissions"
+          icon={<Send className="w-8 h-8 text-orange-500" />}
+        />
+      </CreatorLayout>
+    );
+  }
 
   if (loading) {
     return (

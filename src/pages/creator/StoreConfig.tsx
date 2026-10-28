@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import CreatorLayout from "@/layouts/CreatorLayout";
+import GuestLockedView from "@/components/creator/GuestLockedView";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +17,8 @@ import {
   promoteSaaS, 
   unpromoteSaaS,
   uploadStoreImage,
-  fetchCreatorProfile
+  fetchCreatorProfile,
+  getUserId
 } from "@/lib/api";
 import { 
   Store, 
@@ -73,6 +75,10 @@ export default function StoreConfig() {
   }, []);
 
   const loadStoreData = async () => {
+    if (!getUserId()) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const profile = await fetchCreatorProfile();
@@ -233,6 +239,20 @@ export default function StoreConfig() {
   const getAffiliateRedirectUrl = (code: string) => {
     return `${window.location.origin}/affiliate/${code}`;
   };
+
+  if (!getUserId()) {
+    return (
+      <CreatorLayout>
+        <GuestLockedView
+          title="Creator Storefront & Merch Hub"
+          subtitle="Curate Your Custom Store & Product Shelf"
+          description="Sign in to customize your public creator store, showcase sponsored products, and earn affiliate commissions directly."
+          returnUrl="/creator/store"
+          icon={<Store className="w-8 h-8 text-orange-500" />}
+        />
+      </CreatorLayout>
+    );
+  }
 
   if (loading) {
     return (

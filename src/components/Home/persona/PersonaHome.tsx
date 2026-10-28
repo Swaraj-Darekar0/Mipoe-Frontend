@@ -26,18 +26,18 @@ const PersonaBody: React.FC = () => {
   // before mounting the incoming one, so measuring on the persona change itself
   // measures the gap between them.
   useEffect(() => {
-    const id = window.setTimeout(() => ScrollTrigger.refresh(), 260);
+    const id = window.setTimeout(() => ScrollTrigger.refresh(), 160);
     return () => window.clearTimeout(id);
   }, [persona]);
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={persona}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.18, ease: "easeOut" }}
+        transition={{ duration: 0.12, ease: "easeOut" }}
       >
         {persona === "creator" ? <HeroCreator /> : <HeroBrand />}
         <SignalingCarousel persona={persona} label={content.carouselLabel} intro={content.carouselIntro} steps={content.steps} />

@@ -225,7 +225,7 @@ const CompleteProfile = () => {
         isDarkTheme={true}
         activeStep={activeStep}
         onStepChange={(step) => setActiveStep(step)}
-        stepLabels={["Personal Details", "Social Verification", "Payout Setup", "Launch Hub"]}
+        stepLabels={["Personal Details", "Social Verification", "Smart Account Ready"]}
         onboardingTitle="Creator Onboarding"
         hideFooter={true}
         disableStepIndicators={false}
@@ -404,114 +404,48 @@ const CompleteProfile = () => {
                   }}
                   className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-5 rounded-xl flex items-center gap-2 text-xs transition-all"
                 >
-                  Continue to Payout Setup
+                  Continue to Smart Account
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
           </Step>
 
-          {/* Step 3: Payout Setup */}
+          {/* Step 3: Smart Account Activation (No Upfront Bank Friction) */}
           <Step>
             <div className="space-y-4 text-left py-1">
               <div className="pb-3 border-b border-white/10">
-                <h3 className="text-base font-bold text-white">Payout Credentials</h3>
-                <p className="text-xs text-gray-400">Configure your UPI ID or Direct Bank Details for campaign commission payouts.</p>
+                <h3 className="text-base font-bold text-white">Smart Account Ready</h3>
+                <p className="text-xs text-gray-400">Your decentralized micro-payout wallet on Base L2 is activated and ready for earnings.</p>
               </div>
 
-              <div className="space-y-1.5">
-                <label htmlFor="upiId" className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-400 flex items-center gap-1.5">
-                  <CreditCard className="h-3.5 w-3.5 text-indigo-400" /> UPI ID (Fast Payouts)
-                </label>
-                <Input
-                  id="upiId"
-                  type="text"
-                  value={upiId}
-                  onChange={(e) => setUpiId(e.target.value)}
-                  placeholder="e.g. creatorname@okaxis"
-                  className="bg-white/5 border-white/10 text-white rounded-xl placeholder:text-gray-600 focus:border-primary/50 focus:ring-primary/20 text-xs"
-                />
-              </div>
-
-              <div className="pt-2 border-t border-white/5 space-y-3">
-                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Or Direct Bank Transfer</span>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-semibold text-gray-400">Account Holder Name</label>
-                    <Input
-                      type="text"
-                      value={bankAccountHolder}
-                      onChange={(e) => setBankAccountHolder(e.target.value)}
-                      placeholder="Holder Full Name"
-                      className="bg-white/5 border-white/10 text-white rounded-xl text-xs"
-                    />
+              <div className="space-y-2.5">
+                <div className="p-3.5 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-2xl flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 mt-0.5">
+                    <CreditCard className="w-4 h-4" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-semibold text-gray-400">Bank Account Number</label>
-                    <Input
-                      type="text"
-                      value={bankAccountNumber}
-                      onChange={(e) => setBankAccountNumber(e.target.value)}
-                      placeholder="12-16 Digit Account No."
-                      className="bg-white/5 border-white/10 text-white rounded-xl text-xs"
-                    />
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Zero Upfront Friction</h4>
+                    <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                      No bank account or PAN details required today. When your clips earn milestone views, simply enter your UPI ID at withdrawal to receive instant INR payouts.
+                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-gray-400">IFSC Code</label>
-                  <Input
-                    type="text"
-                    value={bankIfsc}
-                    onChange={(e) => setBankIfsc(e.target.value.toUpperCase())}
-                    placeholder="e.g. SBIN0001234"
-                    className="bg-white/5 border-white/10 text-white rounded-xl text-xs uppercase"
-                  />
+                <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 mt-0.5">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Instant Milestone Crediting</h4>
+                    <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                      Every verified milestone is automatically allocated to your wallet. You retain full control with zero lockup periods.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end items-center pt-3 border-t border-white/10">
-                <Button
-                  type="button"
-                  onClick={() => setActiveStep(4)}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-5 rounded-xl flex items-center gap-2 text-xs transition-all"
-                >
-                  Continue to Final Review
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </Step>
-
-          {/* Step 4: Launch Hub */}
-          <Step>
-            <div className="space-y-4 text-left py-1">
-              <div className="pb-3 border-b border-white/10">
-                <h3 className="text-base font-bold text-white">Review & Complete Onboarding</h3>
-                <p className="text-xs text-gray-400">Review your profile details before launching your Creator Hub.</p>
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 text-xs">
-                <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                  <span className="text-gray-400">Nickname:</span>
-                  <span className="font-bold text-white">{profile.nickname || "—"}</span>
-                </div>
-                <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                  <span className="text-gray-400">Phone:</span>
-                  <span className="font-bold text-white">{profile.phone || "—"}</span>
-                </div>
-                <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                  <span className="text-gray-400">Instagram Handle:</span>
-                  <span className="font-bold text-emerald-400">@{profile.instagram_username || "linked"}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Payout Target:</span>
-                  <span className="font-bold text-white">{upiId ? upiId : bankAccountNumber ? `Bank (${bankAccountNumber.slice(-4)})` : "Configured"}</span>
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+              <form onSubmit={handleSubmit} className="pt-2">
                 <Button
                   type="submit"
                   className="w-full py-5 rounded-2xl text-white bg-indigo-600 hover:bg-indigo-500 font-bold transition duration-200 flex items-center justify-center gap-2 text-xs shadow-lg shadow-indigo-600/20"
@@ -521,12 +455,11 @@ const CompleteProfile = () => {
                     <Loader2 className="h-5 w-5 animate-spin text-white" />
                   ) : (
                     <>
-                      Complete Onboarding & Launch Hub <ArrowRight className="h-4 w-4" />
+                      Activate Creator Hub & Enter Dashboard <ArrowRight className="h-4 w-4" />
                     </>
                   )}
                 </Button>
               </form>
-
             </div>
           </Step>
       </Stepper>

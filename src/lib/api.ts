@@ -52,105 +52,289 @@ export async function logout(): Promise<void> {
     }
 }
 
-interface CacheEntry {
+interface PersistentCacheEntry {
   bodyText: string;
   status: number;
   statusText: string;
   headers: [string, string][];
   timestamp: number;
+  tier: 'static' | 'profile' | 'none';
 }
 
-const apiCache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 10000; // 10 seconds cache TTL
+const MEMORY_CACHE = new Map<string, PersistentCacheEntry>();
+const INFLIGHT_REQUESTS = new Map<string, Promise<Response>>();
 
-function shouldBypassCache(url: string, options: RequestInit): boolean {
-  const method = (options.method || 'GET').toUpperCase();
-  if (method !== 'GET') return true;
-
-  if (url.includes('nocache=true')) return true;
-  
-  if (options.headers) {
-    const headersObj = options.headers as Record<string, string>;
-    if (headersObj['Cache-Control'] === 'no-cache' || headersObj['Pragma'] === 'no-cache') {
-      return true;
-    }
+export function getEndpointTier(url: string): 'static' | 'profile' | 'none' {
+  // TIER 3: ZERO STALE TOLERANCE - Financial, Payout, TDS, Ledger, & Active Auth State
+  if (
+    url.includes('/wallet-balance') ||
+    url.includes('/creator-withdraw') ||
+    url.includes('/withdrawals') ||
+    url.includes('/payout-details') ||
+    url.includes('/verify-payout-details') ||
+    url.includes('/virtual-account') ||
+    url.includes('/transactions') ||
+    url.includes('/refund') ||
+    url.includes('/allocate-budget') ||
+    url.includes('/reclaim-budget') ||
+    url.includes('/distribute-to-creator') ||
+    url.includes('/bulk-distribute') ||
+    url.includes('/create-deposit-order') ||
+    url.includes('/verify-deposit') ||
+    url.includes('/api/auth/verify-pan') ||
+    url.includes('/campaign-summary/') ||
+    url.includes('/affiliate-dashboard/')
+  ) {
+    return 'none';
   }
 
-  // Bypass cache for live analytics/graphs/real-time tracking
-  if (url.includes('/campaign-summary/')) return true;
-  if (url.includes('/affiliate-dashboard/')) return true;
-  
-  const campaignMatch = url.match(/\/api\/brand\/campaigns\/(\d+)(?:\/|$)/);
-  if (campaignMatch) return true;
+  // TIER 2: STALE-WHILE-REVALIDATE - User Profiles & Campaign Metadata (2-3 min TTL)
+  if (
+    url.includes('/api/brand/profile') ||
+    url.includes('/api/creator/profile') ||
+    url.includes('/api/creator/your-campaigns') ||
+    url.includes('/api/creator/campaign-clips') ||
+    url.includes('/api/brand/campaigns') ||
+    url.includes('/api/auth/me')
+  ) {
+    return 'profile';
+  }
 
-  return false;
+  // TIER 1: STATIC & CATALOGS - Persistent Cache (10-15 min TTL)
+  if (
+    url.includes('/api/campaigns') ||
+    url.includes('/api/brand/affiliate/status') ||
+    url.includes('/api/products') ||
+    url.includes('/store/')
+  ) {
+    return 'static';
+  }
+
+  return 'none';
 }
 
-async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+const TIER_TTL: Record<'static' | 'profile' | 'none', number> = {
+  static: 10 * 60 * 1000,
+  profile: 2 * 60 * 1000,
+  none: 0,
+};
+
+function invalidateMatchingCaches(url: string) {
+  MEMORY_CACHE.clear();
+  if (typeof window === 'undefined') return;
+
+  if (url.includes('/campaign')) {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('mipoe_cache_') && (k.includes('campaign') || k.includes('profile')))
+      .forEach(k => localStorage.removeItem(k));
+  } else if (url.includes('/profile') || url.includes('/onboarding')) {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('mipoe_cache_') && k.includes('profile'))
+      .forEach(k => localStorage.removeItem(k));
+  }
+}
+
+export function getCachedJson<T>(endpointPath: string, maxAgeMs: number = 1000 * 60 * 15): T | null {
+  if (typeof window === 'undefined') return null;
+  const fullUrl = `${API_BASE}${endpointPath}`;
+  try {
+    const mem = MEMORY_CACHE.get(fullUrl);
+    if (mem && Date.now() - mem.timestamp < maxAgeMs) {
+      return JSON.parse(mem.bodyText) as T;
+    }
+    const raw = localStorage.getItem(`mipoe_cache_${fullUrl}`);
+    if (raw) {
+      const entry: PersistentCacheEntry = JSON.parse(raw);
+      if (Date.now() - entry.timestamp < maxAgeMs) {
+        MEMORY_CACHE.set(fullUrl, entry);
+        return JSON.parse(entry.bodyText) as T;
+      }
+    }
+  } catch {
+    // Ignore JSON parse or storage errors
+  }
+  return null;
+}
+
+export function getCachedBrandProfile(): BrandProfile | null {
+  return getCachedJson<BrandProfile>('/api/brand/profile');
+}
+
+export function getCachedBrandCampaigns(): Campaign[] | null {
+  return getCachedJson<Campaign[]>('/api/brand/campaigns');
+}
+
+export function getCachedCreatorCampaigns(): Campaign[] | null {
+  return getCachedJson<Campaign[]>('/api/creator/your-campaigns');
+}
+
+export function getCachedAffiliateStatus(): AffiliateStatus | null {
+  return getCachedJson<AffiliateStatus>('/api/brand/affiliate/status');
+}
+
+function triggerBackgroundRevalidate(url: string, options: RequestInit, tier: 'static' | 'profile' | 'none') {
+  if (INFLIGHT_REQUESTS.has(url)) return;
+
+  const revalPromise = fetch(url, { ...options, credentials: 'include' })
+    .then(async res => {
+      if (res.ok) {
+        const bodyText = await res.text();
+        const headersList: [string, string][] = [];
+        res.headers.forEach((val, key) => headersList.push([key, val]));
+        const entry: PersistentCacheEntry = {
+          bodyText,
+          status: res.status,
+          statusText: res.statusText,
+          headers: headersList,
+          timestamp: Date.now(),
+          tier,
+        };
+        MEMORY_CACHE.set(url, entry);
+        try {
+          localStorage.setItem(`mipoe_cache_${url}`, JSON.stringify(entry));
+        } catch {
+          // ignore quota exceeded
+        }
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      INFLIGHT_REQUESTS.delete(url);
+    });
+
+  INFLIGHT_REQUESTS.set(url, revalPromise as any);
+}
+
+export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const method = (options.method || 'GET').toUpperCase();
+  const tier = getEndpointTier(url);
+
+  // Invalidate on mutations
   if (method !== 'GET') {
-    apiCache.clear();
+    invalidateMatchingCaches(url);
   }
 
-  const bypass = shouldBypassCache(url, options);
-  if (!bypass) {
-    const cached = apiCache.get(url);
-    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
-      return new Response(cached.bodyText, {
-        status: cached.status,
-        statusText: cached.statusText,
-        headers: new Headers(cached.headers)
+  // Handle GET Caching and Deduplication
+  if (method === 'GET' && tier !== 'none') {
+    // 1. In-Flight Request Deduplication
+    const inflight = INFLIGHT_REQUESTS.get(url);
+    if (inflight) {
+      return inflight.then(res => res.clone());
+    }
+
+    // 2. Fast In-Memory Cache Check
+    const mem = MEMORY_CACHE.get(url);
+    if (mem && (Date.now() - mem.timestamp < TIER_TTL[tier])) {
+      return new Response(mem.bodyText, {
+        status: mem.status,
+        statusText: mem.statusText,
+        headers: new Headers(mem.headers),
       });
     }
-  }
 
-  options.credentials = 'include';
-  
-  const headers: Record<string, string> = {
-    'Accept': 'application/json',
-    'ngrok-skip-browser-warning': 'true',
-    ...options.headers as any
-  };
+    // 3. Persistent LocalStorage Cache Check (Survives F5 Reload)
+    const storageKey = `mipoe_cache_${url}`;
+    const persisted = localStorage.getItem(storageKey);
+    if (persisted) {
+      try {
+        const entry: PersistentCacheEntry = JSON.parse(persisted);
+        const age = Date.now() - entry.timestamp;
 
-  if (!(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
-  }
+        if (age < TIER_TTL[tier]) {
+          MEMORY_CACHE.set(url, entry);
+          return new Response(entry.bodyText, {
+            status: entry.status,
+            statusText: entry.statusText,
+            headers: new Headers(entry.headers),
+          });
+        }
 
-  options.headers = headers;
-
-  const response = await fetch(url, options);
-
-  if (response.status === 401) {
-    const isAuthRoute = url.endsWith('/login') || url.endsWith('/register') || url.endsWith('/api/auth/google-sync') || url.endsWith('/api/auth/me');
-    const path = typeof window !== 'undefined' ? window.location.pathname : '';
-    const isPublicPage = path === '/' || path.startsWith('/creator/campaigns') || path.startsWith('/creator/affiliate-campaigns') || path.startsWith('/creator/dashboard/');
-    if (!isAuthRoute && !isPublicPage) {
-      clearAuthTokens();
-      window.location.href = '/login';
+        // SWR: Return stale cached data immediately for 0ms blank flash, trigger silent background revalidation
+        if (tier === 'profile') {
+          triggerBackgroundRevalidate(url, options, tier);
+          return new Response(entry.bodyText, {
+            status: entry.status,
+            statusText: entry.statusText,
+            headers: new Headers(entry.headers),
+          });
+        }
+      } catch {
+        localStorage.removeItem(storageKey);
+      }
     }
   }
 
-  if (!bypass && response.ok) {
+  // 4. Dispatch Network Request
+  const networkPromise = (async () => {
     try {
-      const clone = response.clone();
-      const bodyText = await clone.text();
-      const headersList: [string, string][] = [];
-      response.headers.forEach((val, key) => {
-        headersList.push([key, val]);
-      });
-      apiCache.set(url, {
-        bodyText,
-        status: response.status,
-        statusText: response.statusText,
-        headers: headersList,
-        timestamp: Date.now()
-      });
-    } catch (e) {
-      console.warn("Failed to cache response:", e);
+      options.credentials = 'include';
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+        ...(options.headers as any),
+      };
+
+      if (tier === 'none') {
+        headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+        headers['Pragma'] = 'no-cache';
+      }
+
+      if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+      }
+      options.headers = headers;
+
+      const response = await fetch(url, options);
+
+      if (response.status === 401) {
+        const isAuthRoute = url.endsWith('/login') || url.endsWith('/register') || url.endsWith('/api/auth/google-sync') || url.endsWith('/api/auth/me');
+        const path = typeof window !== 'undefined' ? window.location.pathname : '';
+        const isPublicPage = path === '/' || path.startsWith('/creator/campaigns') || path.startsWith('/creator/affiliate-campaigns') || path.startsWith('/creator/dashboard/');
+        if (!isAuthRoute && !isPublicPage) {
+          clearAuthTokens();
+          window.location.href = '/login';
+        }
+      }
+
+      if (response.ok && tier !== 'none') {
+        try {
+          const clone = response.clone();
+          const bodyText = await clone.text();
+          const headersList: [string, string][] = [];
+          response.headers.forEach((val, key) => {
+            headersList.push([key, val]);
+          });
+          const entry: PersistentCacheEntry = {
+            bodyText,
+            status: response.status,
+            statusText: response.statusText,
+            headers: headersList,
+            timestamp: Date.now(),
+            tier,
+          };
+          MEMORY_CACHE.set(url, entry);
+          try {
+            localStorage.setItem(`mipoe_cache_${url}`, JSON.stringify(entry));
+          } catch {
+            // quota exceeded fallback
+          }
+        } catch (e) {
+          console.warn("Failed to cache response:", e);
+        }
+      }
+
+      return response;
+    } finally {
+      INFLIGHT_REQUESTS.delete(url);
     }
+  })();
+
+  if (method === 'GET') {
+    INFLIGHT_REQUESTS.set(url, networkPromise);
   }
 
-  return response;
+  const result = await networkPromise;
+  return result.clone();
 }
 
 // Update the return type
@@ -170,6 +354,79 @@ export async function syncGoogleUser(supabaseToken: string): Promise<{
   
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to sync Google user');
+  return data;
+}
+
+export interface WalletSyncResponse {
+  role: string;
+  username: string;
+  user_id: string;
+  wallet_address?: string;
+  smart_account_address?: string;
+  wallet_provider?: string;
+  okto_id?: string;
+  profile_completed?: boolean;
+  pan_verification_status?: string;
+  is_tds_applicable?: boolean;
+  msg?: string;
+}
+
+export type OktoSyncResponse = WalletSyncResponse;
+
+export async function syncWalletUser(params: {
+  auth_token: string;
+  role: 'brand' | 'creator';
+  wallet_address?: string;
+  email?: string;
+  phone?: string;
+  name?: string;
+}): Promise<WalletSyncResponse> {
+  const res = await apiFetch(`${API_BASE}/api/auth/wallet-sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || data.detail || 'Failed to sync wallet user');
+
+  if (data.user_id && data.role) {
+    setAuthTokens(data.user_id, data.role);
+    if (data.wallet_address) {
+      localStorage.setItem('wallet_address', data.wallet_address);
+    }
+  }
+  return data;
+}
+
+export const syncOktoUser = syncWalletUser;
+
+export async function verifyPan(panNumber: string, nameOnPan?: string): Promise<{
+  status: string;
+  pan_number: string;
+  tds_rate_percentage: number;
+  savings_vs_penalty: string;
+  msg: string;
+}> {
+  const res = await apiFetch(`${API_BASE}/api/auth/verify-pan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pan_number: panNumber, name_on_pan: nameOnPan }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || data.detail || 'Failed to verify PAN');
+  return data;
+}
+
+export async function deleteAccount(reason?: string): Promise<{ status: string; msg: string }> {
+  const res = await apiFetch(`${API_BASE}/api/auth/account`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason, confirm_text: 'DELETE' }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || data.detail || 'Failed to delete account');
+  clearAuthTokens();
+  localStorage.removeItem('wallet_address');
   return data;
 }
 
@@ -808,7 +1065,7 @@ export async function getBrandProfile(nocache = false): Promise<BrandProfile> {
   }
 }
 
-export async function updateBrandProfile(profileData: { username?: string; email?: string; phone?: string }): Promise<UpdateClipResponse> {
+export async function updateBrandProfile(profileData: { username?: string; email?: string; phone?: string; business_address?: string }): Promise<UpdateClipResponse> {
   try {
     const res = await apiFetch(`${API_BASE}/api/brand/profile`, {
       method: 'PUT',
@@ -950,10 +1207,10 @@ export interface VirtualAccountResponse {
   gateway?: string;
 }
 
-export async function createDepositOrder(amount: number): Promise<DepositOrderResponse> {
+export async function createDepositOrder(amount: number, gateway: string = 'onramp'): Promise<DepositOrderResponse> {
   const res = await apiFetch(`${API_BASE}/api/payments/create-deposit-order`, {
     method: 'POST',
-    body: JSON.stringify({ amount })
+    body: JSON.stringify({ amount, gateway })
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to create deposit order');
@@ -1078,9 +1335,16 @@ export async function distributeFundsToCreator(
 
 export interface CreatorWithdrawResponse {
   msg: string;
+  gross_amount?: number;
   amount: number;
+  tds_rate?: number;
+  tds_amount?: number;
+  net_amount?: number;
+  tds_section?: string;
+  has_pan?: boolean;
   new_balance: number;
   payout_method: string;
+  destination_upi?: string;
   reference_id: string;
   utr: string;
   status: string;
@@ -1088,8 +1352,9 @@ export interface CreatorWithdrawResponse {
 
 export async function creatorWithdraw(
   amount: number,
-  payoutMethod: 'upi' | 'bank',
+  payoutMethod: 'upi' | 'bank' = 'upi',
   upiId?: string,
+  panNumber?: string,
   bankAccount?: string,
   ifsc?: string
 ): Promise<CreatorWithdrawResponse> {
@@ -1105,13 +1370,16 @@ export async function creatorWithdraw(
     payload.ifsc = ifsc;
   }
 
+  if (panNumber) {
+    payload.pan_number = panNumber;
+  }
+
   const res = await apiFetch(`${API_BASE}/api/payments/creator-withdraw`, {
     method: 'POST',
-    
     body: JSON.stringify(payload)
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.msg || 'Withdrawal failed');
+  if (!res.ok) throw new Error(data.msg || data.detail || 'Withdrawal failed');
   return data;
 }
 
@@ -1164,6 +1432,50 @@ export async function getTransactions(
   );
   const data = await res.json();
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch transactions');
+  return data;
+}
+
+export interface BrandRefundableSummary {
+  wallet_balance: number;
+  active_campaign_locks: number;
+  max_refundable_amount: number;
+  active_campaign_count: number;
+  currency: string;
+  tds_applicable: boolean;
+  tds_note: string;
+}
+
+export async function getBrandRefundableSummary(): Promise<BrandRefundableSummary> {
+  const res = await apiFetch(`${API_BASE}/api/brand/refundable-summary`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || data.detail || 'Failed to fetch refundable summary');
+  return data;
+}
+
+export async function brandWithdrawFunds(payload: {
+  amount: number;
+  payout_method: 'upi' | 'bank';
+  upi_id?: string;
+  bank_account?: string;
+  ifsc?: string;
+  account_holder_name?: string;
+}): Promise<{
+  status: string;
+  withdrawn_amount: number;
+  remaining_wallet_balance: number;
+  transaction_id: number;
+  payout_method: string;
+  tds_rate_percentage: number;
+  tds_deducted: number;
+  msg: string;
+}> {
+  const res = await apiFetch(`${API_BASE}/api/brand/withdraw-funds`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || data.detail || 'Withdrawal request failed');
   return data;
 }
 
@@ -2650,5 +2962,60 @@ export async function getPublicStore(username: string): Promise<PublicStoreData>
   if (!res.ok) throw new Error(data.msg || 'Failed to fetch public storefront');
   return data;
 }
+
+export interface BrandTaxInfo {
+  gstin?: string;
+  legal_business_name?: string;
+  billing_address?: string;
+  state_code?: string;
+  extracted_pan?: string;
+  updated_at?: string;
+}
+
+export interface BrandTaxInvoice {
+  invoice_id: string;
+  transaction_id: number;
+  external_txn_id?: string;
+  date: string | null;
+  gross_amount: number;
+  taxable_amount: number;
+  gst_rate: string;
+  gst_amount: number;
+  cgst: number;
+  sgst: number;
+  description: string;
+  status: string;
+}
+
+export interface BrandTaxInvoicesResponse {
+  tax_info: BrandTaxInfo;
+  has_gstin: boolean;
+  invoices: BrandTaxInvoice[];
+}
+
+export interface UpdateBrandTaxDetailsPayload {
+  gstin: string;
+  legal_business_name: string;
+  billing_address: string;
+}
+
+export async function getBrandTaxInvoices(): Promise<BrandTaxInvoicesResponse> {
+  const res = await apiFetch(`${API_BASE}/api/brand/tax-invoices`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || data.msg || 'Failed to fetch tax invoices');
+  return data;
+}
+
+export async function updateBrandTaxDetails(payload: UpdateBrandTaxDetailsPayload): Promise<{ msg: string; tax_info: BrandTaxInfo }> {
+  const res = await apiFetch(`${API_BASE}/api/brand/tax-invoices`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || data.msg || 'Failed to save GST details');
+  return data;
+}
+
 
 

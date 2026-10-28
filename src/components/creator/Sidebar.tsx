@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutGrid, Flame, Send, Wallet, LogOut, Store, Menu } from 'lucide-react';
-import { fetchCreatorProfile, CreatorProfile as ApiCreatorProfile, logout as logoutApi } from '@/lib/api';
+import { LayoutGrid, Flame, Send, Wallet, LogOut, Store, Menu, Lock } from 'lucide-react';
+import { fetchCreatorProfile, CreatorProfile as ApiCreatorProfile, logout as logoutApi, getUserId } from '@/lib/api';
 import {
   Sheet,
   SheetContent,
@@ -14,9 +14,10 @@ interface NavLinkProps {
   icon: React.ReactNode;
   children: React.ReactNode;
   onClick?: () => void;
+  badge?: React.ReactNode;
 }
 
-const NavLink: React.FC<NavLinkProps> = ({ to, icon, children, onClick }) => {
+const NavLink: React.FC<NavLinkProps> = ({ to, icon, children, onClick, badge }) => {
   const location = useLocation();
 
   const isActive = (() => {
@@ -37,14 +38,17 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon, children, onClick }) => {
     <Link
       to={to}
       onClick={onClick}
-      className={`flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-sm font-medium transition-all ${
+      className={`flex items-center justify-between px-3.5 py-2.5 min-h-[44px] rounded-xl text-sm font-medium transition-all group ${
         isActive
           ? 'bg-orange-500/10 text-orange-600 font-semibold border-r-2 border-orange-500 shadow-xs'
           : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
       }`}
     >
-      {icon}
-      <span>{children}</span>
+      <div className="flex items-center gap-3">
+        {icon}
+        <span>{children}</span>
+      </div>
+      {badge}
     </Link>
   );
 };
@@ -61,6 +65,10 @@ export const CreatorSidebarContent: React.FC<CreatorSidebarContentProps> = ({ on
   useEffect(() => {
     let isMounted = true;
     const loadProfile = async () => {
+      if (!getUserId()) {
+        if (isMounted) setLoading(false);
+        return;
+      }
       try {
         const profile = await fetchCreatorProfile();
         if (isMounted) setUser(profile);
@@ -83,6 +91,11 @@ export const CreatorSidebarContent: React.FC<CreatorSidebarContentProps> = ({ on
     await logoutApi();
     navigate("/");
   };
+
+  const isGuest = !user && !loading;
+  const guestLockBadge = isGuest ? (
+    <Lock className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-500 transition-colors" />
+  ) : null;
 
   return (
     <div className="flex flex-col h-full">
@@ -130,18 +143,18 @@ export const CreatorSidebarContent: React.FC<CreatorSidebarContentProps> = ({ on
           <NavLink to="/creator/affiliate-campaigns" icon={<Flame className="w-4 h-4 text-orange-500" />} onClick={onNavigate}>
             Campaigns
           </NavLink>
-          <NavLink to="/creator/affiliate-analytics" icon={<LayoutGrid className="w-4 h-4 text-orange-500" />} onClick={onNavigate}>
+          <NavLink to="/creator/affiliate-analytics" icon={<LayoutGrid className="w-4 h-4 text-orange-500" />} onClick={onNavigate} badge={guestLockBadge}>
             Analytics
           </NavLink>
-          <NavLink to="/creator/store" icon={<Store className="w-4 h-4 text-orange-500" />} onClick={onNavigate}>
+          <NavLink to="/creator/store" icon={<Store className="w-4 h-4 text-orange-500" />} onClick={onNavigate} badge={guestLockBadge}>
             My Store
           </NavLink>
         </div>
 
-        <NavLink to="/creator/submissions" icon={<Send className="w-4 h-4 text-blue-500" />} onClick={onNavigate}>
+        <NavLink to="/creator/submissions" icon={<Send className="w-4 h-4 text-blue-500" />} onClick={onNavigate} badge={guestLockBadge}>
           Submissions
         </NavLink>
-        <NavLink to="/creator/wallet" icon={<Wallet className="w-4 h-4 text-emerald-500" />} onClick={onNavigate}>
+        <NavLink to="/creator/wallet" icon={<Wallet className="w-4 h-4 text-emerald-500" />} onClick={onNavigate} badge={guestLockBadge}>
           Earnings
         </NavLink>
       </nav>

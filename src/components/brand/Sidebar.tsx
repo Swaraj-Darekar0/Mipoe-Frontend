@@ -9,6 +9,7 @@ import {
   ShoppingBag, 
   Inbox, 
   BarChart3, 
+  ReceiptText,
   LogOut, 
   Menu 
 } from 'lucide-react';
@@ -214,6 +215,9 @@ export const BrandSidebarContent: React.FC<BrandSidebarContentProps> = ({ onNavi
         <div className="flex flex-col gap-1 pl-1 mb-1">
           <NavLink to="/brand/transactions" icon={<BarChart3 className="w-4 h-4 text-teal-600" />} onClick={onNavigate}>
             Transaction Log
+          </NavLink>
+          <NavLink to="/brand/dashboard?tab=tax_invoices" icon={<ReceiptText className="w-4 h-4 text-emerald-600" />} onClick={onNavigate}>
+            GST & Invoices (ITC)
           </NavLink>
         </div>
       </nav>

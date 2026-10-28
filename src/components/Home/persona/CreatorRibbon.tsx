@@ -235,8 +235,23 @@ interface Strip {
   step: number;
 }
 
+const INITIAL_STRIP_DESKTOP: Strip = {
+  total: 4986.4,
+  split: 3171.2,
+  count: 113,
+  step: 28.064,
+};
+
+const INITIAL_STRIP_COMPACT: Strip = {
+  total: 2458.2,
+  split: 1481.1,
+  count: 64,
+  step: 23.142,
+};
+
 const CreatorRibbon: React.FC = () => {
-  const scene = useWideScene() ? DESKTOP : COMPACT;
+  const isWide = useWideScene();
+  const scene = isWide ? DESKTOP : COMPACT;
   const uid = useId().replace(/:/g, "");
 
   const d = useMemo(() => smoothPath(scene.anchors), [scene]);
@@ -266,11 +281,12 @@ const CreatorRibbon: React.FC = () => {
   const underCellsRef = useRef<SVGGElement>(null);
   const overBandRef = useRef<SVGPathElement>(null);
   const overCellsRef = useRef<SVGGElement>(null);
-  const [strip, setStrip] = useState<Strip | null>(null);
+  const [strip, setStrip] = useState<Strip>(() => (isWide ? INITIAL_STRIP_DESKTOP : INITIAL_STRIP_COMPACT));
 
-  // Reset between breakpoints so the ticker never positions the previous
-  // scene's cell count against the new path.
-  useEffect(() => setStrip(null), [scene]);
+  // Switch between precomputed initial strips when breakpoint changes
+  useEffect(() => {
+    setStrip(isWide ? INITIAL_STRIP_DESKTOP : INITIAL_STRIP_COMPACT);
+  }, [isWide]);
 
   useEffect(() => {
     const path = geomRef.current;
@@ -460,7 +476,7 @@ const CreatorRibbon: React.FC = () => {
         underlay={
           // Behind the band, so her flat bottom crop lands inside it. Her head
           // and body stay clear of the ribbon; only that edge is covered.
-          <image href="/character_asset.png" x={charX} y={charY} width={charW} height={charH} />
+          <image href="/character_asset.webp" x={charX} y={charY} width={charW} height={charH} />
         }
         overlay={
           <>
@@ -469,7 +485,7 @@ const CreatorRibbon: React.FC = () => {
                 one to the over layer the moment it passes the loop's crown, and
                 back when it recycles. The band showing through the gaps between
                 cells is what gives the film-strip framing. */}
-            <g ref={underCellsRef}>
+            <g ref={underCellsRef} style={{ willChange: 'transform' }} className="pointer-events-none">
               {Array.from({ length: strip?.count ?? 0 }, (_, i) => {
                 const clip = DEFAULT_CLIPS[i % DEFAULT_CLIPS.length];
                 return (
@@ -500,7 +516,7 @@ const CreatorRibbon: React.FC = () => {
               strokeLinecap="butt"
               strokeDasharray="0 1"
             />
-            <g ref={overCellsRef} />
+            <g ref={overCellsRef} style={{ willChange: 'transform' }} className="pointer-events-none" />
 
 
             {/* Last, over everything: the badge is the plinth she stands on and

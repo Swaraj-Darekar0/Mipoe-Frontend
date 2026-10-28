@@ -9,7 +9,10 @@ import {
   getWalletBalance,
   getBrandProfile,
   BrandProfile,
-  getAffiliateStatus
+  getAffiliateStatus,
+  getCachedBrandProfile,
+  getCachedBrandCampaigns,
+  getCachedAffiliateStatus
 } from "@/lib/api";
 import WalletOverview from "@/components/brand/WalletOverview";
 import { Button } from "@/components/ui/button";
@@ -28,10 +31,15 @@ import { AffiliateOnboarding } from "@/components/brand/AffiliateOnboarding";
 import { ProductCatalog } from "@/components/brand/ProductCatalog";
 import { AffiliateCampaigns } from "@/components/brand/AffiliateCampaigns";
 import { AffiliateCRM } from "@/components/brand/AffiliateCRM";
+import { TaxInvoicesTab } from "@/components/brand/TaxInvoicesTab";
 
 const BrandDashboard = () => {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedProfile = getCachedBrandProfile();
+  const cachedCampaigns = getCachedBrandCampaigns();
+  const cachedAffiliate = getCachedAffiliateStatus();
+
+  const [campaigns, setCampaigns] = useState<Campaign[]>(() => cachedCampaigns || []);
+  const [loading, setLoading] = useState(() => !cachedCampaigns);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -40,12 +48,17 @@ const BrandDashboard = () => {
   const { toast } = useToast();
 
   // Onboarding States
-  const [profile, setProfile] = useState<BrandProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"campaigns" | "affiliate_campaigns" | "product_catalog" | "affiliate_crm" | "affiliate_onboarding">("campaigns");
-  const [affiliateStatus, setAffiliateStatus] = useState<"not_started" | "completed">("not_started");
-  const [affiliateLoading, setAffiliateLoading] = useState(true);
-  const [integrationType, setIntegrationType] = useState<"shopify" | "custom" | "cashfree">("shopify");
+  const [profile, setProfile] = useState<BrandProfile | null>(() => cachedProfile);
+  const [profileLoading, setProfileLoading] = useState(() => !cachedProfile);
+  const [activeTab, setActiveTab] = useState<"campaigns" | "affiliate_campaigns" | "product_catalog" | "affiliate_crm" | "affiliate_onboarding" | "tax_invoices">("campaigns");
+  const [affiliateStatus, setAffiliateStatus] = useState<"not_started" | "completed">(() => cachedAffiliate?.status || "not_started");
+  const [affiliateLoading, setAffiliateLoading] = useState(() => !cachedAffiliate);
+  const [integrationType, setIntegrationType] = useState<"shopify" | "custom" | "cashfree">(() => {
+    if (cachedAffiliate?.has_shopify_token || cachedAffiliate?.shopify_shop) return "shopify";
+    if (cachedAffiliate?.custom_api_key) return "custom";
+    if (cachedAffiliate?.onboarding_gateway) return "cashfree";
+    return "shopify";
+  });
 
   const fetchBalance = async () => {
     try {
@@ -99,8 +112,12 @@ const BrandDashboard = () => {
   // Synchronize activeTab with URL search params (?tab=...)
   useEffect(() => {
     const tabParam = searchParams.get("tab");
-    const isPersonalAgency = profile?.category === "Personal Agency";
+    if (tabParam === "tax_invoices") {
+      setActiveTab("tax_invoices");
+      return;
+    }
 
+    const isPersonalAgency = profile?.category === "Personal Agency";
     if (isPersonalAgency || !tabParam || tabParam === "campaigns") {
       setActiveTab("campaigns");
       return;
@@ -151,7 +168,7 @@ const BrandDashboard = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    loadProfile();
+    loadProfile(Boolean(cachedProfile));
   }, []);
 
   // Polling for automated PAN check and admin compliance review updates
@@ -171,7 +188,7 @@ const BrandDashboard = () => {
     if (profile?.onboarding_status === "verified") {
       const loadDashboardData = async () => {
         try {
-          setLoading(true);
+          if (!cachedCampaigns) setLoading(true);
           const [campaignData, balanceData] = await Promise.all([
             fetchBrandCampaigns(),
             getWalletBalance()
@@ -398,6 +415,10 @@ const BrandDashboard = () => {
                 <AffiliateCRM />
               )}
             </>
+          )}
+
+          {activeTab === "tax_invoices" && (
+            <TaxInvoicesTab />
           )}
         </div>
       </BrandLayout>

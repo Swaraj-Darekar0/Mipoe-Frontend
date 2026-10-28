@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,11 +15,13 @@ import {
   savePayoutDetails,
   getWithdrawalHistory,
   creatorWithdraw,
+  verifyPan,
   revertFailedWithdrawal,
   getCreatorVirtualAccount,
+  getUserId,
   VirtualAccountResponse
 } from '@/lib/api';
-import { Loader2, Wallet, Send, Edit2, CheckCircle2, AlertCircle, RotateCcw, RefreshCw, Copy, Building2, QrCode } from 'lucide-react';
+import { Loader2, Wallet, Send, Edit2, CheckCircle2, AlertCircle, RotateCcw, RefreshCw, Copy, Building2, QrCode, Sparkles, ShieldCheck, FileText, Percent, Lock, ExternalLink } from 'lucide-react';
 
 import {
   CreditCard,
@@ -30,6 +33,7 @@ import {
 } from '@/components/creator/creditCard';
 
 import CreatorLayout from '@/layouts/CreatorLayout';
+import GuestLockedView from '@/components/creator/GuestLockedView';
 
 interface PayoutDetailsState {
   payout_method: 'upi' | 'bank' | null;
@@ -70,10 +74,15 @@ export default function CreatorWallet() {
   const [ifsc, setIfsc] = useState('');
   const [accountHolderName, setAccountHolderName] = useState('');
   
-  // Withdrawal state
+  // JIT Withdrawal & Tax States
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [destinationUpi, setDestinationUpi] = useState('');
+  const [panInput, setPanInput] = useState('');
+  const [panVerified, setPanVerified] = useState(false);
+  const [verifyingPan, setVerifyingPan] = useState(false);
   const [withdrawalLoading, setWithdrawalLoading] = useState(false);
   const [showWithdrawalConfirm, setShowWithdrawalConfirm] = useState(false);
+  const [showPanModal, setShowPanModal] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRecord[]>([]);
   const [revertingId, setRevertingId] = useState<number | null>(null);
   const [refreshingHistory, setRefreshingHistory] = useState(false);
@@ -87,6 +96,10 @@ export default function CreatorWallet() {
   };
   
   const loadWalletData = async (isInitialLoad = false) => {
+    if (!getUserId()) {
+      setLoading(false);
+      return;
+    }
     try {
       if (isInitialLoad) setLoading(true);
       else setRefreshingHistory(true);
@@ -274,9 +287,39 @@ export default function CreatorWallet() {
     }
   };
 
+  const handleVerifyPan = async () => {
+    const clean = panInput.trim().toUpperCase();
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(clean)) {
+      toast({
+        title: "Invalid PAN Format",
+        description: "Please enter a valid 10-character alphanumeric PAN (e.g. ABCDE1234F).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setVerifyingPan(true);
+    try {
+      await verifyPan(clean);
+      setPanVerified(true);
+      toast({
+        title: "PAN Successfully Verified!",
+        description: "Standard 1% TDS applied. You will now keep 19% extra on all your earnings!",
+        className: "bg-emerald-50 border-emerald-200 text-emerald-900",
+      });
+    } catch (e: any) {
+      toast({
+        title: "PAN Verification Failed",
+        description: e.message || "Failed to verify PAN.",
+        variant: "destructive",
+      });
+    } finally {
+      setVerifyingPan(false);
+    }
+  };
+
   const handleWithdrawAmount = async () => {
     try {
-      // Validation
       const amount = parseFloat(withdrawalAmount);
       if (!amount || amount <= 0) {
         toast({
@@ -296,49 +339,40 @@ export default function CreatorWallet() {
         return;
       }
       
-      if (!verifiedPayoutDetails) {
+      const targetUpi = (destinationUpi || upiId || payoutDetails.upi_id || '').trim();
+      if (!targetUpi || !targetUpi.includes('@')) {
         toast({
-          title: 'Incomplete Payout Details',
-          description: 'Please verify your payout details before withdrawing',
-          variant: 'destructive'
+          title: 'Missing UPI ID',
+          description: 'Please enter a destination UPI ID (e.g. name@okaxis) to receive payout.',
+          variant: 'destructive',
         });
         return;
       }
       
       setWithdrawalLoading(true);
 
-      if (!payoutDetails.payout_method) {
-        toast({
-          title: 'Error',
-          description: 'No payout method configured.',
-          variant: 'destructive',
-        });
-        setWithdrawalLoading(false);
-        return;
-      }
-      
       const response = await creatorWithdraw(
         amount,
-        payoutDetails.payout_method,
-        payoutDetails.upi_id,
-        payoutDetails.bank_account,
-        payoutDetails.ifsc
+        'upi',
+        targetUpi,
+        panVerified ? panInput : undefined,
       );
       
       setWithdrawalAmount('');
       setShowWithdrawalConfirm(false);
       
       // Reload wallet data
-      await loadWalletData();
+      await loadWalletData(true);
       
       toast({
-        title: 'Success',
-        description: `Withdrawal of ₹${amount.toFixed(2)} initiated successfully`,
+        title: 'Instant Payout Disbursed!',
+        description: `Net ₹${response.net_amount || amount} transferred via UPI to ${targetUpi}. TDS: ₹${response.tds_amount || 0} (${response.tds_section || '194S'}).`,
+        className: "bg-emerald-50 border-emerald-200 text-emerald-900",
       });
       
     } catch (error: any) {
       toast({
-        title: 'Error',
+        title: 'Withdrawal Notice',
         description: error.message || 'Withdrawal failed',
         variant: 'destructive'
       });
@@ -346,6 +380,20 @@ export default function CreatorWallet() {
       setWithdrawalLoading(false);
     }
   };
+
+  if (!getUserId()) {
+    return (
+      <CreatorLayout>
+        <GuestLockedView
+          title="Creator Financial Vault"
+          subtitle="Instant UPI Payouts & Zero-Fee Withdrawals"
+          description="Connect your account to view your balance, claim campaign distributions, and withdraw directly to your UPI ID."
+          returnUrl="/creator/wallet"
+          icon={<Wallet className="w-8 h-8 text-orange-500" />}
+        />
+      </CreatorLayout>
+    );
+  }
 
   if (loading) {
     return (
@@ -508,16 +556,31 @@ export default function CreatorWallet() {
 
                   <div className="space-y-2">
                     <div className="bg-zinc-50 border border-zinc-200/70 rounded-xl p-2.5 flex items-center justify-between">
-                      <div>
-                        <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-400 font-semibold block">Account Number</span>
-                        <span className="font-mono font-bold text-xs sm:text-sm text-zinc-900">{virtualAccount.account_number}</span>
+                      <div className="min-w-0 pr-2">
+                        <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-400 font-semibold block">
+                          {virtualAccount.account_number.startsWith("0x") ? "Base L2 Smart Account" : "Account Number"}
+                        </span>
+                        <span className="font-mono font-bold text-xs sm:text-sm text-zinc-900 break-all select-all block">
+                          {virtualAccount.account_number}
+                        </span>
+                        {virtualAccount.account_number.startsWith("0x") && (
+                          <a
+                            href={`https://sepolia.basescan.org/address/${virtualAccount.account_number}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 hover:underline font-sans font-medium mt-0.5"
+                          >
+                            View on BaseScan Sepolia Explorer
+                            <ExternalLink size={9} />
+                          </a>
+                        )}
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 rounded-lg"
-                        onClick={() => copyToClipboard(virtualAccount.account_number, 'Account Number')}
-                        title="Copy Account Number"
+                        className="h-7 w-7 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 rounded-lg shrink-0"
+                        onClick={() => copyToClipboard(virtualAccount.account_number, virtualAccount.account_number.startsWith("0x") ? 'Smart Account Address' : 'Account Number')}
+                        title="Copy Account"
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
@@ -600,28 +663,8 @@ export default function CreatorWallet() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-5">
-                    {!verifiedPayoutDetails ? (
-                      <div className="p-5 bg-amber-50/70 rounded-xl border border-amber-200 text-center">
-                        <p className="text-amber-800 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 mb-2">
-                          <AlertCircle className="h-4 w-4 text-amber-600" />
-                          Please verify your payout details first
-                        </p>
-                        <p className="text-xs text-amber-700/80 mb-3 max-w-sm mx-auto">
-                          A verified UPI ID or Bank account is required before requesting withdrawals.
-                        </p>
-                        <Button 
-                          onClick={() => {
-                            const elem = document.querySelector('[value="payout-details"]') as HTMLElement;
-                            elem?.click();
-                          }}
-                          variant="outline"
-                          className="border-amber-300 bg-white hover:bg-amber-50 text-amber-800 font-semibold rounded-xl text-xs h-9"
-                        >
-                          Go to Payout Details
-                        </Button>
-                      </div>
-                    ) : (
                       <div className="space-y-4">
+                        {/* 1. Amount Input */}
                         <div className="space-y-1.5">
                           <Label htmlFor="amount" className="text-xs font-semibold text-zinc-700">Withdrawal Amount</Label>
                           <div className="relative">
@@ -673,16 +716,100 @@ export default function CreatorWallet() {
                           </div>
                         </div>
 
+                        {/* 2. Destination UPI ID */}
+                        <div className="space-y-1.5">
+                          <Label htmlFor="destUpi" className="text-xs font-semibold text-zinc-700">Destination UPI ID (GPay / PhonePe / Paytm)</Label>
+                          <Input
+                            id="destUpi"
+                            type="text"
+                            placeholder="e.g. yourname@okaxis"
+                            value={destinationUpi || upiId || payoutDetails.upi_id || ''}
+                            onChange={(e) => setDestinationUpi(e.target.value)}
+                            className="bg-zinc-50 border-zinc-200 focus:bg-white text-zinc-900 font-mono text-xs rounded-xl h-10"
+                          />
+                        </div>
+
+                        {/* 3. JIT Dynamic Tax Breakdown & PAN Card */}
+                        <div className="p-3.5 rounded-xl border space-y-2.5 text-xs transition-all bg-zinc-50/70 border-zinc-200">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-zinc-800 flex items-center gap-1.5">
+                              <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                              Tax Deduction at Source (TDS)
+                            </span>
+                            {panVerified ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                1% Standard TDS
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                                20% Section 206AA
+                              </span>
+                            )}
+                          </div>
+
+                          {!panVerified ? (
+                            <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg space-y-2 text-amber-900">
+                              <p className="text-[11px] leading-relaxed">
+                                <strong>Save 19% Tax!</strong> Under Indian Income Tax Section 206AA, withdrawals without a PAN attract a <strong>20% penalty TDS</strong>. Verify your PAN now to pay only <strong>1% TDS</strong> and keep an extra <strong className="tabular-nums">₹{((parseFloat(withdrawalAmount) || 0) * 0.19).toFixed(2)}</strong>!
+                              </p>
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="ABCDE1234F"
+                                  maxLength={10}
+                                  value={panInput}
+                                  onChange={(e) => setPanInput(e.target.value.toUpperCase())}
+                                  className="h-8 bg-white border-amber-300 text-xs uppercase font-mono tracking-wider"
+                                />
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={verifyingPan || panInput.length !== 10}
+                                  onClick={handleVerifyPan}
+                                  className="h-8 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] px-3 shrink-0"
+                                >
+                                  {verifyingPan ? <Loader2 className="w-3 h-3 animate-spin" /> : "Verify & Save 19%"}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center gap-2 text-emerald-900 text-[11px]">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span>PAN Verified ({panInput.slice(0, 2)}••••{panInput.slice(-2)}). 1% Section 194S rate applied.</span>
+                            </div>
+                          )}
+
+                          {/* Live Math Breakdown */}
+                          <div className="pt-2 border-t border-zinc-200/60 space-y-1 text-[11px] text-zinc-600 font-mono">
+                            <div className="flex justify-between">
+                              <span>Gross Amount:</span>
+                              <span className="font-bold text-zinc-900">₹{(parseFloat(withdrawalAmount) || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-red-600">
+                              <span>TDS ({panVerified ? '1% Sec 194S' : '20% Sec 206AA'}):</span>
+                              <span>-₹{((parseFloat(withdrawalAmount) || 0) * (panVerified ? 0.01 : 0.20)).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-emerald-700 text-xs pt-1 border-t border-zinc-200/40">
+                              <span>Net Credited to UPI:</span>
+                              <span>₹{((parseFloat(withdrawalAmount) || 0) * (panVerified ? 0.99 : 0.80)).toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+
                         <Button 
-                          onClick={() => setShowWithdrawalConfirm(true)}
+                          onClick={() => {
+                            if (!panVerified) {
+                              setShowPanModal(true);
+                            } else {
+                              setShowWithdrawalConfirm(true);
+                            }
+                          }}
                           disabled={!withdrawalAmount || parseFloat(withdrawalAmount) <= 0 || parseFloat(withdrawalAmount) > walletBalance}
                           className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs sm:text-sm rounded-xl h-10 shadow-xs transition-all disabled:opacity-50"
                         >
                           <Send className="h-4 w-4 mr-2" />
-                          Request Withdrawal
+                          {panVerified ? "Proceed to Confirm Withdrawal" : "Verify PAN & Proceed to Payout"}
                         </Button>
                       </div>
-                    )}
                   </CardContent>
                 </Card>
 
@@ -959,14 +1086,29 @@ export default function CreatorWallet() {
         <AlertDialog open={showWithdrawalConfirm} onOpenChange={setShowWithdrawalConfirm}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirm Withdrawal</AlertDialogTitle>
-              <AlertDialogDescription>
-                You are about to withdraw ₹{parseFloat(withdrawalAmount || '0').toFixed(2)} to your {payoutDetails.payout_method?.toUpperCase()} account.
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-gray-700">
-                  {payoutDetails.payout_method === 'upi' 
-                    ? `UPI: ${payoutDetails.upi_id}`
-                    : `Account: ${payoutDetails.bank_account} (${payoutDetails.ifsc})`
-                  }
+              <AlertDialogTitle>Confirm Instant UPI Withdrawal</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-xs text-zinc-600">
+                  <p>
+                    Please review your withdrawal breakdown before funds are disbursed directly to your UPI ID:
+                  </p>
+                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl space-y-1.5 font-mono">
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Requested Amount:</span>
+                      <span className="font-bold text-zinc-900">₹{parseFloat(withdrawalAmount || '0').toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-red-600">
+                      <span>TDS Deduction ({panVerified ? '1% Sec 194S' : '20% Sec 206AA'}):</span>
+                      <span>-₹{(parseFloat(withdrawalAmount || '0') * (panVerified ? 0.01 : 0.20)).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-emerald-700 pt-1 border-t border-zinc-200 text-sm">
+                      <span>Net Transferred to UPI:</span>
+                      <span>₹{(parseFloat(withdrawalAmount || '0') * (panVerified ? 0.99 : 0.80)).toFixed(2)}</span>
+                    </div>
+                    <div className="pt-1 text-[11px] text-zinc-500 font-sans">
+                      Target UPI: <strong className="font-mono text-zinc-800">{destinationUpi || upiId || payoutDetails.upi_id || 'creator@upi'}</strong>
+                    </div>
+                  </div>
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -990,6 +1132,93 @@ export default function CreatorWallet() {
             </div>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Mandatory Educational First-Withdrawal PAN Dialog */}
+        <Dialog open={showPanModal} onOpenChange={setShowPanModal}>
+          <DialogContent className="bg-white border-zinc-200 text-zinc-900 sm:max-w-lg">
+            <DialogHeader>
+              <div className="flex items-center gap-2 text-indigo-600 mb-1">
+                <ShieldCheck className="w-5 h-5 shrink-0" />
+                <DialogTitle className="text-lg font-bold text-zinc-900">
+                  Statutory PAN Verification Required
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
+                Prior to your first earnings withdrawal, Indian statutory tax law requires your Permanent Account Number (PAN).
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3.5 py-1 text-xs text-zinc-600">
+              {/* Three Educational Pillars */}
+              <div className="space-y-2.5 p-3 bg-zinc-50 border border-zinc-200/80 rounded-xl">
+                <div className="flex items-start gap-2.5">
+                  <FileText className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-zinc-800 text-xs">Quarterly Form 26Q Statutory Fulfillment:</strong>
+                    <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
+                      Under Section 194S of the Indian Income Tax Act, Mipoe files quarterly Form 26Q returns with the Income Tax Department. Providing your PAN ensures all deducted TDS reflects directly in your official Annual Information Statement (AIS) / Form 26AS for tax refund/credit.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 pt-2 border-t border-zinc-200/60">
+                  <Percent className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-zinc-800 text-xs">Save 19% Tax Immediately:</strong>
+                    <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
+                      Providing your PAN locks in the standard <strong>1% TDS</strong> rate. Without a PAN, statutory Section 206AA penalizes withdrawals with a <strong>20% penalty deduction</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 pt-2 border-t border-zinc-200/60">
+                  <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-zinc-800 text-xs">DPDP Act 2023 & AES-256 Storage:</strong>
+                    <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
+                      Your PAN is never sold or shared with advertisers. It is hashed and encrypted at rest using AES-256 cryptographic standards, adhering strictly to Indian Digital Personal Data Protection Act sovereignty rules.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* PAN Input Box */}
+              <div className="space-y-2 pt-1">
+                <Label htmlFor="mandatoryPanField" className="text-xs font-semibold text-zinc-700">Enter Your 10-Character PAN</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="mandatoryPanField"
+                    placeholder="ABCDE1234F"
+                    maxLength={10}
+                    value={panInput}
+                    onChange={(e) => setPanInput(e.target.value.toUpperCase())}
+                    className="h-10 font-mono tracking-widest text-sm uppercase bg-white border-zinc-300"
+                  />
+                  <Button
+                    type="button"
+                    disabled={verifyingPan || panInput.trim().length !== 10}
+                    onClick={async () => {
+                      await handleVerifyPan();
+                      if (/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panInput.trim().toUpperCase())) {
+                        setShowPanModal(false);
+                        setShowWithdrawalConfirm(true);
+                      }
+                    }}
+                    className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 shrink-0"
+                  >
+                    {verifyingPan ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Unlock 1%"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setShowPanModal(false)} className="text-xs">
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </CreatorLayout>
   );

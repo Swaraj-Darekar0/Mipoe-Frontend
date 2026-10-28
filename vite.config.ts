@@ -11,19 +11,6 @@ import { componentTagger } from "lovable-tagger";
 // `extend()` in Lanyard.tsx) with "Cannot read properties of undefined
 // (reading 'lov')". Skip tagging for files that render a react-three-fiber
 // scene so this dev-only instrumentation can't reach those elements.
-function taggerSkippingR3F() {
-  const tagger = componentTagger();
-  const originalTransform = tagger.transform as (this: unknown, code: string, id: string, options?: unknown) => unknown;
-  tagger.transform = function (code: string, id: string, options?: unknown) {
-    if (id.includes("/persona/Lanyard.tsx") || id.includes("\\persona\\Lanyard.tsx")) {
-      return null;
-    }
-    return originalTransform.call(this, code, id, options);
-  };
-  return tagger;
-}
-
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   assetsInclude: ["**/*.glb"],
   server: {
@@ -33,7 +20,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === 'development' &&
-    taggerSkippingR3F(),
+    componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {

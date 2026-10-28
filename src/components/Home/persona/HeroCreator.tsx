@@ -130,36 +130,16 @@ const HeroCreator: React.FC = () => {
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    // Matches HeroBrand's entrance so switching persona feels like one system.
-    // Scoped + reverted so the crossfade can't leave orphaned tweens behind.
+    // Fast, crisp entrance for typography and CTA without blocking hero artwork.
+    // Scoped + reverted so switching persona can't leave orphaned tweens behind.
     const ctx = gsap.context(() => {
       gsap.from(".hero-rise", {
-        y: 24,
+        y: 14,
         opacity: 0,
-        duration: 0.85,
-        ease: "power3.out",
-        stagger: 0.1,
-        clearProps: "transform,opacity",
-      });
-      // Full-bleed, so it fades rather than rises — sliding a layer that reaches
-      // all four edges just reads as the page shifting.
-      gsap.from(".hero-scene", {
-        opacity: 0,
-        duration: 1.1,
-        delay: 0.25,
+        duration: 0.38,
         ease: "power2.out",
-        clearProps: "opacity",
-      });
-      // Stickers land last and land hard: they should read as being placed on
-      // top after the fact, not as part of the same rise as the type.
-      gsap.from(".hero-sticker", {
-        scale: 0.4,
-        opacity: 0,
-        duration: 0.5,
-        delay: 0.55,
-        stagger: 0.07,
-        ease: "back.out(2.4)",
-        clearProps: "scale,opacity",
+        stagger: 0.04,
+        clearProps: "transform,opacity",
       });
     }, rootRef);
     return () => ctx.revert();

@@ -40,7 +40,17 @@ const TermsConditions = React.lazy(() => import("./components/policies/TermsCond
 const PrivacyPolicy = React.lazy(() => import("./components/policies/PrivacyPolicy"));
 const CookiePolicy = React.lazy(() => import("./components/policies/CookiePolicy"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 3, // 3 minutes staleTime
+      gcTime: 1000 * 60 * 15, // 15 minutes garbage collection
+      refetchOnWindowFocus: false, // Prevent redundant HTTP bursts on tab switches
+      refetchOnMount: false, // Serve cached data on component mount
+      retry: 1, // Limit waterfall retry delay
+    },
+  },
+});
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center h-screen w-screen bg-background">
