@@ -942,7 +942,6 @@ const CampaignView = () => {
         {submitDialog}
       </CreatorLayout>
     );
-  );
 };
 
 export default CampaignView;
