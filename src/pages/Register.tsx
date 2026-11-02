@@ -85,24 +85,10 @@ const Register = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      const redirectParam = searchParams.get("redirect");
-      const redirectQuery = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : "";
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?role=${role}${redirectQuery}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      toast.error(err.message || "Failed to start Google sign in");
-    }
+  const handleGoogleLogin = () => {
+    const redirectParam = searchParams.get("redirect");
+    const redirectQuery = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : "";
+    navigate(`/login?role=${role}${redirectQuery}`);
   };
 
   const handleSandboxQuickRegister = async (targetRole: "brand" | "creator") => {

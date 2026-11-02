@@ -31,6 +31,9 @@ const Login = () => {
   const [resetMessage, setResetMessage] = useState("");
 
   const [consentGiven, setConsentGiven] = useState(false);
+  const creatorGoogleButtonRef = useRef<HTMLDivElement>(null);
+  const brandGoogleButtonRef = useRef<HTMLDivElement>(null);
+  const [isGsiReady, setIsGsiReady] = useState(false);
 
   // Avatar interactivity states
   const [avatarState, setAvatarState] = useState<AvatarState>("idle");
@@ -83,7 +86,6 @@ const Login = () => {
 
     const processOAuthCallback = async () => {
       setIsOAuthSyncing(true);
-      setIsSuccessVideoPlaying(true);
       setLoading(true);
 
       try {
@@ -133,6 +135,11 @@ const Login = () => {
             navigate("/creator/complete-profile");
           }
         };
+
+        // ONLY trigger video playback once authentication and wallet sync are confirmed successful
+        setIsSuccessVideoPlaying(true);
+        setIsOAuthSyncing(false);
+        setLoading(false);
 
         // If the left video already finished playing, navigate immediately
         if (hasNavigatedRef.current && pendingNavigationRef.current) {
@@ -197,8 +204,8 @@ const Login = () => {
 
   // Handle credential response from native Google Identity Services (Solution 2: signInWithIdToken)
   const handleGoogleCredentialResponse = async (idToken: string) => {
-    setIsSuccessVideoPlaying(true);
     setLoading(true);
+    setError("");
 
     try {
       // 1. Sign in to Supabase directly using the Google ID Token (zero redirect to supabase.co!)
@@ -225,7 +232,7 @@ const Login = () => {
       setAuthTokens(response.user_id, response.role);
       preloadPostLoginRoutes();
 
-      // 5. Navigate once the left-side video finishes (or immediately if already ended)
+      // 5. Setup navigation once success video finishes
       pendingNavigationRef.current = () => {
         toast.success("Successfully signed in with Google!");
         const redirectParam = searchParams.get("redirect");
@@ -240,6 +247,10 @@ const Login = () => {
         }
       };
 
+      // 6. ONLY trigger video playback once credentials and wallet sync are 100% verified!
+      setIsSuccessVideoPlaying(true);
+      setLoading(false);
+
       if (hasNavigatedRef.current && pendingNavigationRef.current) {
         pendingNavigationRef.current();
       }
@@ -252,42 +263,14 @@ const Login = () => {
     }
   };
 
-  const fallbackToOAuthRedirect = async () => {
-    setLoading(true);
-    try {
-      const redirectParam = searchParams.get("redirect");
-      const redirectQuery = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : "";
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/login?role=${role}&oauth_callback=true${redirectQuery}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      setLoading(false);
-      toast.error(err.message || "Failed to start Google sign in");
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    if (!consentGiven) {
-      toast.error("Please accept the Terms & Conditions and Privacy Policy to continue");
-      return;
-    }
-
+  // Mount native Google Identity Services (GIS) buttons
+  useEffect(() => {
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "1057115398692-c9nhbom5tetbpoaenvjh5j345kd24gsj.apps.googleusercontent.com";
 
-    if (window.google?.accounts?.id && googleClientId) {
-      setLoading(true);
-      try {
-        // Clear g_state cookie to ensure prompt displays even if previously dismissed
-        document.cookie = "g_state=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT";
+    const renderGsiButtons = () => {
+      if (!window.google?.accounts?.id || !googleClientId) return;
 
+      try {
         window.google.accounts.id.initialize({
           client_id: googleClientId,
           callback: async (response: { credential: string }) => {
@@ -297,28 +280,54 @@ const Login = () => {
               setLoading(false);
             }
           },
+          auto_select: false,
+          cancel_on_tap_outside: true,
         });
 
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            console.warn(
-              "Google One-Tap prompt not displayed:",
-              notification.getNotDisplayedReason?.() || notification.getSkippedReason?.()
-            );
-            // Fall back to standard OAuth redirect if One-Tap was suppressed
-            fallbackToOAuthRedirect();
-          }
-        });
-        return;
+        if (role === "creator" && creatorGoogleButtonRef.current) {
+          creatorGoogleButtonRef.current.innerHTML = "";
+          window.google.accounts.id.renderButton(creatorGoogleButtonRef.current, {
+            type: "standard",
+            theme: "outline",
+            size: "large",
+            text: "continue_with",
+            shape: "rectangular",
+            logo_alignment: "left",
+            width: 380,
+          });
+        }
+
+        if (role === "brand" && brandGoogleButtonRef.current) {
+          brandGoogleButtonRef.current.innerHTML = "";
+          window.google.accounts.id.renderButton(brandGoogleButtonRef.current, {
+            type: "standard",
+            theme: "outline",
+            size: "large",
+            text: "continue_with",
+            shape: "rectangular",
+            logo_alignment: "left",
+            width: 380,
+          });
+        }
+
+        setIsGsiReady(true);
       } catch (err) {
-        console.warn("GIS prompt error, falling back:", err);
-        fallbackToOAuthRedirect();
-        return;
+        console.warn("Failed to render Google Identity Services button:", err);
       }
-    }
+    };
 
-    fallbackToOAuthRedirect();
-  };
+    if (window.google?.accounts?.id) {
+      renderGsiButtons();
+    } else {
+      const interval = setInterval(() => {
+        if (window.google?.accounts?.id) {
+          clearInterval(interval);
+          renderGsiButtons();
+        }
+      }, 150);
+      return () => clearInterval(interval);
+    }
+  }, [role]);
 
   const handleSandboxQuickLogin = async (targetRole: "brand" | "creator") => {
     setLoading(true);
@@ -437,26 +446,32 @@ const Login = () => {
                   </label>
                 </div>
 
-                {/* Primary: Continue with Google (strictly guarded by checkbox) */}
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={!consentGiven || loading || isSuccessVideoPlaying}
-                  className={`flex h-12 w-full items-center justify-center gap-3 rounded-xl border text-sm font-semibold transition-all ${
-                    consentGiven && !loading && !isSuccessVideoPlaying
-                      ? "bg-white text-zinc-800 border-zinc-200 shadow-xs hover:bg-zinc-50 hover:border-zinc-300 cursor-pointer active:scale-[0.99]"
-                      : "bg-zinc-50 text-zinc-400 border-zinc-200 opacity-60 cursor-not-allowed"
-                  }`}
-                  title={!consentGiven ? "Please accept the Terms & Privacy Policy to continue" : "Continue with Google"}
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" fill="#FFC107"></path>
-                    <path d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" fill="#FF3D00"></path>
-                    <path d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" fill="#4CAF50"></path>
-                    <path d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.022,35.244,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z" fill="#1976D2"></path>
-                  </svg>
-                  <span>Continue with Google</span>
-                </button>
+                {/* Primary: Continue with Google (rendered natively by Google Identity Services) */}
+                <div className="relative w-full min-h-[48px] flex items-center justify-center">
+                  {!consentGiven && (
+                    <div
+                      onClick={() => {
+                        toast.error("Please accept the Terms & Conditions and Privacy Policy to continue");
+                      }}
+                      className="absolute inset-0 z-20 cursor-pointer rounded-xl bg-transparent"
+                      title="Please accept Terms & Privacy Policy first"
+                    />
+                  )}
+                  <div
+                    ref={creatorGoogleButtonRef}
+                    className={`w-full flex justify-center transition-opacity duration-200 [&>div]:!w-full [&>div>iframe]:!w-full ${
+                      !consentGiven || loading || isSuccessVideoPlaying
+                        ? "opacity-50 pointer-events-none"
+                        : "opacity-100"
+                    }`}
+                  />
+                  {!isGsiReady && (
+                    <div className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 text-xs text-zinc-400">
+                      <div className="w-4 h-4 border-2 border-zinc-300 border-t-[#FF5C00] rounded-full animate-spin" />
+                      <span>Loading secure Google login...</span>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               /* BRAND CORPORATE AUTH (Email + Password + Google) - Untouched */
@@ -566,19 +581,31 @@ const Login = () => {
                   <div className="h-px w-full flex-1 bg-zinc-200"></div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  className="flex h-11 w-full items-center justify-center gap-2.5 rounded-lg border border-zinc-200 bg-white text-sm font-medium text-zinc-700 shadow-xs transition-colors hover:bg-zinc-50 hover:border-zinc-300"
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" fill="#FFC107"></path>
-                    <path d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" fill="#FF3D00"></path>
-                    <path d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" fill="#4CAF50"></path>
-                    <path d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.022,35.244,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z" fill="#1976D2"></path>
-                  </svg>
-                  <span>Continue with Google</span>
-                </button>
+                <div className="relative w-full min-h-[44px] flex items-center justify-center">
+                  {!consentGiven && (
+                    <div
+                      onClick={() => {
+                        toast.error("Please accept the Terms & Conditions and Privacy Policy to continue");
+                      }}
+                      className="absolute inset-0 z-20 cursor-pointer rounded-lg bg-transparent"
+                      title="Please accept Terms & Privacy Policy first"
+                    />
+                  )}
+                  <div
+                    ref={brandGoogleButtonRef}
+                    className={`w-full flex justify-center transition-opacity duration-200 [&>div]:!w-full [&>div>iframe]:!w-full ${
+                      !consentGiven || loading || isSuccessVideoPlaying
+                        ? "opacity-50 pointer-events-none"
+                        : "opacity-100"
+                    }`}
+                  />
+                  {!isGsiReady && (
+                    <div className="flex h-11 w-full items-center justify-center gap-2.5 rounded-lg border border-zinc-200 bg-zinc-50 text-xs text-zinc-400">
+                      <div className="w-3.5 h-3.5 border-2 border-zinc-300 border-t-[#FF5C00] rounded-full animate-spin" />
+                      <span>Loading secure Google login...</span>
+                    </div>
+                  )}
+                </div>
               </>
             )}
 

@@ -19,10 +19,17 @@ const AuthLayout = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasTriggeredEnded = useRef(false);
 
-  // Trigger video playback strictly on successful sign-in / registration
+  // Trigger video playback strictly on confirmed successful sign-in / registration
   useEffect(() => {
+    const video = videoRef.current;
+
+    // Immediately stop and reset video if success state is false
     if (!isSuccessVideoPlaying) {
       hasTriggeredEnded.current = false;
+      if (video) {
+        video.pause();
+        video.currentTime = 0;
+      }
       return;
     }
 
@@ -38,12 +45,19 @@ const AuthLayout = ({
       return () => clearTimeout(mobileTimer);
     }
 
-    const video = videoRef.current;
     if (video) {
       video.currentTime = 0;
       video.muted = true;
       video.play().catch((err) => {
-        console.error("Video playback error:", err);
+        console.warn("Video autoplay prevented or interrupted:", err);
+        // Fallback: transition smoothly if media autoplay is blocked by browser
+        const autoAdvanceTimer = setTimeout(() => {
+          if (!hasTriggeredEnded.current) {
+            hasTriggeredEnded.current = true;
+            onVideoEnded?.();
+          }
+        }, 1200);
+        return () => clearTimeout(autoAdvanceTimer);
       });
     }
 
@@ -57,11 +71,15 @@ const AuthLayout = ({
 
     return () => {
       clearTimeout(fallbackTimer);
+      if (video) {
+        video.pause();
+      }
     };
   }, [isSuccessVideoPlaying, onVideoEnded]);
 
   const handleEnded = () => {
-    if (!hasTriggeredEnded.current) {
+    // Only proceed if success state is still valid and not already navigated
+    if (isSuccessVideoPlaying && !hasTriggeredEnded.current) {
       hasTriggeredEnded.current = true;
       onVideoEnded?.();
     }
