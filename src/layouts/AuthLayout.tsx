@@ -41,15 +41,9 @@ const AuthLayout = ({
     const video = videoRef.current;
     if (video) {
       video.currentTime = 0;
-      // Play on sign-in event. Try unmuted, fallback to muted if blocked by browser
-      video.muted = false;
-      video.play().catch(() => {
-        if (video) {
-          video.muted = true;
-          video.play().catch((err) => {
-            console.error("Video playback error:", err);
-          });
-        }
+      video.muted = true;
+      video.play().catch((err) => {
+        console.error("Video playback error:", err);
       });
     }
 
@@ -75,8 +69,11 @@ const AuthLayout = ({
 
   return (
     <div className="min-h-screen w-full bg-white text-zinc-900 flex">
-      {/* Left Panel - Hidden on mobile & portrait tablets (< 1024px); flexible width full-height column on desktop */}
-      <div className="hidden lg:block lg:w-[42%] xl:w-[45%] max-w-[680px] shrink-0 relative bg-black select-none overflow-hidden h-screen sticky top-0">
+      {/* Left Panel - Hidden on mobile & portrait tablets (< 1024px); strictly aspect-ratio preserved on desktop without cropping */}
+      <div
+        className="hidden lg:flex lg:h-screen lg:aspect-[9/16] shrink-0 relative bg-black select-none overflow-hidden sticky top-0 items-center justify-center"
+        style={{ aspectRatio: "9/16" }}
+      >
         <video
           ref={videoRef}
           src="/REFER.mp4"
@@ -85,7 +82,7 @@ const AuthLayout = ({
           muted
           playsInline
           onEnded={handleEnded}
-          className="h-full w-full object-cover select-none block"
+          className="h-full w-full object-contain block select-none"
         />
       </div>
 

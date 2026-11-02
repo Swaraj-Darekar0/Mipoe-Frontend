@@ -54,13 +54,19 @@ const Register = () => {
     }
   };
 
-  // Sync role state with query param if it changes
+  // Sync role state with query param if it changes (creators redirect directly to /login)
   useEffect(() => {
     const r = searchParams.get("role");
-    if (r === "brand" || r === "creator") {
-      setRole(r);
+    if (r === "creator") {
+      const redirectParam = searchParams.get("redirect");
+      const redirectQuery = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : "";
+      navigate(`/login?role=creator${redirectQuery}`, { replace: true });
+      return;
     }
-  }, [searchParams]);
+    if (r === "brand") {
+      setRole("brand");
+    }
+  }, [searchParams, navigate]);
 
   const navigateAfterAuth = (registeredRole: string, profileCompleted?: boolean) => {
     const redirectParam = searchParams.get("redirect");
@@ -152,24 +158,14 @@ const Register = () => {
                 <span>No Passwords Needed for Creators!</span>
               </div>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Creators on Mipoe don't need passwords or seed phrases. Your secure Web 2.5 smart account is automatically provisioned via Google or Phone / WhatsApp OTP on our Sign In portal.
+                Creators on Mipoe don't need passwords or seed phrases. Your secure Web 2.5 smart account is automatically provisioned via Google on our Sign In portal.
               </p>
               <div className="pt-2 flex flex-col gap-2.5">
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  className="flex h-11 w-full items-center justify-center gap-2.5 rounded-lg border border-zinc-200 bg-white text-sm font-medium text-zinc-700 shadow-xs transition-colors hover:bg-zinc-50 hover:border-zinc-300"
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" fill="#FFC107"></path><path d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" fill="#FF3D00"></path><path d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" fill="#4CAF50"></path><path d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.022,35.244,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z" fill="#1976D2"></path>
-                  </svg>
-                  <span>1-Click Sign In with Google</span>
-                </button>
                 <Link
                   to={`/login?role=creator${searchParams.get("redirect") ? `&redirect=${encodeURIComponent(searchParams.get("redirect")!)}` : ""}`}
                   className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#FF5C00] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#FF5C00]/90"
                 >
-                  <span>Sign In with Phone / WhatsApp OTP</span>
+                  <span>Go to Creator Sign In</span>
                 </Link>
               </div>
             </div>
