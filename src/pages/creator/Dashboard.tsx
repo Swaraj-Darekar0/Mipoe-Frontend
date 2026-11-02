@@ -65,11 +65,12 @@ const CreatorDashboard = () => {
   };
 
   useEffect(() => {
+    if (!creatorId) {
+      navigate('/creator/campaigns', { replace: true });
+      return;
+    }
     if (!cachedCampaigns) setLoading(true);
-    const dataFetches = (creatorId 
-      ? Promise.all([fetchCreatorCampaigns(), getWalletBalance()])
-      : Promise.resolve([[], { balance: 0 }] as [Campaign[], { balance: number }])
-    )
+    const dataFetches = Promise.all([fetchCreatorCampaigns(), getWalletBalance()])
       .then(([yours, walletRes]) => {
         setYourCampaigns(yours);
         setWalletBalance(walletRes.balance);

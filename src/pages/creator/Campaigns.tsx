@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
 import CreatorLayout from "@/layouts/CreatorLayout";
 import CampaignCard from "@/components/creator/CampaignCard";
-import { fetchAllCampaigns, Campaign } from "@/lib/api";
+import { fetchAllCampaigns, Campaign, getUserId, checkAuthStatus } from "@/lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Card, Skeleton } from "@heroui/react";
 import { SlidersHorizontal } from "lucide-react";
 import { CategoryFilter } from "@/components/ui/CategoryFilter";
+import MarketplaceExplorer from "./MarketplaceExplorer";
 
 const CampaignsPage = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(getUserId()));
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,33 @@ const CampaignsPage = () => {
     { value: "finance_crypto", label: "Finance & Crypto" }
   ];
 
+  // Verify authentication on mount
   useEffect(() => {
+    let isMounted = true;
+    const verifyAuth = async () => {
+      const currentId = getUserId();
+      if (currentId) {
+        if (isMounted) setIsAuthenticated(true);
+        return;
+      }
+      try {
+        const res = await checkAuthStatus();
+        if (isMounted) {
+          setIsAuthenticated(Boolean(res.authenticated && res.user_id));
+        }
+      } catch {
+        if (isMounted) setIsAuthenticated(false);
+      }
+    };
+    verifyAuth();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
     const getCampaigns = async () => {
       try {
         setLoading(true);
@@ -51,7 +79,7 @@ const CampaignsPage = () => {
       }
     };
     getCampaigns();
-  }, [toast]);
+  }, [isAuthenticated, toast]);
 
   const handleCardClick = (id: number) => {
     navigate(`/creator/dashboard/${id}`);
@@ -64,6 +92,10 @@ const CampaignsPage = () => {
       (!campaignType || campaign.campaign_type === campaignType) &&
       (selectedCategory === "all" || campaign.category === selectedCategory)
   );
+
+  if (!isAuthenticated) {
+    return <MarketplaceExplorer isAuthenticated={false} />;
+  }
 
   return (
     <CreatorLayout>

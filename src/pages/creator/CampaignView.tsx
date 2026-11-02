@@ -1,6 +1,20 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Trash2, ImageOff, Link as LinkIcon, Loader2, Sparkles, Send, CheckCircle2, Clock, AlertCircle, ExternalLink } from "lucide-react";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
+import { 
+  Trash2, 
+  ImageOff, 
+  Link as LinkIcon, 
+  Loader2, 
+  Sparkles, 
+  Send, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle, 
+  ExternalLink,
+  ArrowLeft,
+  LogIn,
+  ShieldCheck
+} from "lucide-react";
 import CreatorLayout from "@/layouts/CreatorLayout";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +39,7 @@ import {
   fetchCreatorProfile,
   CreatorProfile,
   getUserId,
+  checkAuthStatus,
 } from "@/lib/api";
 
 // Extract media code from various Instagram Reels URL formats
@@ -76,6 +91,7 @@ const CampaignView = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
+  const [userId, setUserId] = useState<string | null>(() => getUserId());
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [imgError, setImgError] = useState(false);
   const [submittedClips, setSubmittedClips] = useState<ClipData[]>([]);
@@ -91,6 +107,30 @@ const CampaignView = () => {
   const [clipUrlInput, setClipUrlInput] = useState("");
   const [submittingClip, setSubmittingClip] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  // Sync auth state if authenticated via cookies/session
+  useEffect(() => {
+    let isMounted = true;
+    const verifyUser = async () => {
+      const currentId = getUserId();
+      if (currentId) {
+        if (isMounted) setUserId(currentId);
+        return;
+      }
+      try {
+        const res = await checkAuthStatus();
+        if (isMounted && res.authenticated && res.user_id) {
+          setUserId(res.user_id);
+        }
+      } catch {
+        // Guest mode
+      }
+    };
+    verifyUser();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const fetchCampaignAndClips = useCallback(async () => {
     try {
@@ -281,25 +321,59 @@ const CampaignView = () => {
   };
 
   if (loading) {
+    const spinner = (
+      <div className="flex items-center justify-center h-72">
+        <div className="w-6 h-6 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+      </div>
+    );
+    if (!userId) {
+      return (
+        <div className="min-h-screen bg-[#fafafa] flex flex-col">
+          <header className="h-16 border-b border-zinc-200 bg-white/95 px-4 flex items-center justify-between">
+            <Link to="/" className="font-display text-2xl font-black text-zinc-900">
+              SELLR<span className="text-[#FF5C00]">.</span>
+            </Link>
+          </header>
+          <div className="flex-1 flex items-center justify-center">
+            {spinner}
+          </div>
+        </div>
+      );
+    }
     return (
       <CreatorLayout>
-        <div className="flex items-center justify-center h-72">
-          <div className="w-6 h-6 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
-        </div>
+        {spinner}
       </CreatorLayout>
     );
   }
 
   if (error || !campaign) {
+    const errorCard = (
+      <div className="p-8 text-center bg-rose-50 border border-rose-200 rounded-2xl max-w-lg mx-auto mt-12">
+        <AlertCircle className="w-8 h-8 text-rose-600 mx-auto mb-2" />
+        <p className="text-rose-800 font-semibold text-sm">{error || "Campaign not found."}</p>
+        <Button onClick={() => navigate(userId ? "/creator/dashboard" : "/creator/campaigns")} className="mt-4 bg-zinc-900 text-white rounded-xl text-xs font-semibold">
+          {userId ? "Back to Hub" : "Back to Marketplace"}
+        </Button>
+      </div>
+    );
+    if (!userId) {
+      return (
+        <div className="min-h-screen bg-[#fafafa] flex flex-col">
+          <header className="h-16 border-b border-zinc-200 bg-white/95 px-4 flex items-center justify-between">
+            <Link to="/" className="font-display text-2xl font-black text-zinc-900">
+              SELLR<span className="text-[#FF5C00]">.</span>
+            </Link>
+          </header>
+          <div className="flex-1 px-4">
+            {errorCard}
+          </div>
+        </div>
+      );
+    }
     return (
       <CreatorLayout>
-        <div className="p-8 text-center bg-rose-50 border border-rose-200 rounded-2xl max-w-lg mx-auto mt-12">
-          <AlertCircle className="w-8 h-8 text-rose-600 mx-auto mb-2" />
-          <p className="text-rose-800 font-semibold text-sm">{error || "Campaign not found."}</p>
-          <Button onClick={() => navigate("/creator/dashboard")} className="mt-4 bg-zinc-900 text-white rounded-xl text-xs font-semibold">
-            Back to Hub
-          </Button>
-        </div>
+        {errorCard}
       </CreatorLayout>
     );
   }
@@ -353,9 +427,8 @@ const CampaignView = () => {
     return `${views.toLocaleString()} Views`;
   };
 
-  return (
-    <CreatorLayout>
-      <div className="max-w-6xl mx-auto space-y-8">
+  const campaignContent = (
+    <div className="max-w-6xl mx-auto space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Left Column: Media & Campaign Info */}
@@ -487,7 +560,22 @@ const CampaignView = () => {
                 <div className="py-10 text-center text-zinc-400 text-xs">
                   <Send className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
                   <p className="font-semibold text-zinc-700 text-sm">No clips submitted yet</p>
-                  <p className="text-zinc-400 mt-1">Submit your first Instagram Reel link to begin tracking views.</p>
+                  <p className="text-zinc-400 mt-1 max-w-sm mx-auto">
+                    {!userId
+                      ? "Sign in with Google to view your submission history and track live view counts."
+                      : "Submit your first Instagram Reel link to begin tracking views."}
+                  </p>
+                  {!userId && (
+                    <Button
+                      onClick={handleOpenSubmitDialog}
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 text-xs font-semibold rounded-xl border-zinc-200 hover:bg-zinc-50"
+                    >
+                      <LogIn className="w-3.5 h-3.5 mr-1.5 text-[#FF5C00]" />
+                      Sign In to Submit
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -599,24 +687,48 @@ const CampaignView = () => {
               
               {/* Primary Action Button */}
               <div className="space-y-2">
-                <Button
-                  onClick={handleOpenSubmitDialog}
-                  disabled={!qualifies}
-                  className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide transition-all shadow-xs ${
-                    qualifies 
-                      ? "bg-orange-500 hover:bg-orange-600 text-white cursor-pointer active:scale-98" 
-                      : "bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed"
-                  }`}
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  {qualifies ? "Submit Clip" : "Locked (Requirement)"}
-                </Button>
-                {!qualifies && (
-                  <p className="text-[11px] text-rose-600 text-center leading-normal">
-                    {!hasInstagram 
-                      ? "Requires verified Instagram profile connection." 
-                      : `Requires ${campaign.follower_range} followers (Your account: ${followerCount.toLocaleString()}).`}
+                {!userId ? (
+                  <Button
+                    onClick={handleOpenSubmitDialog}
+                    className="w-full py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white cursor-pointer active:scale-98 shadow-xs flex items-center justify-center gap-2"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Sign in to Submit Clip</span>
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleOpenSubmitDialog}
+                    disabled={!qualifies}
+                    className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide transition-all shadow-xs ${
+                      qualifies 
+                        ? "bg-orange-500 hover:bg-orange-600 text-white cursor-pointer active:scale-98" 
+                        : "bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed"
+                    }`}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {qualifies ? "Submit Clip" : "Locked (Requirement)"}
+                  </Button>
+                )}
+                {!userId ? (
+                  <p className="text-[11px] text-zinc-500 text-center leading-normal">
+                    Sign in with Google to submit your Reel link and claim earnings.
                   </p>
+                ) : !qualifies && (
+                  <div className="space-y-1.5 text-center">
+                    <p className="text-[11px] text-rose-600 leading-normal">
+                      {!hasInstagram 
+                        ? "Requires verified Instagram profile connection." 
+                        : `Requires ${campaign.follower_range} followers (Your account: ${followerCount.toLocaleString()}).`}
+                    </p>
+                    {!hasInstagram && (
+                      <Link
+                        to="/creator/profile"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 hover:text-orange-700 underline"
+                      >
+                        Connect Instagram in Profile &rarr;
+                      </Link>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -672,8 +784,9 @@ const CampaignView = () => {
 
         </div>
       </div>
+    );
 
-      {/* In-page Submit Clip Dialog */}
+    const submitDialog = (
       <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
         <DialogContent className="sm:max-w-md rounded-2xl bg-white border border-zinc-200/80 p-6 text-zinc-900 shadow-2xl">
           <DialogHeader>
@@ -757,7 +870,78 @@ const CampaignView = () => {
           </form>
         </DialogContent>
       </Dialog>
-    </CreatorLayout>
+    );
+
+    if (!userId) {
+      return (
+        <div className="min-h-screen bg-[#fafafa] text-zinc-900 flex flex-col font-sans selection:bg-orange-100 selection:text-orange-900">
+          <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-zinc-200/80 shadow-2xs">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <Link to="/" className="flex items-center gap-1.5 group">
+                  <span className="font-display text-2xl font-black tracking-tight text-zinc-900 group-hover:text-orange-600 transition-colors">
+                    SELLR<span className="text-[#FF5C00]">.</span>
+                  </span>
+                </Link>
+                <div className="h-4 w-px bg-zinc-200" />
+                <button
+                  onClick={() => navigate("/creator/campaigns")}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Marketplace</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Link
+                  to={`/login?role=creator&redirect=${encodeURIComponent(`/creator/dashboard/${campaign_id}?submit=true`)}`}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign in to Earn</span>
+                </Link>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            {campaignContent}
+          </main>
+
+          <aside className="bg-gradient-to-r from-zinc-900 to-black text-white py-6 border-t border-zinc-800 mt-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+              <div className="space-y-1">
+                <div className="flex items-center justify-center sm:justify-start gap-2 text-xs font-bold text-orange-400 uppercase tracking-wider">
+                  <ShieldCheck className="w-4 h-4" />
+                  Ready to submit your content?
+                </div>
+                <p className="text-sm text-zinc-300">
+                  Sign in with Google to submit Reel links, track verified view milestones, and claim daily UPI earnings.
+                </p>
+              </div>
+
+              <Link
+                to={`/login?role=creator&redirect=${encodeURIComponent(`/creator/dashboard/${campaign_id}?submit=true`)}`}
+                className="px-6 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-bold text-sm shadow-md transition-all active:scale-95 shrink-0 flex items-center gap-2 cursor-pointer"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Connect with Google to Submit</span>
+              </Link>
+            </div>
+          </aside>
+
+          {submitDialog}
+        </div>
+      );
+    }
+
+    return (
+      <CreatorLayout>
+        {campaignContent}
+        {submitDialog}
+      </CreatorLayout>
+    );
   );
 };
 

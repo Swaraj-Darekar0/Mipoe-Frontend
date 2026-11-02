@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import CreatorLayout from "@/layouts/CreatorLayout";
 import { 
   getCreatorAffiliateCampaigns, 
   getCreatorConversions, 
   joinAffiliateCampaign,
-  CreatorAffiliateCampaign 
+  CreatorAffiliateCampaign,
+  getUserId,
+  checkAuthStatus
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -25,26 +27,55 @@ import {
   AlertCircle,
   TrendingUp,
   Info,
-  Loader2
+  Loader2,
+  LogIn,
+  ShieldCheck
 } from "lucide-react";
 
 const AffiliateCampaignView: React.FC = () => {
   const { campaign_id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
+  const [userId, setUserId] = useState<string | null>(() => getUserId());
   const [campaign, setCampaign] = useState<CreatorAffiliateCampaign | null>(null);
   const [conversions, setConversions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Sync auth state
+  useEffect(() => {
+    let isMounted = true;
+    const verifyUser = async () => {
+      const currentId = getUserId();
+      if (currentId) {
+        if (isMounted) setUserId(currentId);
+        return;
+      }
+      try {
+        const res = await checkAuthStatus();
+        if (isMounted && res.authenticated && res.user_id) {
+          setUserId(res.user_id);
+        }
+      } catch {
+        // Guest mode
+      }
+    };
+    verifyUser();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const loadCampaignData = useCallback(async () => {
     try {
       setLoading(true);
+      const currentUserId = getUserId();
       const [allCamps, allConversions] = await Promise.all([
         getCreatorAffiliateCampaigns(),
-        getCreatorConversions()
+        currentUserId ? getCreatorConversions().catch(() => []) : Promise.resolve([])
       ]);
 
       const selectedCamp = allCamps.find(c => c.id === Number(campaign_id));
@@ -54,7 +85,7 @@ const AffiliateCampaignView: React.FC = () => {
           description: "Affiliate campaign not found.",
           variant: "destructive"
         });
-        navigate("/creator/affiliate-campaigns");
+        navigate(currentUserId ? "/creator/affiliate-campaigns" : "/creator/campaigns");
         return;
       }
 
@@ -82,6 +113,12 @@ const AffiliateCampaignView: React.FC = () => {
   }, [loadCampaignData]);
 
   const handleJoin = async () => {
+    const currentUserId = getUserId();
+    if (!currentUserId) {
+      const returnUrl = `/creator/affiliate-campaigns/${campaign_id}?join=true`;
+      navigate(`/login?role=creator&redirect=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
     if (!campaign) return;
     setJoining(true);
     try {
@@ -103,6 +140,15 @@ const AffiliateCampaignView: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (searchParams.get("join") === "true") {
+      const currentUserId = getUserId();
+      if (currentUserId && campaign && campaign.application_status !== "active" && campaign.application_status !== "applied") {
+        handleJoin();
+      }
+    }
+  }, [searchParams, campaign]);
+
   const handleCopyLink = () => {
     if (!campaign || !campaign.affiliate_code) return;
     const referralUrl = `${window.location.origin}/affiliate/${campaign.affiliate_code}`;
@@ -117,12 +163,29 @@ const AffiliateCampaignView: React.FC = () => {
   };
 
   if (loading) {
+    const spinner = (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-zinc-500">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500 mb-3" />
+        <p className="font-semibold text-sm">Synchronizing campaign metrics...</p>
+      </div>
+    );
+    if (!userId) {
+      return (
+        <div className="min-h-screen bg-[#fafafa] flex flex-col">
+          <header className="h-16 border-b border-zinc-200 bg-white/95 px-4 flex items-center justify-between">
+            <Link to="/" className="font-display text-2xl font-black text-zinc-900">
+              SELLR<span className="text-[#FF5C00]">.</span>
+            </Link>
+          </header>
+          <div className="flex-1 flex items-center justify-center">
+            {spinner}
+          </div>
+        </div>
+      );
+    }
     return (
       <CreatorLayout>
-        <div className="flex flex-col items-center justify-center h-[60vh] text-zinc-500">
-          <Loader2 className="w-8 h-8 animate-spin text-orange-500 mb-3" />
-          <p className="font-semibold text-sm">Synchronizing campaign metrics...</p>
-        </div>
+        {spinner}
       </CreatorLayout>
     );
   }
@@ -139,18 +202,17 @@ const AffiliateCampaignView: React.FC = () => {
     (new Date(campaign.deadline).getTime() - new Date().getTime()) / (1000 * 3600 * 24)
   );
 
-  return (
-    <CreatorLayout>
-      <div className="space-y-8 animate-in fade-in duration-200">
-        
-        {/* Back Link */}
-        <Link 
-          to="/creator/affiliate-campaigns" 
-          className="inline-flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Campaigns
-        </Link>
+  const affiliateContent = (
+    <div className="space-y-8 animate-in fade-in duration-200">
+      
+      {/* Back Link */}
+      <Link 
+        to={userId ? "/creator/affiliate-campaigns" : "/creator/campaigns"} 
+        className="inline-flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        {userId ? "Back to Campaigns" : "Back to Marketplace"}
+      </Link>
 
         {/* Campaign Hero Card */}
         <div className="bg-white border border-zinc-200/80 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row gap-8 items-start relative overflow-hidden shadow-xs">
@@ -283,14 +345,19 @@ const AffiliateCampaignView: React.FC = () => {
                 <>
                   <div className="space-y-1 w-full sm:w-auto text-left">
                     <span className="text-xs text-zinc-700 block font-semibold">Ready to partner with this campaign?</span>
-                    <span className="text-[10px] text-zinc-500 block">Click below to join and get your custom referral link.</span>
+                    <span className="text-[10px] text-zinc-500 block">
+                      {!userId 
+                        ? "Sign in with Google to get your custom referral link and earn commissions."
+                        : "Click below to join and get your custom referral link."}
+                    </span>
                   </div>
                   <Button
                     disabled={joining}
                     onClick={handleJoin}
-                    className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs h-10 px-6 rounded-xl shrink-0 shadow-xs"
+                    className="w-full sm:w-auto bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold text-xs h-10 px-6 rounded-xl shrink-0 shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    {joining ? "Joining..." : "Join Affiliate Program"}
+                    {!userId && <LogIn className="w-4 h-4" />}
+                    {joining ? "Joining..." : !userId ? "Sign in to Join Campaign" : "Join Affiliate Program"}
                   </Button>
                 </>
               )}
@@ -517,8 +584,75 @@ const AffiliateCampaignView: React.FC = () => {
         </div>
 
       </div>
-    </CreatorLayout>
-  );
+    );
+
+    if (!userId) {
+      return (
+        <div className="min-h-screen bg-[#fafafa] text-zinc-900 flex flex-col font-sans selection:bg-orange-100 selection:text-orange-900">
+          <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-zinc-200/80 shadow-2xs">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <Link to="/" className="flex items-center gap-1.5 group">
+                  <span className="font-display text-2xl font-black tracking-tight text-zinc-900 group-hover:text-orange-600 transition-colors">
+                    SELLR<span className="text-[#FF5C00]">.</span>
+                  </span>
+                </Link>
+                <div className="h-4 w-px bg-zinc-200" />
+                <button
+                  onClick={() => navigate("/creator/campaigns")}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Marketplace</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Link
+                  to={`/login?role=creator&redirect=${encodeURIComponent(`/creator/affiliate-campaigns/${campaign_id}?join=true`)}`}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign in to Earn</span>
+                </Link>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            {affiliateContent}
+          </main>
+
+          <aside className="bg-gradient-to-r from-zinc-900 to-black text-white py-6 border-t border-zinc-800 mt-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+              <div className="space-y-1">
+                <div className="flex items-center justify-center sm:justify-start gap-2 text-xs font-bold text-orange-400 uppercase tracking-wider">
+                  <ShieldCheck className="w-4 h-4" />
+                  Partner with top brands today
+                </div>
+                <p className="text-sm text-zinc-300">
+                  Sign in with Google to get instant access to custom referral links and automated daily commissions.
+                </p>
+              </div>
+
+              <Link
+                to={`/login?role=creator&redirect=${encodeURIComponent(`/creator/affiliate-campaigns/${campaign_id}?join=true`)}`}
+                className="px-6 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-bold text-sm shadow-md transition-all active:scale-95 shrink-0 flex items-center gap-2 cursor-pointer"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Connect with Google to Join</span>
+              </Link>
+            </div>
+          </aside>
+        </div>
+      );
+    }
+
+    return (
+      <CreatorLayout>
+        {affiliateContent}
+      </CreatorLayout>
+    );
 };
 
 export default AffiliateCampaignView;

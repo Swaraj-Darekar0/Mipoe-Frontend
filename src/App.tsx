@@ -27,6 +27,7 @@ const Wallet = React.lazy(() => import("./pages/creator/Wallet"));
 const Withdrawals = React.lazy(() => import("./pages/creator/Withdrawals"));
 const BrandTransactions = React.lazy(() => import("./pages/brand/Transactions"));
 const CampaignsPage = React.lazy(() => import("./pages/creator/Campaigns"));
+const MarketplaceExplorer = React.lazy(() => import("./pages/creator/MarketplaceExplorer"));
 const SubmissionsPage = React.lazy(() => import("./pages/creator/Submissions"));
 const AuthCallback = React.lazy(() => import("./pages/creator/AuthCallback"));
 const CreatorAffiliateCampaignsPage = React.lazy(() => import("./pages/creator/AffiliateCampaigns"));
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/creator/dashboard" element={<CreatorDashboard />} />
             <Route path="/creator/campaigns" element={<CampaignsPage />} />
+            <Route path="/explore" element={<MarketplaceExplorer />} />
             <Route path="/creator/submissions" element={<SubmissionsPage />} />
             <Route path="/creator/submit/:campaignId" element={<SubmitClip />} />
             <Route path="/brand/dashboard" element={<BrandDashboard />} />
