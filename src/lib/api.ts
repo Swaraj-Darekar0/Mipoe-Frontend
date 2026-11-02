@@ -5,7 +5,7 @@ export const API_BASE =
   import.meta.env.VITE_API_BASE_URL || 
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:5000' 
-    : 'https://enrich-prominent-backspace.ngrok-free.dev');
+    : 'https://sellr-backend-wrns.onrender.com');
 
 // --- Token Management ---
 export const setAuthTokens = (userId: string, role: string) => {
