@@ -28,7 +28,10 @@ import {
   ChevronRight,
   CreditCard,
   Building,
-  CheckCircle2
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  Check
 } from "lucide-react";
 
 const CompleteProfile = () => {
@@ -42,6 +45,10 @@ const CompleteProfile = () => {
     instagram_username: "",
     instagram_verified: false,
   });
+
+  // Base L2 Smart Account Wallet State
+  const [walletAddress, setWalletAddress] = useState<string | null>(localStorage.getItem('wallet_address'));
+  const [copiedWallet, setCopiedWallet] = useState(false);
 
   // Payout Credentials States
   const [upiId, setUpiId] = useState("");
@@ -69,6 +76,11 @@ const CompleteProfile = () => {
         navigate("/creator/dashboard");
       } else {
         setProfile(data);
+        const addr = data.wallet_address || localStorage.getItem('wallet_address');
+        if (addr) {
+          setWalletAddress(addr);
+          localStorage.setItem('wallet_address', addr);
+        }
         if (data.instagram_verified) {
           setActiveStep(3);
         }
@@ -197,9 +209,9 @@ const CompleteProfile = () => {
     setError(null);
     try {
       await updateCreatorProfile({
-        nickname: profile.nickname,
-        bio: profile.bio,
-        phone: profile.phone,
+        nickname: profile.nickname || profile.username || "Creator",
+        bio: profile.bio || "Creator at Mipoe",
+        phone: profile.phone || "9999999999",
       });
       toast({
         title: "Onboarding Completed",
@@ -417,6 +429,59 @@ const CompleteProfile = () => {
               <div className="pb-3 border-b border-white/10">
                 <h3 className="text-base font-bold text-white">Smart Account Ready</h3>
                 <p className="text-xs text-gray-400">Your decentralized micro-payout wallet on Base L2 is activated and ready for earnings.</p>
+              </div>
+
+              {/* Base L2 Smart Wallet Address Card */}
+              <div className="p-4 bg-zinc-900/90 border border-indigo-500/30 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs font-bold text-white tracking-wide">Base L2 Smart Account</span>
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    ERC-4337
+                  </span>
+                </div>
+
+                {walletAddress ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-xs">
+                      <code className="text-indigo-300 font-mono text-[11px] select-all break-all">
+                        {walletAddress}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(walletAddress);
+                          setCopiedWallet(true);
+                          toast({ title: "Copied!", description: "Smart account address copied to clipboard." });
+                          setTimeout(() => setCopiedWallet(false), 2000);
+                        }}
+                        className="ml-2 text-gray-400 hover:text-white transition-colors p-1 shrink-0"
+                        title="Copy address"
+                      >
+                        {copiedWallet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-gray-400 px-1">
+                      <span>Zero-gas sponsored by Paymaster</span>
+                      <a
+                        href={`https://sepolia.basescan.org/address/${walletAddress}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1 font-medium"
+                      >
+                        BaseScan Explorer <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2.5 py-2 text-xs text-indigo-300">
+                    <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                    <span>Provisioning smart contract account on Base Sepolia...</span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2.5">

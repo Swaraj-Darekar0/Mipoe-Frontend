@@ -7,6 +7,18 @@ export const API_BASE =
     ? 'http://localhost:5000' 
     : 'https://sellr-backend-wrns.onrender.com');
 
+interface PersistentCacheEntry {
+  bodyText: string;
+  status: number;
+  statusText: string;
+  headers: [string, string][];
+  timestamp: number;
+  tier: 'static' | 'profile' | 'none';
+}
+
+const MEMORY_CACHE = new Map<string, PersistentCacheEntry>();
+const INFLIGHT_REQUESTS = new Map<string, Promise<Response>>();
+
 // --- Token Management ---
 export const setAuthTokens = (userId: string, role: string) => {
   sessionStorage.setItem('user_id', userId); 
@@ -19,10 +31,23 @@ export const getUserId = () => sessionStorage.getItem('user_id') || localStorage
 export const getRole = () => sessionStorage.getItem('role') || localStorage.getItem('role');
 
 export const clearAuthTokens = () => {
-  sessionStorage.removeItem('user_id');
-  sessionStorage.removeItem('role');
+  sessionStorage.clear();
   localStorage.removeItem('user_id');
   localStorage.removeItem('role');
+  localStorage.removeItem('wallet_address');
+
+  // Wipe all SWR / persistent profile & metadata cache entries to prevent cross-account leaks
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('mipoe_cache_'))
+      .forEach(k => localStorage.removeItem(k));
+  } catch {
+    // Ignore storage errors
+  }
+
+  // Clear in-memory caches and inflight promises
+  MEMORY_CACHE.clear();
+  INFLIGHT_REQUESTS.clear();
 };
 
 export async function checkAuthStatus(): Promise<{ authenticated: boolean; user_id?: string; role?: string; username?: string }> {
@@ -41,28 +66,21 @@ export async function checkAuthStatus(): Promise<{ authenticated: boolean; user_
 }
 
 export async function logout(): Promise<void> {
+  try {
+    await apiFetch(`${API_BASE}/logout`, {
+      method: 'DELETE',
+    });
+  } catch (error) {
+    console.error("Logout failed on backend, clearing tokens from frontend anyway.", error);
+  } finally {
+    clearAuthTokens();
     try {
-        await apiFetch(`${API_BASE}/logout`, {
-            method: 'DELETE',
-        });
-    } catch (error) {
-        console.error("Logout failed on backend, clearing tokens from frontend anyway.", error);
-    } finally {
-        clearAuthTokens();
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn("Supabase signOut error:", err);
     }
+  }
 }
-
-interface PersistentCacheEntry {
-  bodyText: string;
-  status: number;
-  statusText: string;
-  headers: [string, string][];
-  timestamp: number;
-  tier: 'static' | 'profile' | 'none';
-}
-
-const MEMORY_CACHE = new Map<string, PersistentCacheEntry>();
-const INFLIGHT_REQUESTS = new Map<string, Promise<Response>>();
 
 export function getEndpointTier(url: string): 'static' | 'profile' | 'none' {
   // TIER 3: ZERO STALE TOLERANCE - Financial, Payout, TDS, Ledger, & Active Auth State
@@ -337,11 +355,12 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
   return result.clone();
 }
 
-// Update the return type
 export async function syncGoogleUser(supabaseToken: string): Promise<{ 
   msg: string; 
   user_id: string; 
   role: string; 
+  username?: string;
+  wallet_address?: string;
   profile_completed: boolean;
 }> {
   const res = await apiFetch(`${API_BASE}/api/auth/google-sync`, {
@@ -353,7 +372,14 @@ export async function syncGoogleUser(supabaseToken: string): Promise<{
   });
   
   const data = await res.json();
-  if (!res.ok) throw new Error(data.msg || 'Failed to sync Google user');
+  if (!res.ok) throw new Error(data.msg || data.detail || 'Failed to sync Google user');
+
+  if (data.user_id && data.role) {
+    setAuthTokens(data.user_id, data.role);
+    if (data.wallet_address) {
+      localStorage.setItem('wallet_address', data.wallet_address);
+    }
+  }
   return data;
 }
 
@@ -655,6 +681,7 @@ export interface CreatorProfile {
   nickname?: string;
   bio?: string;
   phone?: string;
+  wallet_address?: string;
   join_date?: string;
   profile_completed: boolean;
   instagram_username?: string;

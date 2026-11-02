@@ -35,6 +35,45 @@ const Login = () => {
   const brandGoogleButtonRef = useRef<HTMLDivElement>(null);
   const [isGsiReady, setIsGsiReady] = useState(false);
 
+  // Google Popup & Auth State Machine
+  const [googleAuthState, setGoogleAuthState] = useState<"idle" | "popup_open" | "verifying" | "success" | "failed">("idle");
+  const isHoveredOnGoogleBtn = useRef(false);
+  const isAuthenticatingRef = useRef(false);
+  const focusCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleWindowBlur = () => {
+      if (isHoveredOnGoogleBtn.current && googleAuthState === "idle") {
+        isAuthenticatingRef.current = true;
+        setGoogleAuthState("popup_open");
+      }
+    };
+
+    const handleWindowFocus = () => {
+      if (isAuthenticatingRef.current) {
+        if (focusCheckTimeoutRef.current) clearTimeout(focusCheckTimeoutRef.current);
+        focusCheckTimeoutRef.current = setTimeout(() => {
+          setGoogleAuthState((current) => {
+            if (current === "popup_open") {
+              isAuthenticatingRef.current = false;
+              toast.info("Google sign-in was dismissed. Click below to continue.");
+              return "idle";
+            }
+            return current;
+          });
+        }, 1200);
+      }
+    };
+
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("focus", handleWindowFocus);
+    return () => {
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("focus", handleWindowFocus);
+      if (focusCheckTimeoutRef.current) clearTimeout(focusCheckTimeoutRef.current);
+    };
+  }, [googleAuthState]);
+
   // Avatar interactivity states
   const [avatarState, setAvatarState] = useState<AvatarState>("idle");
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
@@ -204,10 +243,21 @@ const Login = () => {
 
   // Handle credential response from native Google Identity Services (Solution 2: signInWithIdToken)
   const handleGoogleCredentialResponse = async (idToken: string) => {
+    if (focusCheckTimeoutRef.current) clearTimeout(focusCheckTimeoutRef.current);
+    isAuthenticatingRef.current = true;
+    setGoogleAuthState("verifying");
     setLoading(true);
     setError("");
 
     try {
+      // 0. Ensure complete user session isolation: wipe all previous Supabase tokens and cached profiles
+      clearAuthTokens();
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutErr) {
+        console.warn("Pre-auth signOut error:", signOutErr);
+      }
+
       // 1. Sign in to Supabase directly using the Google ID Token (zero redirect to supabase.co!)
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
@@ -232,7 +282,10 @@ const Login = () => {
       setAuthTokens(response.user_id, response.role);
       preloadPostLoginRoutes();
 
-      // 5. Setup navigation once success video finishes
+      // 5. SUCCESS: Transition spinner to Emerald Green (different color from initial connecting spinner)
+      setGoogleAuthState("success");
+
+      // 6. Setup navigation once success video finishes
       pendingNavigationRef.current = () => {
         toast.success("Successfully signed in with Google!");
         const redirectParam = searchParams.get("redirect");
@@ -247,7 +300,7 @@ const Login = () => {
         }
       };
 
-      // 6. ONLY trigger video playback once credentials and wallet sync are 100% verified!
+      // 7. ONLY trigger video playback once credentials and wallet sync are 100% verified!
       setIsSuccessVideoPlaying(true);
       setLoading(false);
 
@@ -258,8 +311,13 @@ const Login = () => {
       console.error("Google sign-in error:", err);
       toast.error(err.message || "Failed to finalize Google sign-in");
       clearAuthTokens();
+      setGoogleAuthState("failed");
       setIsSuccessVideoPlaying(false);
       setLoading(false);
+      isAuthenticatingRef.current = false;
+      setTimeout(() => {
+        setGoogleAuthState("idle");
+      }, 1500);
     }
   };
 
@@ -446,8 +504,13 @@ const Login = () => {
                   </label>
                 </div>
 
-                {/* Primary: Continue with Google (rendered natively by Google Identity Services) */}
-                <div className="relative w-full min-h-[48px] flex items-center justify-center">
+                {/* Primary: Continue with Google (rendered natively by Google Identity Services or dynamic status spinner) */}
+                <div
+                  className="relative w-full min-h-[48px] flex items-center justify-center"
+                  onMouseEnter={() => { isHoveredOnGoogleBtn.current = true; }}
+                  onMouseLeave={() => { isHoveredOnGoogleBtn.current = false; }}
+                  onMouseDown={() => { isHoveredOnGoogleBtn.current = true; }}
+                >
                   {!consentGiven && (
                     <div
                       onClick={() => {
@@ -457,19 +520,57 @@ const Login = () => {
                       title="Please accept Terms & Privacy Policy first"
                     />
                   )}
-                  <div
-                    ref={creatorGoogleButtonRef}
-                    className={`w-full flex justify-center transition-opacity duration-200 [&>div]:!w-full [&>div>iframe]:!w-full ${
-                      !consentGiven || loading || isSuccessVideoPlaying
-                        ? "opacity-50 pointer-events-none"
-                        : "opacity-100"
-                    }`}
-                  />
-                  {!isGsiReady && (
-                    <div className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 text-xs text-zinc-400">
-                      <div className="w-4 h-4 border-2 border-zinc-300 border-t-[#FF5C00] rounded-full animate-spin" />
-                      <span>Loading secure Google login...</span>
+
+                  {googleAuthState !== "idle" ? (
+                    <div
+                      className={`w-full max-w-[380px] h-12 flex items-center justify-center gap-3 rounded-xl border px-4 py-3 text-xs font-semibold select-none transition-all duration-300 pointer-events-none ${
+                        googleAuthState === "success"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800 shadow-sm shadow-emerald-500/10"
+                          : googleAuthState === "verifying"
+                          ? "border-amber-200 bg-amber-50 text-amber-900 shadow-sm"
+                          : googleAuthState === "failed"
+                          ? "border-red-200 bg-red-50 text-red-700"
+                          : "border-indigo-200 bg-indigo-50/80 text-indigo-900 shadow-sm"
+                      }`}
+                    >
+                      {googleAuthState === "success" ? (
+                        <>
+                          {/* Distinct Success Spinner Color: Emerald Green */}
+                          <div className="w-4 h-4 rounded-full border-2 border-emerald-300 border-t-emerald-600 animate-spin" />
+                          <span>Verified! Launching workspace...</span>
+                        </>
+                      ) : googleAuthState === "verifying" ? (
+                        <>
+                          <div className="w-4 h-4 rounded-full border-2 border-amber-300 border-t-amber-600 animate-spin" />
+                          <span>Securing Base L2 smart account...</span>
+                        </>
+                      ) : googleAuthState === "failed" ? (
+                        <span>Sign-in was cancelled or failed. Restoring...</span>
+                      ) : (
+                        <>
+                          {/* Initial Spinner Color: Distinct Indigo / Brand Blue */}
+                          <div className="w-4 h-4 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" />
+                          <span>Connecting to Google Account...</span>
+                        </>
+                      )}
                     </div>
+                  ) : (
+                    <>
+                      <div
+                        ref={creatorGoogleButtonRef}
+                        className={`w-full flex justify-center transition-opacity duration-200 [&>div]:!w-full [&>div>iframe]:!w-full ${
+                          !consentGiven || loading || isSuccessVideoPlaying
+                            ? "opacity-50 pointer-events-none"
+                            : "opacity-100"
+                        }`}
+                      />
+                      {!isGsiReady && (
+                        <div className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 text-xs text-zinc-400">
+                          <div className="w-4 h-4 border-2 border-zinc-300 border-t-[#FF5C00] rounded-full animate-spin" />
+                          <span>Loading secure Google login...</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -581,7 +682,12 @@ const Login = () => {
                   <div className="h-px w-full flex-1 bg-zinc-200"></div>
                 </div>
 
-                <div className="relative w-full min-h-[44px] flex items-center justify-center">
+                <div
+                  className="relative w-full min-h-[44px] flex items-center justify-center"
+                  onMouseEnter={() => { isHoveredOnGoogleBtn.current = true; }}
+                  onMouseLeave={() => { isHoveredOnGoogleBtn.current = false; }}
+                  onMouseDown={() => { isHoveredOnGoogleBtn.current = true; }}
+                >
                   {!consentGiven && (
                     <div
                       onClick={() => {
@@ -591,19 +697,55 @@ const Login = () => {
                       title="Please accept Terms & Privacy Policy first"
                     />
                   )}
-                  <div
-                    ref={brandGoogleButtonRef}
-                    className={`w-full flex justify-center transition-opacity duration-200 [&>div]:!w-full [&>div>iframe]:!w-full ${
-                      !consentGiven || loading || isSuccessVideoPlaying
-                        ? "opacity-50 pointer-events-none"
-                        : "opacity-100"
-                    }`}
-                  />
-                  {!isGsiReady && (
-                    <div className="flex h-11 w-full items-center justify-center gap-2.5 rounded-lg border border-zinc-200 bg-zinc-50 text-xs text-zinc-400">
-                      <div className="w-3.5 h-3.5 border-2 border-zinc-300 border-t-[#FF5C00] rounded-full animate-spin" />
-                      <span>Loading secure Google login...</span>
+
+                  {googleAuthState !== "idle" ? (
+                    <div
+                      className={`w-full max-w-[380px] h-11 flex items-center justify-center gap-2.5 rounded-lg border px-3 py-2.5 text-xs font-semibold select-none transition-all duration-300 pointer-events-none ${
+                        googleAuthState === "success"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800 shadow-sm"
+                          : googleAuthState === "verifying"
+                          ? "border-amber-200 bg-amber-50 text-amber-900 shadow-sm"
+                          : googleAuthState === "failed"
+                          ? "border-red-200 bg-red-50 text-red-700"
+                          : "border-indigo-200 bg-indigo-50/80 text-indigo-900 shadow-sm"
+                      }`}
+                    >
+                      {googleAuthState === "success" ? (
+                        <>
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-emerald-300 border-t-emerald-600 animate-spin" />
+                          <span>Verified! Launching brand portal...</span>
+                        </>
+                      ) : googleAuthState === "verifying" ? (
+                        <>
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-amber-300 border-t-amber-600 animate-spin" />
+                          <span>Securing brand account...</span>
+                        </>
+                      ) : googleAuthState === "failed" ? (
+                        <span>Sign-in was cancelled or failed. Restoring...</span>
+                      ) : (
+                        <>
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" />
+                          <span>Connecting to Google Account...</span>
+                        </>
+                      )}
                     </div>
+                  ) : (
+                    <>
+                      <div
+                        ref={brandGoogleButtonRef}
+                        className={`w-full flex justify-center transition-opacity duration-200 [&>div]:!w-full [&>div>iframe]:!w-full ${
+                          !consentGiven || loading || isSuccessVideoPlaying
+                            ? "opacity-50 pointer-events-none"
+                            : "opacity-100"
+                        }`}
+                      />
+                      {!isGsiReady && (
+                        <div className="flex h-11 w-full items-center justify-center gap-2.5 rounded-lg border border-zinc-200 bg-zinc-50 text-xs text-zinc-400">
+                          <div className="w-3.5 h-3.5 border-2 border-zinc-300 border-t-[#FF5C00] rounded-full animate-spin" />
+                          <span>Loading secure Google login...</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </>
