@@ -74,11 +74,36 @@ const Login = () => {
       }
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && googleAuthState === "popup_open") {
+        isAuthenticatingRef.current = false;
+        setGoogleAuthState("idle");
+        toast.info("Google sign-in was cancelled.");
+      }
+    };
+
+    let safetyTimeout: NodeJS.Timeout | null = null;
+    if (googleAuthState === "popup_open") {
+      safetyTimeout = setTimeout(() => {
+        setGoogleAuthState((current) => {
+          if (current === "popup_open") {
+            isAuthenticatingRef.current = false;
+            toast.info("Sign-in session timed out. You can click to try again.");
+            return "idle";
+          }
+          return current;
+        });
+      }, 45000);
+    }
+
     window.addEventListener("blur", handleWindowBlur);
     window.addEventListener("focus", handleWindowFocus);
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("focus", handleWindowFocus);
+      window.removeEventListener("keydown", handleKeyDown);
+      if (safetyTimeout) clearTimeout(safetyTimeout);
       if (popupOpenTimerRef.current) clearTimeout(popupOpenTimerRef.current);
       if (focusCheckTimeoutRef.current) clearTimeout(focusCheckTimeoutRef.current);
     };
@@ -542,35 +567,50 @@ const Login = () => {
                   {/* Spinner overlay displayed in place of the button when pop-up opens or authenticates */}
                   {googleAuthState !== "idle" && (
                     <div
-                      className={`absolute inset-0 w-full h-12 flex items-center justify-center gap-3 rounded-xl border px-4 py-3 text-xs font-semibold select-none transition-all duration-300 pointer-events-none z-10 ${
+                      className={`absolute inset-0 w-full h-12 flex items-center justify-between rounded-xl border px-4 py-3 text-xs font-semibold select-none transition-all duration-300 z-10 ${
                         googleAuthState === "success"
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-800 shadow-sm shadow-emerald-500/10"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800 shadow-sm shadow-emerald-500/10 pointer-events-none"
                           : googleAuthState === "verifying"
-                          ? "border-amber-200 bg-amber-50 text-amber-900 shadow-sm"
+                          ? "border-amber-200 bg-amber-50 text-amber-900 shadow-sm pointer-events-none"
                           : googleAuthState === "failed"
-                          ? "border-red-200 bg-red-50 text-red-700"
+                          ? "border-red-200 bg-red-50 text-red-700 pointer-events-none"
                           : "border-indigo-200 bg-indigo-50/90 text-indigo-900 shadow-sm"
                       }`}
                     >
                       {googleAuthState === "success" ? (
-                        <>
+                        <div className="flex items-center justify-center gap-3 w-full">
                           {/* Distinct Success Spinner Color: Vibrant Emerald Green */}
                           <div className="w-4 h-4 rounded-full border-2 border-emerald-300 border-t-emerald-600 animate-spin" />
                           <span>Verified! Launching workspace...</span>
-                        </>
+                        </div>
                       ) : googleAuthState === "verifying" ? (
-                        <>
+                        <div className="flex items-center justify-center gap-3 w-full">
                           <div className="w-4 h-4 rounded-full border-2 border-amber-300 border-t-amber-600 animate-spin" />
                           <span>Securing Base L2 smart account...</span>
-                        </>
+                        </div>
                       ) : googleAuthState === "failed" ? (
-                        <span>Sign-in was cancelled. Restoring...</span>
+                        <div className="flex items-center justify-center gap-3 w-full">
+                          <span>Sign-in was cancelled. Restoring...</span>
+                        </div>
                       ) : (
-                        <>
-                          {/* Initial Spinner Color: Distinct Indigo / Brand Blue */}
-                          <div className="w-4 h-4 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" />
-                          <span>Connecting to Google Account...</span>
-                        </>
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2.5">
+                            {/* Initial Spinner Color: Distinct Indigo / Brand Blue */}
+                            <div className="w-4 h-4 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" />
+                            <span>Connecting to Google Account...</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              isAuthenticatingRef.current = false;
+                              setGoogleAuthState("idle");
+                            }}
+                            className="pointer-events-auto text-[11px] font-medium text-indigo-600 hover:text-indigo-900 underline px-1 py-0.5 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -696,6 +736,8 @@ const Login = () => {
                   onMouseEnter={() => { isHoveredOnGoogleBtn.current = true; }}
                   onMouseLeave={() => { isHoveredOnGoogleBtn.current = false; }}
                   onMouseDown={() => { isHoveredOnGoogleBtn.current = true; }}
+                  onTouchStart={() => { isHoveredOnGoogleBtn.current = true; }}
+                  onTouchEnd={() => { isHoveredOnGoogleBtn.current = false; }}
                 >
                   {!consentGiven && (
                     <div
@@ -720,33 +762,48 @@ const Login = () => {
                   {/* Spinner overlay displayed in place of the button when pop-up opens or authenticates */}
                   {googleAuthState !== "idle" && (
                     <div
-                      className={`absolute inset-0 w-full h-11 flex items-center justify-center gap-2.5 rounded-lg border px-3 py-2.5 text-xs font-semibold select-none transition-all duration-300 pointer-events-none z-10 ${
+                      className={`absolute inset-0 w-full h-11 flex items-center justify-between rounded-lg border px-3 py-2.5 text-xs font-semibold select-none transition-all duration-300 z-10 ${
                         googleAuthState === "success"
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-800 shadow-sm"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800 shadow-sm pointer-events-none"
                           : googleAuthState === "verifying"
-                          ? "border-amber-200 bg-amber-50 text-amber-900 shadow-sm"
+                          ? "border-amber-200 bg-amber-50 text-amber-900 shadow-sm pointer-events-none"
                           : googleAuthState === "failed"
-                          ? "border-red-200 bg-red-50 text-red-700"
+                          ? "border-red-200 bg-red-50 text-red-700 pointer-events-none"
                           : "border-indigo-200 bg-indigo-50/90 text-indigo-900 shadow-sm"
                       }`}
                     >
                       {googleAuthState === "success" ? (
-                        <>
+                        <div className="flex items-center justify-center gap-2.5 w-full">
                           <div className="w-3.5 h-3.5 rounded-full border-2 border-emerald-300 border-t-emerald-600 animate-spin" />
                           <span>Verified! Launching brand portal...</span>
-                        </>
+                        </div>
                       ) : googleAuthState === "verifying" ? (
-                        <>
+                        <div className="flex items-center justify-center gap-2.5 w-full">
                           <div className="w-3.5 h-3.5 rounded-full border-2 border-amber-300 border-t-amber-600 animate-spin" />
                           <span>Securing brand account...</span>
-                        </>
+                        </div>
                       ) : googleAuthState === "failed" ? (
-                        <span>Sign-in was cancelled. Restoring...</span>
+                        <div className="flex items-center justify-center gap-2.5 w-full">
+                          <span>Sign-in was cancelled. Restoring...</span>
+                        </div>
                       ) : (
-                        <>
-                          <div className="w-3.5 h-3.5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" />
-                          <span>Connecting to Google Account...</span>
-                        </>
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3.5 h-3.5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" />
+                            <span>Connecting to Google Account...</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              isAuthenticatingRef.current = false;
+                              setGoogleAuthState("idle");
+                            }}
+                            className="pointer-events-auto text-[11px] font-medium text-indigo-600 hover:text-indigo-900 underline px-1 py-0.5 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
