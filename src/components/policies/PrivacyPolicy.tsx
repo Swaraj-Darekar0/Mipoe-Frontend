@@ -4,11 +4,11 @@ import LegalLayout, { LegalSection, ShortVersion } from "./LegalLayout";
 
 export const PrivacyPolicy: React.FC = () => {
   return (
-    <LegalLayout title="Privacy Policy" lastUpdated="25 October 2026">
+    <LegalLayout title="Privacy Policy" lastUpdated="3 November 2026">
       <ShortVersion>
         <li>We collect what we need to operate the creator marketing engine: your account credentials, payout/UPI details, linked social accounts, and verified view metrics.</li>
-        <li>We operate a 100% non-custodial Web 2.5 smart account architecture (via Okto by CoinDCX on Base L2) where users own their MPC keys and Mipoe never pools or holds custody of client funds.</li>
-        <li>CoinDCX and Onramp.money are registered with FIU-IND (Financial Intelligence Unit of India), providing a comprehensive statutory compliance shield for all INR & UPI rails.</li>
+        <li>We operate a 100% non-custodial Web 2.5 smart account architecture (via Crossmint on Base L2) where users own their smart accounts and Mipoe never pools or holds custody of client funds.</li>
+        <li>Our payment rails integrate with Onramper / Onramp.money, an entity registered with FIU-IND (Financial Intelligence Unit of India), providing a comprehensive statutory compliance shield for all INR & UPI rails.</li>
         <li>TDS is deducted at source under Section 194S (1% with valid PAN) and deposited with the Government of India, with quarterly Form 26Q credit certificates generated for creators.</li>
         <li>Under India's Digital Personal Data Protection Act, 2023 (DPDP Act), all data resides in Indian data centers (AWS Mumbai) and you have the right to full self-service PII erasure at any time via your profile settings or <strong>DELETE /api/auth/account</strong>.</li>
       </ShortVersion>
@@ -20,10 +20,10 @@ export const PrivacyPolicy: React.FC = () => {
         </p>
         <ul className="list-disc space-y-2 pl-5 mt-2">
           <li>
-            <strong className="text-snow">1. Non-Custodial Multi-Party Computation (MPC):</strong> Mipoe is an influencer marketing platform, not a bank, broker, or centralized crypto custodian. Embedded smart accounts on the Base L2 network are provisioned via <strong>Okto (by CoinDCX)</strong>, where private key shares are partitioned and controlled by the user. Mipoe never holds custody of your private keys or pooled funds.
+            <strong className="text-snow">1. Non-Custodial Smart Accounts (ERC-4337):</strong> Mipoe is an influencer marketing platform, not a bank, broker, or centralized crypto custodian. Embedded smart accounts on the Base L2 network are provisioned via <strong>Crossmint</strong>, where users maintain sovereign cryptographic control. Mipoe never holds custody of your private keys or pooled funds.
           </li>
           <li>
-            <strong className="text-snow">2. FIU-IND Statutory Compliance Shield:</strong> Our fiat on-ramp and off-ramp banking integrations are powered by <strong>CoinDCX (Neblio Technologies Pvt. Ltd.)</strong> and <strong>Onramp.money</strong>, both officially registered reporting entities with the <strong>Financial Intelligence Unit - India (FIU-IND)</strong> under the Prevention of Money Laundering Act (PMLA). All statutory AML/CFT compliance for INR transactions is managed directly through these regulated gateways.
+            <strong className="text-snow">2. FIU-IND Statutory Compliance Shield:</strong> Our fiat on-ramp and off-ramp banking integrations are powered by <strong>Onramper / Onramp.money</strong>, an officially registered reporting entity with the <strong>Financial Intelligence Unit - India (FIU-IND)</strong> under the Prevention of Money Laundering Act (PMLA). All statutory AML/CFT compliance for INR transactions is managed directly through these regulated gateways.
           </li>
           <li>
             <strong className="text-snow">3. Indian Income Tax & Statutory Form 26Q Filing (Section 194S):</strong> In accordance with Section 194S of the Income Tax Act, 1961, Mipoe enforces Just-in-Time (JIT) 1% TDS on creator withdrawals. Creator PAN cards are collected solely for submitting quarterly Form 26Q / 26QE returns so creators receive official tax credit in their AIS/26AS statement.
@@ -60,13 +60,13 @@ export const PrivacyPolicy: React.FC = () => {
         </p>
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            <strong className="text-snow">Invisible Smart Wallets:</strong> Upon signing in with Google or Phone/WhatsApp, an embedded, non-custodial EVM smart account is provisioned for you on the <strong>Base L2 network</strong> via <strong>Okto (by CoinDCX)</strong>.
+            <strong className="text-snow">Invisible Smart Wallets:</strong> Upon signing in with Google or Phone/WhatsApp, an embedded, non-custodial EVM smart account is provisioned for you on the <strong>Base L2 network</strong> via <strong>Crossmint</strong>.
           </li>
           <li>
-            <strong className="text-snow">Non-Custodial Multi-Party Computation (MPC):</strong> Private key shares are split mathematically using threshold cryptography. Mipoe does not hold, store, or have access to your private keys or seed phrases.
+            <strong className="text-snow">Non-Custodial Account Abstraction (ERC-4337):</strong> Smart accounts operate with cryptographic passkey and delegated authentication via Crossmint. Mipoe does not hold, store, or have access to your private keys or seed phrases.
           </li>
           <li>
-            <strong className="text-snow">Zero-Fee Brand Deposits (Option B):</strong> When a brand deposits INR via UPI, onramp.money converts fiat to Base USDC. Mipoe fully absorbs all fiat-to-crypto processing fees, ensuring 100% of deposited INR is credited to your campaign pool.
+            <strong className="text-snow">Zero-Fee Brand Deposits (Option B):</strong> When a brand deposits INR via UPI, Onramper / Onramp.money converts fiat to Base USDC. Mipoe fully absorbs all fiat-to-crypto processing fees, ensuring 100% of deposited INR is credited to your campaign pool.
           </li>
           <li>
             <strong className="text-snow">Instant Fiat Payouts:</strong> Milestone allocations are tracked in real-time. When a creator withdraws earnings, the off-ramp infrastructure disburses fiat INR directly to the creator's UPI ID.
@@ -84,8 +84,9 @@ export const PrivacyPolicy: React.FC = () => {
 
       <LegalSection title="5. Third-Party Integrations & Service Providers">
         <ul className="list-disc space-y-2 pl-5">
-          <li><strong className="text-snow">Okto (by CoinDCX):</strong> Non-custodial MPC smart account generation, Base L2 key management, and session token verification;</li>
-          <li><strong className="text-snow">Onramp.money:</strong> Instant UPI on-ramp deposit processing and off-ramp payout disbursement;</li>
+          <li><strong className="text-snow">Crossmint:</strong> Non-custodial ERC-4337 smart account generation, Base L2 key management, and session token verification;</li>
+          <li><strong className="text-snow">Onramper / Onramp.money:</strong> Instant UPI on-ramp deposit processing and off-ramp payout disbursement under FIU-IND compliance;</li>
+          <li><strong className="text-snow">Google Identity Services (GIS):</strong> Native 1-click Google OAuth verification and ID token authentication;</li>
           <li><strong className="text-snow">Supabase:</strong> Cloud database, storage buckets, and OAuth session synchronization;</li>
           <li><strong className="text-snow">Resend:</strong> Delivery of transactional emails, password resets, and payout alerts;</li>
           <li><strong className="text-snow">Meta / Instagram:</strong> OAuth verification and view performance polling under Meta’s API terms;</li>

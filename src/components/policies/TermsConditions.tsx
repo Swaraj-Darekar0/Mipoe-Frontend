@@ -4,7 +4,7 @@ import LegalLayout, { LegalSection, ShortVersion } from "./LegalLayout";
 
 export const TermsConditions: React.FC = () => {
   return (
-    <LegalLayout title="Terms & Conditions" lastUpdated="22 August 2026">
+    <LegalLayout title="Terms & Conditions" lastUpdated="3 November 2026">
       <ShortVersion>
         <li>Sellr connects brands with creators for two things: view-based reel campaigns and affiliate (commission-based) selling.</li>
         <li>You must be 18+ and keep your account details accurate. Creators need an Instagram Professional (Creator/Business) account to participate.</li>
@@ -94,7 +94,7 @@ export const TermsConditions: React.FC = () => {
       <LegalSection title="9. Wallets, Payments, Fees & Taxes">
         <ul className="list-disc space-y-2 pl-5">
           <li>All amounts on Mipoe are primary-denominated in <strong className="text-snow">Indian Rupees (INR)</strong>. </li>
-          <li>Brand deposits are processed via <strong className="text-snow">Onramp.money</strong> (Instant UPI) and credited to your Base L2 smart account provisioned by <strong>Okto (by CoinDCX)</strong>. Under Option B, Mipoe absorbs 100% of fiat-to-crypto conversion fees so 100% of your deposit is credited.</li>
+          <li>Brand deposits are processed via <strong className="text-snow">Onramper / Onramp.money</strong> (Instant UPI) and credited to your Base L2 smart account provisioned by <strong>Crossmint</strong>. Under Option B, Mipoe absorbs 100% of fiat-to-crypto conversion fees so 100% of your deposit is credited.</li>
           <li>Your Mipoe wallet balance represents campaign escrow allocations and milestone earnings. It is non-custodial and earns no interest.</li>
           <li>Creators withdraw earnings directly to their verified Indian UPI ID via automated banking off-ramps.</li>
           <li><strong>Section 194S & Form 26Q TDS Compliance:</strong> All creator payouts are subject to statutory Indian Tax Deduction at Source (TDS). In accordance with Section 194S of the Income Tax Act, 1% TDS is deducted when a verified PAN is on file. Creators who do not provide a PAN are subject to 20% TDS under Section 206AA. Mipoe deposits all TDS quarterly with the Indian Income Tax Department and generates Form 26Q credit certificates for creators.</li>
@@ -139,7 +139,7 @@ export const TermsConditions: React.FC = () => {
       <LegalSection title="14. Disclaimers & Limitation of Liability">
         <ul className="list-disc space-y-2 pl-5">
           <li>Sellr is provided <strong className="text-snow">"as is"</strong>. We work to keep the platform reliable but do not guarantee uninterrupted availability.</li>
-          <li>We depend on third-party services — Instagram/Meta for metrics, Onramp.money and Okto for Web 2.5 payments and smart accounts, Shopify for order data, Supabase for sign-in, Resend for email. We are not liable for failures, delays or data inaccuracies originating from those services, though we will make reasonable efforts to correct their effects.</li>
+          <li>We depend on third-party services — Instagram/Meta for metrics, Onramper / Onramp.money and Crossmint for Web 2.5 payments and smart accounts, Shopify for order data, Google Identity Services and Supabase for sign-in, Resend for email. We are not liable for failures, delays or data inaccuracies originating from those services, though we will make reasonable efforts to correct their effects.</li>
           <li>Sellr is a marketplace, not a party to the commercial relationship between a brand and a creator's audience. Brands are responsible for their products; creators are responsible for their content.</li>
           <li>To the maximum extent permitted by law, Sellr's total liability to you for any claim is limited to the greater of the service fees you paid to Sellr in the 12 months before the claim, or the amount held in your Sellr wallet at the time of the claim. We are not liable for indirect or consequential losses such as lost profits or lost followers.</li>
           <li>Nothing in these terms limits liability that cannot be limited under Indian law.</li>
