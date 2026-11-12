@@ -5,7 +5,6 @@ import {
   ImageOff, 
   Link as LinkIcon, 
   Loader2, 
-  Sparkles, 
   Send, 
   CheckCircle2, 
   Clock, 
@@ -21,6 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/PortalPrimitives";
 import {
   Dialog,
   DialogContent,
@@ -101,6 +102,7 @@ const CampaignView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingClipId, setDeletingClipId] = useState<number | null>(null);
+  const [confirmDeleteClip, setConfirmDeleteClip] = useState<{ id: number; isAccepted: boolean } | null>(null);
 
   // Submit modal state
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
@@ -208,34 +210,32 @@ const CampaignView = () => {
     }
   }, [campaign_id]);
 
-  const handleDeleteClip = useCallback(
-    async (clipId: number, isAccepted: boolean = false) => {
-      if (
-        !window.confirm(
-          isAccepted ? "Delete this accepted clip?" : "Delete this clip submission?",
-        )
-      )
-        return;
-      try {
-        setDeletingClipId(clipId);
-        await deleteClip(clipId);
-        toast({
-          title: "Clip Deleted",
-          description: "Your clip submission has been deleted.",
-        });
-        await refreshClips();
-      } catch (err: unknown) {
-        toast({
-          title: "Delete Failed",
-          description: err instanceof Error ? err.message : "An unknown error occurred",
-          variant: "destructive",
-        });
-      } finally {
-        setDeletingClipId(null);
-      }
-    },
-    [refreshClips, toast],
-  );
+  const handleDeleteClip = useCallback((clipId: number, isAccepted: boolean = false) => {
+    setConfirmDeleteClip({ id: clipId, isAccepted });
+  }, []);
+
+  const executeDeleteClip = useCallback(async () => {
+    if (!confirmDeleteClip) return;
+    const { id: clipId } = confirmDeleteClip;
+    setConfirmDeleteClip(null);
+    try {
+      setDeletingClipId(clipId);
+      await deleteClip(clipId);
+      toast({
+        title: "Clip Deleted",
+        description: "Your clip submission has been deleted.",
+      });
+      await refreshClips();
+    } catch (err: unknown) {
+      toast({
+        title: "Delete Failed",
+        description: err instanceof Error ? err.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingClipId(null);
+    }
+  }, [confirmDeleteClip, refreshClips, toast]);
 
   const hasInstagram = creatorProfile?.instagram_verified && creatorProfile?.instagram_username;
   const followerCount = creatorProfile?.instagram_follower_count ?? 0;
@@ -322,19 +322,22 @@ const CampaignView = () => {
 
   if (loading) {
     const spinner = (
-      <div className="flex items-center justify-center h-72">
-        <div className="w-6 h-6 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+      <div className="flex items-center justify-center h-72 rounded-2xl border border-black/10 bg-white">
+        <div className="text-slate font-mono text-xs uppercase tracking-wider flex items-center gap-2.5">
+          <Loader2 className="w-5 h-5 animate-spin text-lava" />
+          Loading Brief...
+        </div>
       </div>
     );
     if (!userId) {
       return (
-        <div className="min-h-screen bg-[#fafafa] flex flex-col">
-          <header className="h-16 border-b border-zinc-200 bg-white/95 px-4 flex items-center justify-between">
-            <Link to="/" className="font-display text-2xl font-black text-zinc-900">
-              SELLR<span className="text-[#FF5C00]">.</span>
+        <div className="min-h-screen bg-canvas flex flex-col">
+          <header className="h-16 border-b border-black/10 bg-white px-4 flex items-center justify-between">
+            <Link to="/" className="font-display text-2xl font-bold text-ink">
+              sellr<span className="text-lava">.</span>
             </Link>
           </header>
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center px-4">
             {spinner}
           </div>
         </div>
@@ -349,20 +352,20 @@ const CampaignView = () => {
 
   if (error || !campaign) {
     const errorCard = (
-      <div className="p-8 text-center bg-rose-50 border border-rose-200 rounded-2xl max-w-lg mx-auto mt-12">
+      <div className="p-8 text-center bg-rose-50 border border-rose-500/25 rounded-2xl max-w-lg mx-auto mt-12">
         <AlertCircle className="w-8 h-8 text-rose-600 mx-auto mb-2" />
         <p className="text-rose-800 font-semibold text-sm">{error || "Campaign not found."}</p>
-        <Button onClick={() => navigate(userId ? "/creator/dashboard" : "/creator/campaigns")} className="mt-4 bg-zinc-900 text-white rounded-xl text-xs font-semibold">
+        <Button variant="ink" size="sm" onClick={() => navigate(userId ? "/creator/dashboard" : "/creator/campaigns")} className="mt-4">
           {userId ? "Back to Hub" : "Back to Marketplace"}
         </Button>
       </div>
     );
     if (!userId) {
       return (
-        <div className="min-h-screen bg-[#fafafa] flex flex-col">
-          <header className="h-16 border-b border-zinc-200 bg-white/95 px-4 flex items-center justify-between">
-            <Link to="/" className="font-display text-2xl font-black text-zinc-900">
-              SELLR<span className="text-[#FF5C00]">.</span>
+        <div className="min-h-screen bg-canvas flex flex-col">
+          <header className="h-16 border-b border-black/10 bg-white px-4 flex items-center justify-between">
+            <Link to="/" className="font-display text-2xl font-bold text-ink">
+              sellr<span className="text-lava">.</span>
             </Link>
           </header>
           <div className="flex-1 px-4">
@@ -428,14 +431,14 @@ const CampaignView = () => {
   };
 
   const campaignContent = (
-    <div className="max-w-6xl mx-auto space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    <div className="max-w-6xl mx-auto space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* Left Column: Media & Campaign Info */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-5">
             
             {/* Banner Cover */}
-            <div className="w-full aspect-video sm:aspect-[21/9] bg-zinc-100 border border-zinc-200/80 overflow-hidden relative rounded-2xl shadow-xs">
+            <div className="w-full aspect-video sm:aspect-[21/9] bg-black/[0.03] border border-black/10 overflow-hidden relative rounded-2xl">
               {campaign.image_url && !imgError ? (
                 <img
                   src={campaign.image_url}
@@ -444,8 +447,8 @@ const CampaignView = () => {
                   onError={() => setImgError(true)}
                 />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-2 text-xs uppercase tracking-wider">
-                  <ImageOff size={32} className="text-zinc-300" />
+                <div className="w-full h-full flex flex-col items-center justify-center text-steel gap-2 text-xs font-mono uppercase tracking-wider">
+                  <ImageOff size={32} className="text-black/20" />
                   <span>No Campaign Banner</span>
                 </div>
               )}
@@ -454,26 +457,26 @@ const CampaignView = () => {
             {/* Campaign Header Details */}
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-4 flex-wrap">
-                <h1 className="font-display text-2xl sm:text-3xl font-bold text-zinc-900 tracking-tight leading-tight flex-1 min-w-[200px]">
+                <h1 className="font-display text-2xl sm:text-3xl font-bold text-ink tracking-tight leading-tight flex-1 min-w-[200px]">
                   {campaign.name}
                 </h1>
                 <div className="flex gap-2 flex-wrap items-center">
                   {campaign.campaign_type && (
-                    <span className={`inline-flex items-center px-2.5 py-1 text-xs font-bold rounded-lg border ${
+                    <span className={`inline-flex items-center px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider rounded-lg border ${
                       campaign.campaign_type === 'clipping' 
-                        ? 'border-purple-200 text-purple-700 bg-purple-50' 
-                        : 'border-pink-200 text-pink-700 bg-pink-50'
+                        ? 'border-lava/25 text-lava bg-lava/10' 
+                        : 'border-black/10 text-ink bg-black/[0.04]'
                     }`}>
                       {campaign.campaign_type === 'clipping' ? 'Clipping' : 'Influencer'}
                     </span>
                   )}
                   {campaign.category && (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-700 text-xs font-semibold">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg border border-black/10 bg-black/[0.03] text-slate text-xs font-medium">
                       {formatCategory(campaign.category)}
                     </span>
                   )}
                   {campaign.campaign_type === 'influencer' && campaign.follower_range && (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-semibold">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg border border-black/10 bg-black/[0.04] text-ink font-mono text-[11px] font-bold">
                       Req: {campaign.follower_range}
                     </span>
                   )}
@@ -485,7 +488,7 @@ const CampaignView = () => {
                   href={campaign.asset_link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 hover:text-orange-700 hover:underline"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-lava hover:underline"
                 >
                   <span>Download campaign asset materials</span>
                   <ExternalLink className="h-3 w-3" />
@@ -495,40 +498,40 @@ const CampaignView = () => {
 
             {/* Description Card */}
             {campaign.description && (
-              <Card className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-2">
-                <h2 className="font-display text-sm sm:text-base font-bold text-zinc-900">
+              <Card className="p-5 sm:p-6 space-y-2">
+                <h2 className="font-display text-sm sm:text-base font-bold text-ink">
                   Campaign Description
                 </h2>
-                <p className="text-xs sm:text-sm text-zinc-600 whitespace-pre-wrap leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate whitespace-pre-wrap leading-relaxed">
                   {campaign.description}
                 </p>
               </Card>
             )}
 
             {/* Requirements Card */}
-            <Card className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-3">
-              <h2 className="font-display text-sm sm:text-base font-bold text-zinc-900">
+            <Card className="p-5 sm:p-6 space-y-3">
+              <h2 className="font-display text-sm sm:text-base font-bold text-ink">
                 Participation Guidelines & Requirements
               </h2>
-              <ul className="space-y-2 text-xs sm:text-sm text-zinc-700">
+              <ul className="space-y-2 text-xs sm:text-sm text-slate">
                 {campaignRequirements.map((req, index) => (
                   <li key={index} className="flex items-start gap-2">
-                    <span className="size-1.5 rounded-full bg-orange-500 mt-2 shrink-0" />
+                    <span className="size-1.5 rounded-full bg-lava mt-2 shrink-0" />
                     <span>{req}</span>
                   </li>
                 ))}
                 {campaign.hashtag && (
-                  <li className="flex items-center gap-2 pt-1 font-mono text-xs">
-                    <span className="text-zinc-400 font-semibold">Mandatory Hashtag:</span>
-                    <span className="px-2 py-0.5 rounded-md bg-orange-50 text-orange-700 border border-orange-200 font-bold">
+                  <li className="flex flex-wrap items-center gap-2 pt-1 font-mono text-xs">
+                    <span className="text-steel font-semibold">Mandatory Hashtag:</span>
+                    <span className="px-2 py-0.5 rounded-md bg-lava/10 text-lava border border-lava/25 font-bold">
                       {campaign.hashtag}
                     </span>
                   </li>
                 )}
                 {campaign.audio && (
-                  <li className="flex items-center gap-2 font-mono text-xs">
-                    <span className="text-zinc-400 font-semibold">Required Audio:</span>
-                    <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 font-bold">
+                  <li className="flex flex-wrap items-center gap-2 font-mono text-xs">
+                    <span className="text-steel font-semibold">Required Audio:</span>
+                    <span className="px-2 py-0.5 rounded-md bg-black/[0.04] text-ink border border-black/10 font-bold break-all">
                       {campaign.audio}
                     </span>
                   </li>
@@ -537,19 +540,20 @@ const CampaignView = () => {
             </Card>
 
             {/* Your Submissions List Card */}
-            <Card className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+            <Card className="p-5 sm:p-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 pb-3">
                 <div>
-                  <h2 className="font-display text-base font-bold text-zinc-900">
+                  <h2 className="font-display text-base font-bold text-ink">
                     Your Submissions ({allClips.length})
                   </h2>
-                  <p className="text-xs text-zinc-500">Clips submitted for this campaign.</p>
+                  <p className="text-xs text-slate">Clips submitted for this campaign.</p>
                 </div>
                 {allClips.length > 0 && qualifies && (
                   <Button
                     size="sm"
+                    variant="ink"
                     onClick={handleOpenSubmitDialog}
-                    className="bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-xl h-8 shadow-xs"
+                    className="h-8 text-xs"
                   >
                     Submit Another Clip
                   </Button>
@@ -557,10 +561,10 @@ const CampaignView = () => {
               </div>
 
               {allClips.length === 0 ? (
-                <div className="py-10 text-center text-zinc-400 text-xs">
-                  <Send className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
-                  <p className="font-semibold text-zinc-700 text-sm">No clips submitted yet</p>
-                  <p className="text-zinc-400 mt-1 max-w-sm mx-auto">
+                <div className="py-10 text-center text-steel text-xs">
+                  <Send className="w-8 h-8 text-black/20 mx-auto mb-2" />
+                  <p className="font-display font-bold text-ink text-sm">No clips submitted yet</p>
+                  <p className="text-slate mt-1 max-w-sm mx-auto">
                     {!userId
                       ? "Sign in with Google to view your submission history and track live view counts."
                       : "Submit your first Instagram Reel link to begin tracking views."}
@@ -570,9 +574,9 @@ const CampaignView = () => {
                       onClick={handleOpenSubmitDialog}
                       variant="outline"
                       size="sm"
-                      className="mt-3 text-xs font-semibold rounded-xl border-zinc-200 hover:bg-zinc-50"
+                      className="mt-3 text-xs"
                     >
-                      <LogIn className="w-3.5 h-3.5 mr-1.5 text-[#FF5C00]" />
+                      <LogIn className="w-3.5 h-3.5 mr-1.5 text-lava" />
                       Sign In to Submit
                     </Button>
                   )}
@@ -582,24 +586,24 @@ const CampaignView = () => {
                   {allClips.map((clip) => (
                     <div
                       key={clip.id}
-                      className="p-4 rounded-xl border border-zinc-100 bg-zinc-50/50 hover:bg-zinc-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      className="p-4 rounded-xl border border-black/10 bg-black/[0.02] hover:bg-black/[0.04] transition-colors duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
                       <div className="flex-1 min-w-0 space-y-1">
                         <a
                           href={clip.clip_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-semibold text-zinc-900 hover:text-orange-600 text-sm break-all inline-flex items-center gap-1"
+                          className="font-semibold text-ink hover:text-lava text-sm inline-flex items-center gap-1.5 max-w-full transition-colors duration-150"
                         >
-                          <span className="truncate max-w-sm">{clip.clip_url}</span>
-                          <LinkIcon className="h-3 w-3 shrink-0 text-zinc-400" />
+                          <span className="truncate block min-w-0 max-w-full sm:max-w-sm">{clip.clip_url}</span>
+                          <LinkIcon className="h-3 w-3 shrink-0 text-steel" />
                         </a>
-                        <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono">
+                        <div className="flex items-center gap-3 text-xs text-slate font-mono">
                           {clip.submitted_at && (
                             <span>{formatDate(clip.submitted_at)}</span>
                           )}
                           {formatViews(clip.view_count) && (
-                            <span className="font-bold text-zinc-800">{formatViews(clip.view_count)}</span>
+                            <span className="font-bold text-ink tabular-nums">{formatViews(clip.view_count)}</span>
                           )}
                         </div>
                       </div>
@@ -608,8 +612,8 @@ const CampaignView = () => {
                         <Badge
                           className={
                             clip.status === "accepted"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold shadow-none"
-                              : "bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold shadow-none"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-500/25 text-xs font-semibold shadow-none"
+                              : "bg-amber-50 text-amber-800 border border-amber-500/25 text-xs font-semibold shadow-none"
                           }
                         >
                           {clip.status === "accepted" ? (
@@ -624,7 +628,7 @@ const CampaignView = () => {
                           size="icon"
                           onClick={() => handleDeleteClip(clip.id, clip.status === "accepted")}
                           disabled={deletingClipId === clip.id}
-                          className="h-8 w-8 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                          className="h-8 w-8 text-steel hover:text-rose-700 hover:bg-rose-50 rounded-lg"
                           title="Delete clip submission"
                         >
                           {deletingClipId === clip.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -638,7 +642,7 @@ const CampaignView = () => {
 
             {/* Rejected Clips / Revision Section */}
             {rejectedClips.length > 0 && (
-              <Card className="bg-rose-50/50 border border-rose-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+              <Card className="bg-rose-50/50 border-rose-500/25 p-5 sm:p-6 space-y-4">
                 <h2 className="font-display text-base font-bold text-rose-900">
                   Clips Needing Revision ({rejectedClips.length})
                 </h2>
@@ -646,7 +650,7 @@ const CampaignView = () => {
                   {rejectedClips.map((clip) => (
                     <div
                       key={clip.id}
-                      className="border border-rose-200 bg-white p-4 rounded-xl flex flex-col gap-2.5 shadow-xs"
+                      className="border border-rose-500/25 bg-white p-4 rounded-xl flex flex-col gap-2.5"
                     >
                       <a
                         href={clip.clip_url}
@@ -657,7 +661,7 @@ const CampaignView = () => {
                         {clip.clip_url}
                       </a>
                       {clip.feedback && (
-                        <div className="text-xs text-zinc-600 bg-rose-50 p-2.5 rounded-lg border border-rose-100">
+                        <div className="text-xs text-slate bg-rose-50 p-2.5 rounded-lg border border-rose-500/20">
                           <strong className="text-rose-800">Feedback:</strong> {clip.feedback}
                         </div>
                       )}
@@ -667,7 +671,7 @@ const CampaignView = () => {
                           size="sm"
                           onClick={() => handleDeleteClip(clip.id)}
                           disabled={deletingClipId === clip.id}
-                          className="text-xs font-semibold text-rose-600 hover:bg-rose-50 h-8"
+                          className="text-xs font-semibold text-rose-700 hover:bg-rose-50 h-8"
                         >
                           {deletingClipId === clip.id ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Trash2 className="mr-2 h-3 w-3" />}
                           Remove Clip
@@ -683,39 +687,37 @@ const CampaignView = () => {
 
           {/* Right Column: Campaign Budget, CPV & Action Sidebar */}
           <div className="lg:col-span-4">
-            <Card className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs flex flex-col gap-6 sticky top-6">
+            <Card className="p-5 sm:p-6 flex flex-col gap-5 lg:sticky lg:top-6">
               
               {/* Primary Action Button */}
               <div className="space-y-2">
                 {!userId ? (
                   <Button
+                    variant="creator"
                     onClick={handleOpenSubmitDialog}
-                    className="w-full py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white cursor-pointer active:scale-98 shadow-xs flex items-center justify-center gap-2"
+                    className="w-full py-3 h-11 font-bold text-sm"
                   >
-                    <LogIn className="w-4 h-4" />
+                    <LogIn className="w-4 h-4 mr-2" />
                     <span>Sign in to Submit Clip</span>
                   </Button>
                 ) : (
                   <Button
+                    variant={qualifies ? "creator" : "outline"}
                     onClick={handleOpenSubmitDialog}
                     disabled={!qualifies}
-                    className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide transition-all shadow-xs ${
-                      qualifies 
-                        ? "bg-orange-500 hover:bg-orange-600 text-white cursor-pointer active:scale-98" 
-                        : "bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed"
-                    }`}
+                    className="w-full py-3 h-11 font-bold text-sm"
                   >
                     <Send className="w-4 h-4 mr-2" />
                     {qualifies ? "Submit Clip" : "Locked (Requirement)"}
                   </Button>
                 )}
                 {!userId ? (
-                  <p className="text-[11px] text-zinc-500 text-center leading-normal">
+                  <p className="text-[11px] text-slate text-center leading-normal">
                     Sign in with Google to submit your Reel link and claim earnings.
                   </p>
                 ) : !qualifies && (
                   <div className="space-y-1.5 text-center">
-                    <p className="text-[11px] text-rose-600 leading-normal">
+                    <p className="text-[11px] text-rose-700 leading-normal">
                       {!hasInstagram 
                         ? "Requires verified Instagram profile connection." 
                         : `Requires ${campaign.follower_range} followers (Your account: ${followerCount.toLocaleString()}).`}
@@ -723,7 +725,7 @@ const CampaignView = () => {
                     {!hasInstagram && (
                       <Link
                         to="/creator/profile"
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 hover:text-orange-700 underline"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-lava hover:underline"
                       >
                         Connect Instagram in Profile &rarr;
                       </Link>
@@ -732,47 +734,47 @@ const CampaignView = () => {
                 )}
               </div>
 
-              <div className="h-px bg-zinc-100 w-full" />
+              <div className="h-px bg-black/10 w-full" />
 
               {/* Metrics Breakdown */}
               <div className="space-y-4 text-xs">
-                <div>
-                  <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-400 font-semibold block mb-1">
-                    Total Budget
+                <div className="rounded-xl bg-black/[0.03] border border-black/[0.06] p-3.5">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-steel font-bold block mb-1">
+                    Total Budget Pool
                   </span>
-                  <span className="font-mono text-2xl font-bold text-zinc-900 block">
+                  <span className="font-mono text-2xl font-bold text-ink tabular-nums block">
                     ₹{campaign.budget.toLocaleString()}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t border-zinc-100 pt-4">
-                  <div>
-                    <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-400 font-semibold block mb-1">
-                      CPV (Per 1k Views)
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-black/[0.03] border border-black/[0.06] p-3">
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-steel font-bold block mb-1">
+                      CPV (1k Views)
                     </span>
-                    <span className="font-mono text-base font-bold text-zinc-900 block">
+                    <span className="font-mono text-base font-bold text-ink tabular-nums block">
                       ₹{campaign.cpv}
                     </span>
                   </div>
-                  <div>
-                    <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-400 font-semibold block mb-1">
+                  <div className="rounded-xl bg-black/[0.03] border border-black/[0.06] p-3">
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-steel font-bold block mb-1">
                       Deadline
                     </span>
-                    <span className="font-semibold text-xs text-zinc-800 block mt-1">
+                    <span className="font-semibold text-xs text-ink block mt-0.5">
                       {campaign.deadline ? formatDate(campaign.deadline) : "Ongoing"}
                     </span>
                   </div>
                 </div>
 
-                <div className="border-t border-zinc-100 pt-4 space-y-2">
+                <div className="border-t border-black/10 pt-4 space-y-2">
                   <div className="flex items-center justify-between text-[11px] font-mono font-semibold">
-                    <span className="text-zinc-400 uppercase tracking-wider">Payout Progress</span>
-                    <span className="text-zinc-900">{payoutPercent}%</span>
+                    <span className="text-steel uppercase tracking-wider">Payout Progress</span>
+                    <span className="text-ink tabular-nums">{payoutPercent}%</span>
                   </div>
-                  <Progress className="h-2 bg-zinc-100" value={payoutPercent} />
-                  <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 pt-0.5">
+                  <Progress className="h-2 bg-black/[0.06]" value={payoutPercent} />
+                  <div className="flex items-center justify-between text-[11px] font-mono text-slate pt-0.5">
                     <span>Paid Out</span>
-                    <span className="font-bold text-zinc-800">
+                    <span className="font-bold text-ink tabular-nums">
                       ₹{fundsDistributed.toLocaleString()} / ₹{totalBudget.toLocaleString()}
                     </span>
                   </div>
@@ -788,19 +790,19 @@ const CampaignView = () => {
 
     const submitDialog = (
       <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl bg-white border border-zinc-200/80 p-6 text-zinc-900 shadow-2xl">
+        <DialogContent className="sm:max-w-md rounded-2xl bg-white border border-black/10 p-6 text-ink">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl font-bold text-zinc-900">
+            <DialogTitle className="font-display text-xl font-bold text-ink">
               Submit Campaign Clip
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-500 mt-1">
+            <DialogDescription className="text-xs text-slate mt-1">
               Paste the public link of your published Instagram Reel for "{campaign.name}".
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmitClip} className="space-y-5 mt-2">
             <div className="space-y-2">
-              <Label htmlFor="clip-url" className="text-xs font-semibold text-zinc-700">
+              <Label htmlFor="clip-url" className="text-xs font-semibold text-ink">
                 Instagram Reel URL
               </Label>
               <Input
@@ -813,22 +815,22 @@ const CampaignView = () => {
                   setSubmitError("");
                 }}
                 required
-                className="bg-zinc-50 border-zinc-200 focus:bg-white text-zinc-900 rounded-xl text-sm h-11"
+                className="bg-black/[0.02] border-black/10 focus:bg-white text-ink rounded-xl text-sm h-11"
               />
-              <p className="text-[11px] text-zinc-400">
+              <p className="text-[11px] text-steel">
                 Ensure your Instagram profile is public and the video meets all campaign guidelines.
               </p>
             </div>
 
             {submitError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-medium flex items-center gap-2">
+              <div className="p-3 bg-rose-50 border border-rose-500/25 rounded-xl text-rose-700 text-xs font-medium flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
                 <span>{submitError}</span>
               </div>
             )}
 
-            <div className="bg-zinc-50 border border-zinc-200/60 rounded-xl p-3.5 space-y-1.5 text-xs text-zinc-600">
-              <p className="font-bold text-zinc-800 text-[11px] uppercase tracking-wider font-mono">Submission Checklist</p>
+            <div className="bg-black/[0.03] border border-black/[0.06] rounded-xl p-3.5 space-y-1.5 text-xs text-slate">
+              <p className="font-bold text-ink text-[11px] uppercase tracking-wider font-mono">Submission Checklist</p>
               <p className="flex items-center gap-1.5 text-[11px]">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 <span>Includes required hashtag: {campaign.hashtag || "#sellr"}</span>
@@ -842,8 +844,9 @@ const CampaignView = () => {
             <div className="flex gap-2.5 pt-1">
               <Button
                 type="submit"
+                variant="creator"
                 disabled={submittingClip || !clipUrlInput.trim()}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs rounded-xl h-11 shadow-xs transition-all disabled:opacity-50"
+                className="flex-1 text-xs h-11"
               >
                 {submittingClip ? (
                   <>
@@ -862,7 +865,7 @@ const CampaignView = () => {
                 variant="outline"
                 onClick={() => setIsSubmitDialogOpen(false)}
                 disabled={submittingClip}
-                className="border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 rounded-xl h-11 text-xs font-semibold px-4"
+                className="h-11 text-xs px-4"
               >
                 Cancel
               </Button>
@@ -872,34 +875,48 @@ const CampaignView = () => {
       </Dialog>
     );
 
+    const deleteConfirmModal = (
+      <ConfirmDialog
+        open={!!confirmDeleteClip}
+        onOpenChange={(open) => !open && setConfirmDeleteClip(null)}
+        title={confirmDeleteClip?.isAccepted ? "Delete Accepted Clip?" : "Delete Clip Submission?"}
+        description="This clip URL will be removed from tracking for this campaign. Pending views will no longer be counted."
+        confirmLabel="Delete Clip"
+        variant="destructive"
+        onConfirm={executeDeleteClip}
+      />
+    );
+
     if (!userId) {
       return (
-        <div className="min-h-screen bg-[#fafafa] text-zinc-900 flex flex-col font-sans selection:bg-orange-100 selection:text-orange-900">
-          <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-zinc-200/80 shadow-2xs">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <Link to="/" className="flex items-center gap-1.5 group">
-                  <span className="font-display text-2xl font-black tracking-tight text-zinc-900 group-hover:text-orange-600 transition-colors">
-                    SELLR<span className="text-[#FF5C00]">.</span>
+        <div className="min-h-screen bg-canvas text-ink flex flex-col font-sans selection:bg-ink selection:text-white">
+          <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-black/10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+                <Link to="/" className="flex items-center gap-1 shrink-0">
+                  <span className="font-display text-2xl font-bold tracking-tight text-ink">
+                    sellr<span className="text-lava">.</span>
                   </span>
                 </Link>
-                <div className="h-4 w-px bg-zinc-200" />
+                <div className="h-4 w-px bg-black/10 shrink-0" />
                 <button
                   onClick={() => navigate("/creator/campaigns")}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate hover:text-ink transition-colors duration-150 cursor-pointer truncate"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back to Marketplace</span>
+                  <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">Back to Marketplace</span>
+                  <span className="sm:hidden">Marketplace</span>
                 </button>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center shrink-0">
                 <Link
                   to={`/login?role=creator&redirect=${encodeURIComponent(`/creator/dashboard/${campaign_id}?submit=true`)}`}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-95 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-lava hover:bg-lava-hover text-white font-semibold text-xs sm:text-sm transition-colors duration-150 cursor-pointer"
                 >
-                  <LogIn className="w-4 h-4" />
-                  <span>Sign in to Earn</span>
+                  <LogIn className="w-3.5 h-3.5 shrink-0" />
+                  <span>Sign in</span>
+                  <span className="hidden sm:inline">to Earn</span>
                 </Link>
               </div>
             </div>
@@ -909,29 +926,30 @@ const CampaignView = () => {
             {campaignContent}
           </main>
 
-          <aside className="bg-gradient-to-r from-zinc-900 to-black text-white py-6 border-t border-zinc-800 mt-12">
+          <aside className="bg-white text-ink py-6 border-t border-black/10 mt-10">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
               <div className="space-y-1">
-                <div className="flex items-center justify-center sm:justify-start gap-2 text-xs font-bold text-orange-400 uppercase tracking-wider">
-                  <ShieldCheck className="w-4 h-4" />
+                <div className="flex items-center justify-center sm:justify-start gap-2 font-mono text-[11px] font-bold text-lava uppercase tracking-wider">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
                   Ready to submit your content?
                 </div>
-                <p className="text-sm text-zinc-300">
+                <p className="text-sm text-slate">
                   Sign in with Google to submit Reel links, track verified view milestones, and claim daily UPI earnings.
                 </p>
               </div>
 
               <Link
                 to={`/login?role=creator&redirect=${encodeURIComponent(`/creator/dashboard/${campaign_id}?submit=true`)}`}
-                className="px-6 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-bold text-sm shadow-md transition-all active:scale-95 shrink-0 flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-ink hover:bg-charcoal text-white font-semibold text-sm transition-colors duration-150 shrink-0 flex items-center gap-2 cursor-pointer"
               >
-                <LogIn className="w-4 h-4" />
+                <LogIn className="w-4 h-4 shrink-0" />
                 <span>Connect with Google to Submit</span>
               </Link>
             </div>
           </aside>
 
           {submitDialog}
+          {deleteConfirmModal}
         </div>
       );
     }
@@ -940,6 +958,7 @@ const CampaignView = () => {
       <CreatorLayout>
         {campaignContent}
         {submitDialog}
+        {deleteConfirmModal}
       </CreatorLayout>
     );
 };

@@ -1,18 +1,58 @@
 import React, { useRef, useState } from "react";
-import { ImageCropperModal } from "./ImageCropperModal";
+import { ImageCropperModal, type ImageCropperAccent } from "./ImageCropperModal";
 import { Button } from "./button";
-import { Building2, Image as ImageIcon, Camera, Upload, Trash2, ShieldAlert } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./dialog";
+import { Building2, Camera, Upload, Trash2, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface ImageCropInputProps {
+export type ImageCropInputAccent = ImageCropperAccent;
+
+export interface ImageCropInputProps {
   value: string; // The image preview URL or existing database URL
   onChange: (file: File | null, previewUrl: string) => void;
   aspectRatio: "1:1" | "16:9" | "3:1";
   disabled?: boolean;
-  maxSizeMB?: number; // default: 25
+  maxSizeMB?: number; // default: 5
   label?: string;
   placeholder?: string;
+  accent?: ImageCropInputAccent;
 }
+
+const ACCENT_STYLES: Record<
+  ImageCropInputAccent,
+  {
+    dragActive: string;
+    hoverBorder: string;
+    iconCircle: string;
+    buttonClass: string;
+  }
+> = {
+  brand: {
+    dragActive: "border-brand-blue bg-brand-blue/[0.06]",
+    hoverBorder: "hover:border-brand-blue/60",
+    iconCircle: "bg-brand-blue/10 text-brand-blue",
+    buttonClass: "bg-brand-blue hover:bg-brand-blue/90 text-white",
+  },
+  creator: {
+    dragActive: "border-lava bg-lava/[0.06]",
+    hoverBorder: "hover:border-lava/60",
+    iconCircle: "bg-lava/10 text-lava",
+    buttonClass: "bg-lava hover:bg-lava/90 text-white",
+  },
+  neutral: {
+    dragActive: "border-ink bg-black/[0.05]",
+    hoverBorder: "hover:border-black/35",
+    iconCircle: "bg-black/[0.04] text-ink border border-black/10",
+    buttonClass: "bg-ink hover:bg-charcoal text-white",
+  },
+};
 
 export const ImageCropInput: React.FC<ImageCropInputProps> = ({
   value,
@@ -22,12 +62,13 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
   maxSizeMB = 5,
   label,
   placeholder,
+  accent = "neutral",
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showCropper, setShowCropper] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState("");
   const [croppingFileName, setCroppingFileName] = useState("");
-  
+
   // Drag and drop state
   const [isDragActive, setIsDragActive] = useState(false);
 
@@ -36,6 +77,7 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
   const [showErrorModal, setShowErrorModal] = useState(false);
 
   const is1to1 = aspectRatio === "1:1";
+  const accentStyle = ACCENT_STYLES[accent] ?? ACCENT_STYLES.neutral;
 
   const handleFile = (file: File) => {
     // 1. File size check
@@ -104,18 +146,18 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
   };
 
   return (
-    <div className="space-y-2">
-      {label && <label className="block text-sm font-bold text-gray-700">{label}</label>}
-      
+    <div className="space-y-2 min-w-0">
+      {label && <label className="block text-sm font-semibold text-ink">{label}</label>}
+
       {is1to1 ? (
         // 1:1 Circle Layout
-        <div className="flex flex-col sm:flex-row items-center gap-6">
-          <div 
+        <div className="flex flex-col sm:flex-row items-center gap-5">
+          <div
             className={cn(
-              "relative w-32 h-32 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden group transition duration-200",
-              isDragActive && "border-indigo-500 bg-indigo-50/50",
-              disabled && "opacity-75 cursor-not-allowed",
-              !disabled && "cursor-pointer hover:border-indigo-400"
+              "relative w-32 h-32 rounded-full border-2 border-dashed border-black/15 flex items-center justify-center bg-black/[0.03] overflow-hidden group transition-colors duration-150 shrink-0",
+              isDragActive && accentStyle.dragActive,
+              disabled && "opacity-60 cursor-not-allowed",
+              !disabled && cn("cursor-pointer", accentStyle.hoverBorder)
             )}
             onClick={() => !disabled && fileInputRef.current?.click()}
             onDragOver={handleDragOver}
@@ -126,29 +168,29 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
               <>
                 <img src={value} alt="Logo preview" className="w-full h-full object-cover" />
                 {!disabled && (
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-200">
+                  <div className="absolute inset-0 bg-ink/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-150">
                     <Camera className="w-6 h-6 mb-1" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Change</span>
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Change</span>
                   </div>
                 )}
               </>
             ) : (
-              <div className="text-center p-3 text-gray-400">
-                <Building2 className="w-8 h-8 mx-auto mb-1 text-gray-300" />
+              <div className="text-center p-3 text-slate">
+                <Building2 className="w-8 h-8 mx-auto mb-1 text-steel" />
                 <span className="text-xs font-semibold block">Upload Logo</span>
               </div>
             )}
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-2 min-w-0">
+            <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled}
-                className="font-semibold text-xs active:scale-95 transition"
+                className="font-semibold text-xs"
               >
                 {value ? "Replace Logo" : "Select Logo"}
               </Button>
@@ -159,25 +201,27 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
                   size="sm"
                   onClick={handleRemove}
                   disabled={disabled}
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50 font-semibold text-xs active:scale-95 transition"
+                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-semibold text-xs"
                 >
                   Remove Logo
                 </Button>
               )}
             </div>
-            <p className="text-[11px] text-gray-400 leading-normal">
+            <p className="font-mono text-[11px] text-steel leading-normal">
               JPG, PNG, or WebP. Max {maxSizeMB}MB.
             </p>
           </div>
         </div>
       ) : (
-        // 16:9 Rectangle Layout
+        // 16:9 / 3:1 Rectangle Layout
         <div className="space-y-3">
           {value ? (
-            <div className={cn(
-              "relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50 max-w-lg shadow-sm",
-              aspectRatio === "3:1" ? "aspect-[3/1]" : "aspect-video"
-            )}>
+            <div
+              className={cn(
+                "relative rounded-xl border border-black/10 overflow-hidden bg-black/[0.03] max-w-lg",
+                aspectRatio === "3:1" ? "aspect-[3/1]" : "aspect-video"
+              )}
+            >
               <img src={value} alt="Campaign cover preview" className="w-full h-full object-cover" />
               <div className="absolute top-3 right-3 flex gap-2">
                 <Button
@@ -186,7 +230,7 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={disabled}
-                  className="bg-white/90 hover:bg-white text-gray-800 font-semibold text-xs shadow-md backdrop-blur-sm active:scale-95 transition"
+                  className="bg-white/95 hover:bg-white text-ink border border-black/10 font-semibold text-xs shadow-sm"
                 >
                   Replace Cover
                 </Button>
@@ -196,7 +240,8 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
                   size="sm"
                   onClick={handleRemove}
                   disabled={disabled}
-                  className="bg-red-600/90 hover:bg-red-600 text-white font-semibold text-xs shadow-md backdrop-blur-sm active:scale-95 transition animate-in fade-in"
+                  aria-label="Remove image"
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-sm"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
@@ -205,24 +250,29 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
           ) : (
             <div
               className={cn(
-                "border-2 border-dashed border-gray-300 rounded-xl p-4 max-w-lg flex flex-col items-center justify-center text-center transition duration-200 bg-gray-50",
+                "border-2 border-dashed border-black/15 rounded-xl p-4 max-w-lg flex flex-col items-center justify-center text-center transition-colors duration-150 bg-black/[0.03]",
                 aspectRatio === "3:1" ? "aspect-[3/1]" : "aspect-video",
-                isDragActive && "border-indigo-500 bg-indigo-50/50",
-                disabled && "opacity-75 cursor-not-allowed",
-                !disabled && "cursor-pointer hover:border-indigo-400 hover:bg-gray-50/50"
+                isDragActive && accentStyle.dragActive,
+                disabled && "opacity-60 cursor-not-allowed",
+                !disabled && cn("cursor-pointer hover:bg-black/[0.05]", accentStyle.hoverBorder)
               )}
               onClick={() => !disabled && fileInputRef.current?.click()}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              <div className="mx-auto w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 mb-3 shadow-inner">
+              <div
+                className={cn(
+                  "mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-3",
+                  accentStyle.iconCircle
+                )}
+              >
                 <Upload className="w-5 h-5" />
               </div>
-              <p className="text-sm font-semibold text-gray-700">
+              <p className="text-sm font-semibold text-ink">
                 {placeholder || "Click to upload or drag campaign cover here"}
               </p>
-              <p className="text-xs text-gray-400 mt-1.5">
+              <p className="font-mono text-[11px] text-steel mt-1.5">
                 Supports JPG, PNG, or WebP (Max size {maxSizeMB}MB)
               </p>
             </div>
@@ -240,31 +290,32 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
         className="hidden"
       />
 
-      {/* Validation Error Modal */}
-      {showErrorModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200 text-left">
-            <div className="flex items-center gap-3 text-red-600 mb-4">
-              <ShieldAlert className="w-7 h-7" />
-              <h4 className="text-lg font-bold text-gray-900">Upload Validation Error</h4>
+      {/* Validation Error Modal (Accessible Shadcn Dialog) */}
+      <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-md rounded-2xl border border-black/10 bg-white p-5 sm:p-6 text-ink shadow-[0_16px_48px_-12px_rgba(0,0,0,0.16)] data-[state=open]:animate-none data-[state=closed]:animate-none">
+          <DialogHeader className="text-left">
+            <div className="flex items-center gap-3 text-rose-600">
+              <ShieldAlert className="w-6 h-6 shrink-0" />
+              <DialogTitle className="font-display text-lg font-bold tracking-tight text-ink">
+                Upload Validation Error
+              </DialogTitle>
             </div>
-            
-            <p className="text-sm text-gray-600 leading-relaxed mb-6">
+            <DialogDescription className="text-sm text-slate leading-relaxed pt-2">
               {validationError}
-            </p>
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                onClick={() => setShowErrorModal(false)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
-              >
-                Close & Try Again
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          <DialogFooter className="mt-2">
+            <Button
+              type="button"
+              onClick={() => setShowErrorModal(false)}
+              className={cn("font-semibold", accentStyle.buttonClass)}
+            >
+              Close & Try Again
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modular Cropper Modal */}
       {showCropper && (
@@ -277,6 +328,7 @@ export const ImageCropInput: React.FC<ImageCropInputProps> = ({
           imageSrc={cropperImageSrc}
           fileName={croppingFileName}
           aspectRatio={aspectRatio}
+          accent={accent}
           onCropComplete={(croppedFile, previewUrl) => {
             onChange(croppedFile, previewUrl);
           }}

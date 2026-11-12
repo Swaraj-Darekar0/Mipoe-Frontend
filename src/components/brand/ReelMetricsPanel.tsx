@@ -1,6 +1,7 @@
 import React from "react";
 import { Flame, TrendingUp, TrendingDown, Clock3 } from "lucide-react";
 import { ClipData } from "@/lib/api";
+import { MetricCell, StatusPill } from "@/components/ui/PortalPrimitives";
 import {
   ComposedChart,
   Area,
@@ -9,7 +10,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from "recharts";
 
 interface ReelMetricsPanelProps {
@@ -23,11 +24,11 @@ interface ReelMetricsPanelProps {
 
 export const ReelMetricsPanel: React.FC<ReelMetricsPanelProps> = ({
   clip,
-  campaignViewThreshold,
+  campaignViewThreshold: _campaignViewThreshold,
   avgViews,
   timeFilter,
   onTimeFilterChange,
-  formatViews
+  formatViews,
 }) => {
   const safeViews = clip?.view_count ?? 0;
   const safeLikes = clip?.like_count ?? 0;
@@ -44,24 +45,24 @@ export const ReelMetricsPanel: React.FC<ReelMetricsPanelProps> = ({
     const dev = selectedClipDeviation;
     if (dev > 115) {
       return {
-        status: "🔥 Outperforming",
-        colorClass: "text-emerald-700 bg-emerald-50 border-emerald-200",
-        pillClass: "bg-emerald-100 text-emerald-800",
-        meaning: "The clip is gaining algorithmic traction fast."
+        status: "Outperforming",
+        tone: "success" as const,
+        containerClass: "text-emerald-800 bg-emerald-50 border-emerald-500/25",
+        meaning: "The clip is gaining algorithmic traction fast.",
       };
     } else if (dev >= 85) {
       return {
-        status: "⚡ On Track",
-        colorClass: "text-blue-700 bg-blue-50 border-blue-200",
-        pillClass: "bg-blue-100 text-blue-800",
-        meaning: "Normal performance; steady organic distribution."
+        status: "On Track",
+        tone: "brand" as const,
+        containerClass: "text-brand-blue bg-brand-blue/[0.05] border-brand-blue/25",
+        meaning: "Normal performance; steady organic distribution.",
       };
     } else {
       return {
-        status: "📉 Underperforming",
-        colorClass: "text-rose-700 bg-rose-50 border-rose-200",
-        pillClass: "bg-rose-100 text-rose-800",
-        meaning: "Weak hook or poor retention; the algorithm is stalling."
+        status: "Underperforming",
+        tone: "danger" as const,
+        containerClass: "text-rose-800 bg-rose-50 border-rose-500/25",
+        meaning: "Weak hook or poor retention; distribution is stalling.",
       };
     }
   }, [selectedClipDeviation]);
@@ -76,14 +77,19 @@ export const ReelMetricsPanel: React.FC<ReelMetricsPanelProps> = ({
     const data = [];
 
     for (let i = 1; i <= points; i++) {
-      const label = timeFilter === "24h" ? `${i}h` : timeFilter === "7d" ? `Day ${i}` : `Week ${Math.ceil(i / 7.5)}`;
+      const label =
+        timeFilter === "24h"
+          ? `${i}h`
+          : timeFilter === "7d"
+          ? `Day ${i}`
+          : `Week ${Math.ceil(i / 7.5)}`;
       const factor = Math.sin((i / points) * (Math.PI / 2));
       const pointViews = Math.round(views * factor);
-      
+
       data.push({
         name: label,
         Views: pointViews,
-        Engagement: Number(engagementRate.toFixed(2))
+        Engagement: Number(engagementRate.toFixed(2)),
       });
     }
     return data;
@@ -91,28 +97,39 @@ export const ReelMetricsPanel: React.FC<ReelMetricsPanelProps> = ({
 
   if (!clip) {
     return (
-      <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm h-[460px] flex flex-col justify-center items-center text-gray-400">
-        <TrendingUp className="w-12 h-12 mb-2 opacity-30 animate-pulse" />
-        <span className="text-sm font-medium">Select a clip to display video metrics dashboard</span>
+      <div className="lg:col-span-2 rounded-2xl bg-white border border-black/10 p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] h-[440px] flex flex-col justify-center items-center text-steel text-center">
+        <TrendingUp className="w-10 h-10 mb-2 opacity-35" />
+        <span className="font-mono text-xs uppercase tracking-wider">
+          Select a clip to display video metrics telemetry
+        </span>
       </div>
     );
   }
 
+  const deviationDelta = Math.round(selectedClipDeviation - 100);
+
   return (
-    <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col justify-between w-full">
+    <div className="lg:col-span-2 rounded-2xl bg-white border border-black/10 p-4 sm:p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] flex flex-col justify-between w-full min-w-0 text-ink">
       <div>
         {/* Header & Filter dropdown */}
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Video Analysis Dashboard</h4>
-            <p className="text-xs text-gray-500">Real-time performance metrics relative to campaign benchmark</p>
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-5">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-steel mb-1">
+              02 // REEL TELEMETRY
+            </p>
+            <h4 className="font-display text-base sm:text-lg font-bold tracking-tight text-ink">
+              Video Analysis Dashboard
+            </h4>
+            <p className="text-xs text-slate">
+              Real-time performance metrics relative to campaign benchmark
+            </p>
           </div>
-          
+
           <select
             title="timeFilter"
             value={timeFilter}
-            onChange={(e) => onTimeFilterChange(e.target.value as any)}
-            className="text-xs bg-slate-50 border rounded-lg px-3 py-1.5 font-semibold text-slate-700 outline-none focus:border-indigo-500"
+            onChange={(e) => onTimeFilterChange(e.target.value as "24h" | "7d" | "30d")}
+            className="font-mono text-xs font-bold bg-white border border-black/15 rounded-lg px-3 py-1.5 text-ink outline-none focus:border-brand-blue transition-colors duration-150 self-start sm:self-auto"
           >
             <option value="24h">Last 24 Hours</option>
             <option value="7d">Last 7 Days</option>
@@ -120,67 +137,66 @@ export const ReelMetricsPanel: React.FC<ReelMetricsPanelProps> = ({
           </select>
         </div>
 
-        {/* Top Metric Row (KPI Cards) */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-            <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider mb-1">Views</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-bold text-slate-800">
-                {formatViews(safeViews)}
+        {/* Top Metric Row (KPI Wells) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          <MetricCell
+            label="Views"
+            value={
+              <span className="inline-flex items-baseline gap-1.5">
+                <span>{formatViews(safeViews)}</span>
+                {safeViews > 0 && (
+                  <span
+                    className={`font-mono text-[10px] font-bold ${
+                      selectedClipDeviation >= 100 ? "text-emerald-700" : "text-rose-700"
+                    }`}
+                  >
+                    {deviationDelta >= 0 ? `+${deviationDelta}%` : `${deviationDelta}%`}
+                  </span>
+                )}
               </span>
-              {safeViews > 0 ? (
-                <span className={`text-[10px] font-bold ${
-                  selectedClipDeviation >= 100 ? "text-green-600" : "text-red-500"
-                }`}>
-                  {selectedClipDeviation >= 100 ? "+" : ""}
-                  {Math.round(selectedClipDeviation - 100)}%
-                </span>
-              ) : null}
-            </div>
-          </div>
+            }
+          />
+          <MetricCell label="Likes" value={formatViews(safeLikes)} />
+          <MetricCell label="Comments" value={formatViews(safeComments)} />
+        </div>
 
-          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-            <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider mb-1">Likes</span>
-            <span className="text-lg font-bold text-slate-800">
-              {formatViews(safeLikes)}
+        {/* Live Engagement Rate Well */}
+        <div className="mb-4 rounded-xl border border-brand-blue/25 bg-brand-blue/[0.05] p-3.5 sm:p-4">
+          <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wider text-brand-blue">
+            Live Engagement Rate
+          </span>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="font-mono text-lg sm:text-xl font-bold tabular-nums text-ink">
+              {safeEngagementRate.toFixed(2)}%
             </span>
-          </div>
-
-          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-            <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider mb-1">Comments</span>
-            <span className="text-lg font-bold text-slate-800">
-              {formatViews(safeComments)}
+            <span className="font-mono text-xs text-slate tabular-nums">
+              ({formatViews(safeLikes + safeComments)} interactions from {formatViews(safeViews)}{" "}
+              views)
             </span>
           </div>
         </div>
 
-        <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50 p-4">
-          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-violet-500">Live Engagement Rate</span>
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-violet-900">{safeEngagementRate.toFixed(2)}%</span>
-            <span className="text-xs text-violet-700">
-              ({formatViews(safeLikes + safeComments)} interactions from {formatViews(safeViews)} views)
-            </span>
-          </div>
-        </div>
-
-        {/* Algorithmic Deviation diagnostic block */}
-        <div className={`p-4 rounded-xl border flex items-center gap-3 mb-6 ${diagnosticSignal.colorClass}`}>
+        {/* Algorithmic Deviation Diagnostic Block */}
+        <div
+          className={`p-3.5 rounded-xl border flex items-start sm:items-center gap-3 mb-5 ${diagnosticSignal.containerClass}`}
+        >
           {selectedClipDeviation > 115 ? (
-            <Flame className="w-5 h-5 flex-shrink-0" />
+            <Flame className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0" />
           ) : selectedClipDeviation >= 85 ? (
-            <TrendingUp className="w-5 h-5 flex-shrink-0" />
+            <TrendingUp className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0" />
           ) : (
-            <TrendingDown className="w-5 h-5 flex-shrink-0" />
+            <TrendingDown className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0" />
           )}
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-xs uppercase tracking-wide">Status: {diagnosticSignal.status}</span>
-              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${diagnosticSignal.pillClass}`}>
-                Deviation: {selectedClipDeviation.toFixed(1)}%
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono font-bold text-xs uppercase tracking-wide">
+                Status: {diagnosticSignal.status}
               </span>
+              <StatusPill tone={diagnosticSignal.tone}>
+                Deviation: {selectedClipDeviation.toFixed(1)}%
+              </StatusPill>
             </div>
-            <p className="text-xs mt-1 opacity-90">{diagnosticSignal.meaning}</p>
+            <p className="text-xs mt-1 text-charcoal">{diagnosticSignal.meaning}</p>
           </div>
         </div>
 
@@ -188,31 +204,77 @@ export const ReelMetricsPanel: React.FC<ReelMetricsPanelProps> = ({
         <div className="h-[200px] w-full mt-2">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-              <CartesianGrid stroke="#f5f5f5" vertical={false} />
-              <XAxis dataKey="name" tickLine={false} style={{ fontSize: '10px', fill: '#94a3b8' }} />
-              <YAxis yAxisId="left" tickLine={false} axisLine={false} style={{ fontSize: '10px', fill: '#94a3b8' }} />
-              <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} style={{ fontSize: '10px', fill: '#94a3b8' }} />
-              <RechartsTooltip />
-              <Area yAxisId="left" type="monotone" dataKey="Views" fill="#e0e7ff" stroke="#4f46e5" strokeWidth={1.5} />
-              <Line yAxisId="right" type="monotone" dataKey="Engagement" stroke="#10b981" strokeWidth={2} dot={false} />
+              <CartesianGrid stroke="rgba(18, 19, 22, 0.06)" vertical={false} />
+              <XAxis
+                dataKey="name"
+                tickLine={false}
+                axisLine={{ stroke: "rgba(18, 19, 22, 0.08)" }}
+                style={{ fontSize: "10px", fill: "#71717a", fontFamily: "Space Mono, monospace" }}
+              />
+              <YAxis
+                yAxisId="left"
+                tickLine={false}
+                axisLine={false}
+                style={{ fontSize: "10px", fill: "#71717a", fontFamily: "Space Mono, monospace" }}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tickLine={false}
+                axisLine={false}
+                style={{ fontSize: "10px", fill: "#71717a", fontFamily: "Space Mono, monospace" }}
+              />
+              <RechartsTooltip
+                contentStyle={{
+                  backgroundColor: "#ffffff",
+                  borderColor: "rgba(18, 19, 22, 0.12)",
+                  borderRadius: "12px",
+                  fontSize: "11px",
+                  fontFamily: "Space Mono, monospace",
+                  color: "#0e0e11",
+                }}
+              />
+              <Area
+                yAxisId="left"
+                type="monotone"
+                dataKey="Views"
+                fill="rgba(43, 92, 230, 0.14)"
+                stroke="#2b5ce6"
+                strokeWidth={1.75}
+                isAnimationActive={false}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="Engagement"
+                stroke="#0e0e11"
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+              />
             </ComposedChart>
           </ResponsiveContainer>
-          <div className="flex justify-center gap-6 mt-2 text-[10px] font-semibold text-slate-500">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 bg-indigo-100 border border-indigo-600 rounded-sm" />
-              Views (Area)
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-0.5 bg-emerald-500" />
-              Engagement Rate (Line)
-            </div>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-5 mt-3 font-mono text-[10px] font-bold uppercase tracking-wider text-slate">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 bg-brand-blue/20 border border-brand-blue rounded-sm" />
+            <span>Views (Area)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-0.5 bg-ink" />
+            <span>Engagement Rate (Line)</span>
           </div>
         </div>
       </div>
 
-      <div className="text-[10px] text-slate-400 border-t border-slate-100 pt-4 mt-4 flex items-center gap-1">
-        <Clock3 className="w-3.5 h-3.5" />
-        <span>Data feeds update every 12h. Benchmark baseline: {avgViews.toLocaleString()} views average.</span>
+      <div className="font-mono text-[10px] text-steel border-t border-black/[0.06] pt-3.5 mt-4 flex items-center gap-1.5">
+        <Clock3 className="w-3.5 h-3.5 shrink-0" />
+        <span>
+          Data feeds update every 12h. Benchmark baseline:{" "}
+          <strong className="text-ink tabular-nums">{avgViews.toLocaleString("en-IN")}</strong>{" "}
+          views average.
+        </span>
       </div>
     </div>
   );

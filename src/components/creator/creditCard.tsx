@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 import {
   ComponentProps,
   type HTMLAttributes,
+  type KeyboardEvent,
   type ReactNode,
   createContext,
   useContext,
@@ -9,6 +10,7 @@ import {
   useState,
 } from 'react';
 import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
+
 const useSupportsHover = () => {
   const [supportsHover, setSupportsHover] = useState(false);
   useEffect(() => {
@@ -20,21 +22,23 @@ const useSupportsHover = () => {
   }, []);
   return supportsHover;
 };
+
 export type CreditCardProps = HTMLAttributes<HTMLDivElement>;
-export const CreditCard = ({ className, style, ...props }: CreditCardProps) => (
+export const CreditCard = ({ className, ...props }: CreditCardProps) => (
   <div
     className={cn(
-      'group/kibo-credit-card relative aspect-[8560/5398] w-full max-w-96 text-white',
-      '[@media(hover:hover)]:hover:[--card-rotation-y:180deg] [@media(hover:hover)]:hover:[--card-shadow:0_24px_40px_-12px_rgba(15,30,60,0.35)]',
-      '[@media(hover:hover)]:focus-within:[--card-rotation-y:180deg] [@media(hover:hover)]:focus-within:[--card-shadow:0_24px_40px_-12px_rgba(15,30,60,0.35)]',
-      '[--card-rotation-y:0deg] [--card-shadow:0_16px_32px_-12px_rgba(15,30,60,0.25)]',
+      'group/kibo-credit-card relative aspect-[8560/5398] w-full max-w-96 text-ink',
+      '[@media(hover:hover)]:hover:[--card-rotation-y:180deg] [@media(hover:hover)]:hover:[--card-shadow:0_14px_32px_-8px_rgba(14,14,17,0.12)]',
+      '[@media(hover:hover)]:focus-within:[--card-rotation-y:180deg] [@media(hover:hover)]:focus-within:[--card-shadow:0_14px_32px_-8px_rgba(14,14,17,0.12)]',
+      '[--card-rotation-y:0deg] [--card-shadow:0_8px_24px_-6px_rgba(14,14,17,0.08)]',
       '[perspective:1600px]',
-      '@container', // for child container queries
+      '@container',
       className
     )}
     {...(props as any)}
   />
 );
+
 const CreditCardFlipContext = createContext(false);
 export type CreditCardFlipperProps = HTMLAttributes<HTMLDivElement>;
 export const CreditCardFlipper = ({
@@ -64,28 +68,38 @@ export const CreditCardFlipper = ({
     }
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsFlipped((prev) => !prev);
+    }
+  };
+
   const rotation = isFlipped ? 180 : 0;
 
   return (
     <CreditCardFlipContext.Provider value={isFlipped}>
-      {/* biome-ignore lint/nursery/noStaticElementInteractions: tap to flip for touch devices */}
       <div
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onFocus={handleMouseEnter}
         onBlur={handleMouseLeave}
-        tabIndex={supportsHover ? 0 : -1}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
         aria-label="Flip credit card"
         className={cn(
-          'relative h-full w-full [transform-style:preserve-3d] [transition:transform_0.7s_ease-in-out]',
-          '@xs:rounded-2xl rounded-lg',
-          supportsHover ? 'cursor-pointer' : 'cursor-default',
+          'relative h-full w-full [transform-style:preserve-3d] [transition:transform_0.55s_cubic-bezier(0.22,1,0.36,1)]',
+          '@xs:rounded-2xl rounded-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lava/40',
           className
         )}
         style={{
           transform: supportsHover ? 'rotateY(var(--card-rotation-y))' : `rotateY(${rotation}deg)`,
-          boxShadow: supportsHover ? 'var(--card-shadow)' : (isFlipped ? '0 24px 40px -12px rgba(15, 30, 60, 0.35)' : '0 16px 32px -12px rgba(15, 30, 60, 0.25)'),
+          boxShadow: supportsHover
+            ? 'var(--card-shadow)'
+            : isFlipped
+            ? '0 14px 32px -8px rgba(14, 14, 17, 0.12)'
+            : '0 8px 24px -6px rgba(14, 14, 17, 0.08)',
           ...style,
         }}
         {...(props as any)}
@@ -95,6 +109,7 @@ export const CreditCardFlipper = ({
     </CreditCardFlipContext.Provider>
   );
 };
+
 export type CreditCardNameProps = HTMLAttributes<HTMLParagraphElement>;
 export const CreditCardName = ({
   className,
@@ -103,6 +118,7 @@ export const CreditCardName = ({
 }: CreditCardNameProps) => (
   <p className={cn('font-semibold uppercase leading-none', className)} style={style} {...(props as any)} />
 );
+
 export type CreditCardChipProps = HTMLAttributes<SVGSVGElement>;
 export const CreditCardChip = ({
   className,
@@ -135,7 +151,7 @@ export const CreditCardChip = ({
         d="M1 13A12 12 0 0 1 13 1h84a12 12 0 0 1 12 12v66a12 12 0 0 1-12 12H13A12 12 0 0 1 1 79V13Z"
       />
       <path
-        fill="#000"
+        fill="#0e0e11"
         d="M108 71.5H83.65L70.53 60.87A21.41 21.41 0 0 1 56 67.47V90h41a11 11 0 0 0 11-11v-7.5ZM76.48 47a21.38 21.38 0 0 1-4.63 12.36l12.5 10.14H108V47H76.48ZM2 69.5h24.14l12.02-10.12A21.38 21.38 0 0 1 33.52 47H2v22.5Zm53-43c-5.85 0-11.1 2.57-14.68 6.66A19.4 19.4 0 0 0 35.5 46a19.4 19.4 0 0 0 4.82 12.84A19.43 19.43 0 0 0 55 65.5c5.85 0 11.1-2.57 14.68-6.66A19.4 19.4 0 0 0 74.5 46a19.4 19.4 0 0 0-4.82-12.84A19.43 19.43 0 0 0 55 26.5Zm16.85 6.14A21.38 21.38 0 0 1 76.48 45H108V22.5H84.35l-12.5 10.14ZM2 45h31.52a21.38 21.38 0 0 1 4.64-12.38L26.14 22.5H2V45Zm0 34a11 11 0 0 0 11 11h41V67.47a21.41 21.41 0 0 1-14.52-6.59L27.14 71.26l-.27.24H2V79Zm106-66A11 11 0 0 0 97 2H56v22.52c5.7.27 10.83 2.74 14.53 6.61L83.65 20.5H108V13ZM2 20.5h24.87l.27.24 12.34 10.38A21.41 21.41 0 0 1 54 24.52V2H13A11 11 0 0 0 2 13v7.5ZM110 79a13 13 0 0 1-13 13H13A13 13 0 0 1 0 79V13A13 13 0 0 1 13 0h84a13 13 0 0 1 13 13v66Z"
       />
       <defs>
@@ -147,12 +163,13 @@ export const CreditCardChip = ({
           y2="78.12"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="#EDE5A6" />
-          <stop offset="1" stopColor="#CFA255" />
+          <stop stopColor="#F4F4F6" />
+          <stop offset="1" stopColor="#D4D4D8" />
         </linearGradient>
       </defs>
     </svg>
   );
+
 export type CreditCardLogoProps = HTMLAttributes<HTMLDivElement>;
 export const CreditCardLogo = ({
   className,
@@ -163,6 +180,7 @@ export const CreditCardLogo = ({
     {...(props as any)}
   />
 );
+
 export type CreditCardFrontProps = HTMLAttributes<HTMLDivElement> & {
   safeArea?: number;
 };
@@ -177,7 +195,7 @@ export const CreditCardFront = ({
   return (
     <div
       className={cn(
-        'absolute inset-0 flex overflow-hidden bg-foreground/90 [backface-visibility:hidden] [transform:rotateY(0deg)] [z-index:2]',
+        'absolute inset-0 flex overflow-hidden bg-white border border-black/15 text-ink [backface-visibility:hidden] [transform:rotateY(0deg)] [z-index:2]',
         '@xs:rounded-2xl rounded-lg',
         className
       )}
@@ -196,6 +214,7 @@ export const CreditCardFront = ({
     </div>
   );
 };
+
 export type CreditCardServiceProviderProps = ComponentProps<typeof PaymentIcon>;
 export const CreditCardServiceProvider = ({
   className,
@@ -228,6 +247,7 @@ export const CreditCardServiceProvider = ({
     />
   );
 };
+
 export type CreditCardMagStripeProps = HTMLAttributes<HTMLDivElement>;
 export type CreditCardBackContextValue = {
   safeArea: number;
@@ -250,7 +270,7 @@ export const CreditCardBack = ({
     <CreditCardBackContext.Provider value={{ safeArea }}>
       <div
         className={cn(
-          'absolute inset-0 flex overflow-hidden bg-foreground/90 [backface-visibility:hidden] [transform:rotateY(180deg)] [z-index:1]',
+          'absolute inset-0 flex overflow-hidden bg-white border border-black/15 text-ink [backface-visibility:hidden] [transform:rotateY(180deg)] [z-index:1]',
           '@xs:rounded-2xl rounded-lg',
           className
         )}
@@ -270,6 +290,7 @@ export const CreditCardBack = ({
     </CreditCardBackContext.Provider>
   );
 };
+
 export const CreditCardMagStripe = ({
   className,
   ...props
@@ -278,7 +299,7 @@ export const CreditCardMagStripe = ({
   return (
     <div
       className={cn(
-        '-translate-x-1/2 absolute top-[3%] left-1/2 h-1/4 bg-gray-100',
+        '-translate-x-1/2 absolute top-[3%] left-1/2 h-1/4 bg-black/[0.08] border-y border-black/10',
         className
       )}
       style={{
@@ -288,6 +309,7 @@ export const CreditCardMagStripe = ({
     />
   );
 };
+
 export type CreditCardNumberProps = HTMLAttributes<HTMLParagraphElement>;
 export const CreditCardNumber = ({
   className,
@@ -295,23 +317,26 @@ export const CreditCardNumber = ({
   style,
   ...props
 }: CreditCardNumberProps) => (
-  <p className={cn('font-mono leading-none', '@xs:text-2xl', className)} style={style} {...(props as any)}>
+  <p className={cn('font-mono tabular-nums leading-none', '@xs:text-2xl', className)} style={style} {...(props as any)}>
     {children}
   </p>
 );
+
 export type CreditCardExpiryProps = HTMLAttributes<HTMLParagraphElement>;
 export const CreditCardExpiry = ({
   className,
   style,
   ...props
 }: CreditCardExpiryProps) => (
-  <p className={cn('font-mono leading-none', className)} style={style} {...(props as any)} />
+  <p className={cn('font-mono tabular-nums leading-none', className)} style={style} {...(props as any)} />
 );
+
 export type CreditCardCvvProps = HTMLAttributes<HTMLParagraphElement>;
 export const CreditCardCvv = ({
   className,
   style,
   ...props
 }: CreditCardCvvProps) => (
-  <p className={cn('font-mono leading-none', className)} style={style} {...(props as any)} />
+  <p className={cn('font-mono tabular-nums leading-none', className)} style={style} {...(props as any)} />
 );
+

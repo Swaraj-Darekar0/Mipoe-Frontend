@@ -25,4 +25,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-../avatar
+../
+temp_review
+tests
+design.md
+scripts
+.agents/teamwork

@@ -33,59 +33,51 @@ export const TRADITIONAL_CAPSULES: readonly TraditionalCapsuleItem[] = [
 export const SELLR_CAPSULES: readonly SellrCapsuleItem[] = [
   {
     text: "Clip had 248K views",
-    imageUrl:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtWD9rHRb5-p37mcBab97RmHl6BEv2temcCLh98YYZq9qNsyIHsL0kqlg&s=10",
-    w: 168,
-    compactW: 136,
+    imageUrl: "/thumbnails/real_clip_1.webp",
+    w: 196,
+    compactW: 156,
   },
   {
     text: "Clip had ₹40K sales",
-    imageUrl:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa0YO8bAujXXIatFG0psIns6JxrnVU2-mlvqZYAJ9n-Q&s=10",
-    w: 164,
-    compactW: 132,
+    imageUrl: "/thumbnails/real_clip_2.webp",
+    w: 192,
+    compactW: 152,
   },
   {
     text: "Reel had 12K clicks",
-    imageUrl:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQjOkn7mZideRyVVUawYaEaqmLnqFhBtyYBLL2tTrm1bw&s=10",
-    w: 166,
-    compactW: 134,
+    imageUrl: "/thumbnails/real_clip_3.webp",
+    w: 194,
+    compactW: 154,
   },
   {
     text: "UGC had 90K views",
-    imageUrl:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSc2G8iZHTiGSzCj7yU46F6YaPJzCeXIOx_1XM_F4RDTw&s=10",
-    w: 156,
-    compactW: 128,
+    imageUrl: "/thumbnails/real_clip_4.webp",
+    w: 192,
+    compactW: 152,
   },
   {
     text: "Story had 340 codes",
-    imageUrl:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIREDGMPj24GIVlUR8m4W_8PdlBnLNpVpdS3Po-gocRA&s=10",
-    w: 166,
-    compactW: 134,
+    imageUrl: "/thumbnails/real_clip_5.webp",
+    w: 198,
+    compactW: 158,
   },
   {
     text: "Clip had 512K views",
-    imageUrl:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT480dOKYn2bDFC3UAjhxUEA7fz9brk_RE-SHvPlBjYeQ&s=10",
-    w: 168,
-    compactW: 136,
+    imageUrl: "/thumbnails/real_clip_6.webp",
+    w: 196,
+    compactW: 156,
   },
   {
     text: "Reel had ₹75K GMV",
-    imageUrl:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTMjyaGQp-BpXvA_oExMBb57e0pqqLyg2HRIiYqmPGSHg&s=10",
-    w: 158,
-    compactW: 128,
+    imageUrl: "/thumbnails/real_clip_7.webp",
+    w: 194,
+    compactW: 154,
   },
   {
     text: "UGC had 180K views",
-    imageUrl:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtWD9rHRb5-p37mcBab97RmHl6BEv2temcCLh98YYZq9qNsyIHsL0kqlg&s=10",
-    w: 168,
-    compactW: 136,
+    imageUrl: "/thumbnails/real_clip_8.webp",
+    w: 198,
+    compactW: 158,
   },
 ];
 

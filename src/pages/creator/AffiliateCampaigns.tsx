@@ -10,7 +10,6 @@ import {
 } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -18,13 +17,10 @@ import {
   Search, 
   SlidersHorizontal, 
   Loader2, 
-  Megaphone, 
-  Sparkles, 
-  Target, 
-  Award,
-  Layers
+  Megaphone
 } from "lucide-react";
 import { CategoryFilter } from "@/components/ui/CategoryFilter";
+import { PortalPageHeader, MetricCell } from "@/components/ui/PortalPrimitives";
 
 const CreatorAffiliateCampaignsPage: React.FC = () => {
   const { toast } = useToast();
@@ -100,9 +96,8 @@ const CreatorAffiliateCampaignsPage: React.FC = () => {
       toast({
         title: "Joined Successfully!",
         description: "Your unique reference code and link have been generated.",
-        className: "bg-emerald-600 border-emerald-500 text-white shadow-md"
+        className: "bg-emerald-600 border-emerald-500 text-white"
       });
-      // Silent reload to update join statuses
       await loadData(true);
     } catch (err: any) {
       toast({
@@ -119,7 +114,6 @@ const CreatorAffiliateCampaignsPage: React.FC = () => {
     navigate(`/creator/affiliate-campaigns/${id}`);
   };
 
-  // Filter logic
   const filteredCampaigns = campaigns.filter(c => {
     const matchesTab = activeTab === "explore" ? !c.joined : c.joined;
     const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -133,124 +127,96 @@ const CreatorAffiliateCampaignsPage: React.FC = () => {
 
   return (
     <CreatorLayout>
-      <div className="space-y-8 animate-in fade-in duration-200">
-        
-        {/* Header Block */}
-        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="space-y-1.5">
-            <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-zinc-900 flex items-center gap-2.5">
-              Affiliate Campaigns
-              <Sparkles className="w-6 h-6 text-orange-500 shrink-0" />
-            </h1>
-            <p className="text-zinc-500 text-sm max-w-xl">
-              Partner with brands, promote SaaS subscriptions or product orders, and earn ongoing commissions on conversions.
-            </p>
-          </div>
-
-          {/* Quick Balance Stat */}
-          <div className="bg-white border border-zinc-200/80 p-4 rounded-2xl flex items-center gap-3.5 shadow-xs max-w-xs w-full shrink-0">
-            <div className="p-3 bg-orange-50 rounded-xl">
-              <Coins className="w-6 h-6 text-orange-500" />
+      <div className="space-y-8">
+        <PortalPageHeader
+          eyebrow="02 // AFFILIATE PROGRAMS"
+          title="Affiliate"
+          highlighted="Campaigns"
+          accent="creator"
+          subtitle="Partner with brands, promote SaaS subscriptions or product orders, and earn ongoing commissions on conversions."
+          action={
+            <div className="bg-white border border-black/10 p-4 rounded-2xl flex items-center gap-3.5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] w-full md:w-auto md:min-w-[210px] shrink-0">
+              <div className="p-2.5 bg-lava/10 border border-lava/20 rounded-xl">
+                <Coins className="w-5 h-5 text-lava" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono text-steel font-bold block uppercase tracking-widest">Your Balance</span>
+                <span className="font-mono font-bold tabular-nums text-xl text-ink block mt-0.5">
+                  ₹{walletBalance.toLocaleString()}
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] text-zinc-500 font-bold block uppercase tracking-wider">Your Balance</span>
-              <span className="font-black text-xl text-zinc-900 block mt-0.5">₹{walletBalance.toLocaleString()}</span>
-            </div>
-          </div>
-        </header>
+          }
+        />
 
         {/* Stats Summary Panel */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="bg-white border-zinc-200/80 rounded-2xl shadow-xs">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-2.5 bg-zinc-100 rounded-xl">
-                <Target className="w-5 h-5 text-zinc-700" />
-              </div>
-              <div>
-                <span className="text-[10px] text-zinc-500 font-bold block uppercase tracking-wider">Total Active Programs</span>
-                <span className="text-lg font-black text-zinc-900 block mt-0.5">{campaigns.length}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border-zinc-200/80 rounded-2xl shadow-xs">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-2.5 bg-emerald-50 rounded-xl">
-                <Award className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <span className="text-[10px] text-zinc-500 font-bold block uppercase tracking-wider">Joined Campaigns</span>
-                <span className="text-lg font-black text-zinc-900 block mt-0.5">{joinedCount}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border-zinc-200/80 rounded-2xl shadow-xs">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-2.5 bg-orange-50 rounded-xl">
-                <Layers className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <span className="text-[10px] text-zinc-500 font-bold block uppercase tracking-wider">Explore Options</span>
-                <span className="text-lg font-black text-zinc-900 block mt-0.5">{exploreCount}</span>
-              </div>
-            </CardContent>
-          </Card>
+          <MetricCell
+            label="Live Affiliate Drops"
+            value={campaigns.length}
+            sublabel="Open affiliate offers"
+          />
+          <MetricCell
+            label="Joined Campaigns"
+            value={joinedCount}
+            sublabel="Active partner links"
+            valueClassName="text-emerald-700"
+          />
+          <MetricCell
+            label="Explore Options"
+            value={exploreCount}
+            sublabel="Available to join"
+            valueClassName="text-lava"
+          />
         </div>
 
         {/* Tabs & Search Filter Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2 border-t border-zinc-100">
-          
-          {/* Custom Tabs */}
-          <div className="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200/80 w-fit">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t border-black/10">
+          <div className="flex bg-black/[0.04] p-1 rounded-xl border border-black/10 w-full sm:w-fit">
             <button
               onClick={() => setActiveTab("explore")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-semibold transition-colors duration-150 cursor-pointer ${
                 activeTab === "explore" 
-                  ? "bg-white text-zinc-900 shadow-xs" 
-                  : "text-zinc-500 hover:text-zinc-800"
+                  ? "bg-white text-ink shadow-xs border border-black/5" 
+                  : "text-slate hover:text-ink"
               }`}
             >
-              Explore Campaigns ({exploreCount})
+              Explore ({exploreCount})
             </button>
             <button
               onClick={() => setActiveTab("joined")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-semibold transition-colors duration-150 cursor-pointer ${
                 activeTab === "joined" 
-                  ? "bg-white text-zinc-900 shadow-xs" 
-                  : "text-zinc-500 hover:text-zinc-800"
+                  ? "bg-white text-ink shadow-xs border border-black/5" 
+                  : "text-slate hover:text-ink"
               }`}
             >
-              Joined Campaigns ({joinedCount})
+              Joined ({joinedCount})
             </button>
           </div>
 
-          {/* Search and Filters */}
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <div className="relative flex-1 sm:w-64">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+              <Search className="w-4 h-4 text-steel absolute left-3 top-3" />
               <Input
                 type="text"
                 placeholder="Search programs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-white border-zinc-200/80 rounded-xl pl-9 text-xs h-10 text-zinc-900 placeholder:text-zinc-400 focus:border-orange-500"
+                className="bg-white border-black/10 rounded-xl pl-9 text-xs h-10 text-ink placeholder:text-steel focus:border-lava"
               />
             </div>
 
             <Button
+              variant={showFilters ? "creator" : "outline"}
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 h-10 px-4 rounded-xl border font-bold text-xs transition-all duration-200 shrink-0 ${
-                showFilters 
-                  ? "bg-orange-500 border-orange-500 text-white shadow-xs" 
-                  : "bg-white border-zinc-200/80 text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300"
-              }`}
+              className="flex items-center gap-2 h-10 px-4 rounded-xl text-xs font-semibold shrink-0"
             >
               <SlidersHorizontal size={14} />
               <span>Filters</span>
               {selectedCategory !== "all" && (
-                <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${
-                  showFilters ? "bg-white text-orange-600" : "bg-orange-500 text-white"
+                <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-mono font-bold ${
+                  showFilters ? "bg-white text-lava" : "bg-lava text-white"
                 }`}>
                   1
                 </span>
@@ -266,27 +232,29 @@ const CreatorAffiliateCampaignsPage: React.FC = () => {
           onSelectCategory={setSelectedCategory}
           isOpen={showFilters}
           theme="light"
+          accent="creator"
         />
 
         {/* Content list */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
-            <Loader2 className="w-8 h-8 animate-spin text-orange-500 mb-3" />
+          <div className="flex flex-col items-center justify-center py-20 text-slate">
+            <Loader2 className="w-8 h-8 animate-spin text-lava mb-3" />
             <p className="font-semibold text-sm">Syncing affiliate marketplace campaigns...</p>
           </div>
         ) : filteredCampaigns.length === 0 ? (
-          <div className="bg-white border border-dashed border-zinc-200 rounded-3xl p-12 text-center max-w-xl mx-auto shadow-xs">
-            <Megaphone className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
-            <h3 className="font-bold text-zinc-900 text-base">No programs found</h3>
-            <p className="text-zinc-500 text-xs mt-1.5 leading-relaxed">
+          <div className="bg-white border border-dashed border-black/15 rounded-2xl p-10 sm:p-12 text-center max-w-xl mx-auto">
+            <Megaphone className="w-10 h-10 text-steel mx-auto mb-3" />
+            <h3 className="font-display font-bold text-ink text-base">No programs found</h3>
+            <p className="text-slate text-xs mt-1.5 leading-relaxed">
               {activeTab === "joined" 
                 ? "You haven't joined any affiliate campaign programs yet. Switch to the Explore tab to discover active campaigns."
                 : "No matching campaigns discovered. Try checking other categories or modify your search."}
             </p>
             {activeTab === "joined" && (
               <Button
+                variant="creator"
                 onClick={() => setActiveTab("explore")}
-                className="mt-5 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs rounded-xl shadow-xs"
+                className="mt-5 text-xs rounded-xl"
               >
                 Explore Campaign Marketplace
               </Button>
@@ -305,7 +273,6 @@ const CreatorAffiliateCampaignsPage: React.FC = () => {
             ))}
           </div>
         )}
-
       </div>
     </CreatorLayout>
   );

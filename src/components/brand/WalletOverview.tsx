@@ -1,8 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { StatusPill } from "@/components/ui/PortalPrimitives";
 import { Wallet, Plus, RefreshCw, Loader2 } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import AddFunds from "../../pages/brand/AddFunds";
 import { getBrandProfile, BrandProfile } from "@/lib/api";
 import BrandProfileModal from "./BrandProfileModal";
@@ -41,9 +48,9 @@ const WalletOverview: React.FC<WalletOverviewProps> = ({ balance, onRefresh }) =
   };
 
   const handleAddFundsClick = async () => {
-    if (loading) return; 
+    if (loading) return;
 
-    setLoading(true); 
+    setLoading(true);
     try {
       const isProfileComplete = await checkAndHandleProfile();
       if (isProfileComplete) {
@@ -57,31 +64,39 @@ const WalletOverview: React.FC<WalletOverviewProps> = ({ balance, onRefresh }) =
   const handleProfileUpdated = () => {
     setShowProfileModal(false);
     onRefresh(); // Refresh balance after profile update
-    checkAndHandleProfile().then(isComplete => {
-      if(isComplete) {
+    checkAndHandleProfile().then((isComplete) => {
+      if (isComplete) {
         setShowAddFundsDialog(true);
       }
     });
   };
 
   return (
-    <Card className="bg-black text-white border-none shadow-xl mb-8">
-      <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6">
+    <Card className="bg-white border border-black/10 rounded-2xl text-ink shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] mb-5">
+      <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         {/* Left: Balance Info */}
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="p-2.5 sm:p-3 bg-white/10 rounded-full backdrop-blur-sm shrink-0">
-            <Wallet className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-black/[0.03] border border-black/[0.06] text-ink shrink-0">
+            <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-ink" />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-zinc-400 text-xs sm:text-sm font-medium uppercase tracking-wider">Available Funds</p>
-            <div className="flex items-baseline gap-2">
-              <h2 className="text-2xl sm:text-4xl font-bold truncate">
-                ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-steel">
+                Available Vault Funds
+              </p>
+              <StatusPill tone="success" showDot>
+                Escrow Ready
+              </StatusPill>
+            </div>
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-xl sm:text-2xl font-mono font-bold tabular-nums text-ink truncate">
+                ₹{balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </h2>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 text-zinc-500 hover:text-white hover:bg-white/10 rounded-full shrink-0"
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Refresh wallet balance"
+                className="h-7 w-7 text-slate hover:text-ink hover:bg-black/[0.04] rounded-lg shrink-0"
                 onClick={onRefresh}
                 disabled={loading}
               >
@@ -93,23 +108,41 @@ const WalletOverview: React.FC<WalletOverviewProps> = ({ balance, onRefresh }) =
 
         {/* Right: Add Funds Action */}
         <Dialog open={showAddFundsDialog} onOpenChange={setShowAddFundsDialog}>
-          <Button 
-            className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 sm:py-6 text-base sm:text-lg shadow-lg shadow-green-900/20 transition-all hover:scale-105"
+          <Button
+            className="w-full sm:w-auto bg-brand-blue hover:bg-brand-blue/90 text-white font-semibold px-5 h-10 rounded-xl transition-colors duration-150 shrink-0"
             onClick={handleAddFundsClick}
             disabled={loading}
           >
             {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Checking...
-                </>
-              ) : (
-                <>
-                  <Plus className="mr-2 h-5 w-5" /> Add Funds
-                </>
-              )}
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Checking...</span>
+              </>
+            ) : (
+              <>
+                <Plus className="mr-1.5 h-4 w-4" />
+                <span>Add Funds</span>
+              </>
+            )}
           </Button>
-          <DialogContent className="w-full max-w-[900px] p-0 bg-transparent border-none shadow-none">
-            <AddFunds />
+          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[880px] p-4 sm:p-6 bg-canvas border border-black/10 rounded-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-steel">
+                01 // TREASURY TOP-UP
+              </p>
+              <DialogTitle className="font-display text-xl font-bold tracking-tight text-ink">
+                Add Funds to Brand Vault
+              </DialogTitle>
+              <DialogDescription className="text-sm text-slate">
+                Fund your brand vault instantly via zero-fee UPI or direct USDC on Base L2.
+              </DialogDescription>
+            </DialogHeader>
+            <AddFunds
+              onSuccess={() => {
+                setShowAddFundsDialog(false);
+                onRefresh();
+              }}
+            />
           </DialogContent>
         </Dialog>
       </CardContent>

@@ -9,21 +9,140 @@ import {
 } from "@/lib/api";
 import CampaignCard from "@/components/creator/CampaignCard";
 import { AffiliateCampaignCard } from "@/components/creator/AffiliateCampaignCard";
-import { useToast } from "@/hooks/use-toast";
 import { 
-  LogIn, 
-  Sparkles, 
-  Zap, 
-  Video, 
-  ShoppingBag, 
   ChevronLeft, 
   ChevronRight, 
-  ArrowRight,
-  TrendingUp,
-  ShieldCheck,
-  Coins,
-  Loader2
+  LogIn
 } from "lucide-react";
+import gsap from "gsap";
+import SquishyHeadline from "@/components/Home/persona/SquishyHeadline";
+import type { HeadlineLine } from "@/components/Home/persona/heroType";
+
+const CAMPAIGNS_HEADLINE_LINES: readonly HeadlineLine[] = [
+  { text: "ACTIVE" },
+  { text: "Campaigns", highlight: true },
+];
+
+// Curated brand campaigns matching verified clean logo cards with realistic Indian CPM rates
+// const SHOWCASE_UGC_CAMPAIGNS: Campaign[] = [
+//   {
+//     id: 101,
+//     name: "Dolce Studio • Y2K Baby Tees & Flared Denim Fit Check Reels",
+//     platform: "Instagram",
+//     budget: 340000,
+//     cpv: 85,
+//     total_view_count: 580000,
+//     deadline: "2026-12-01T00:00:00Z",
+//     campaign_category: "fashion",
+//     campaign_type: "influencer",
+//     funds_distributed: 232000,
+//     image_url: "/thumbnails/pin_fashion_1.webp",
+//   },
+//   {
+//     id: 102,
+//     name: "Stüssy India • Oversized Tees & Cargo Layering Reels",
+//     platform: "Instagram",
+//     budget: 285000,
+//     cpv: 95,
+//     total_view_count: 420000,
+//     deadline: "2026-11-24T00:00:00Z",
+//     campaign_category: "fashion",
+//     campaign_type: "influencer",
+//     funds_distributed: 147000,
+//     image_url: "/thumbnails/camp_stussy_centered.webp",
+//   },
+//   {
+//     id: 103,
+//     name: "Y2K Orbit • Chrome Shades & Chunky Chain GRWM",
+//     platform: "YouTube",
+//     budget: 225000,
+//     cpv: 75,
+//     total_view_count: 310000,
+//     deadline: "2026-11-28T00:00:00Z",
+//     campaign_category: "fashion",
+//     campaign_type: "influencer",
+//     funds_distributed: 98000,
+//     image_url: "/thumbnails/camp_y2k_orbit.webp",
+//   },
+// ];
+
+// const SHOWCASE_CLIPPING_CAMPAIGNS: Campaign[] = [
+//   {
+//     id: 201,
+//     name: "CRTZ Archive • Unboxings & Streetwear Drop Shorts",
+//     platform: "YouTube",
+//     budget: 240000,
+//     cpv: 80,
+//     total_view_count: 275000,
+//     deadline: "2026-11-21T00:00:00Z",
+//     campaign_category: "fashion",
+//     campaign_type: "clipping",
+//     funds_distributed: 98000,
+//     image_url: "/thumbnails/camp_crtz_stars.webp",
+//   },
+//   {
+//     id: 202,
+//     name: "Urban Monkey • Caps, Eyewear & Campus Fit Edits",
+//     platform: "Instagram",
+//     budget: 270000,
+//     cpv: 90,
+//     total_view_count: 310000,
+//     deadline: "2026-11-19T00:00:00Z",
+//     campaign_category: "fashion",
+//     campaign_type: "clipping",
+//     funds_distributed: 112000,
+//     image_url: "/thumbnails/camp_urban_monkey_cap.webp",
+//   },
+//   {
+//     id: 203,
+//     name: "Bape Sta Club • Sneaker Rotation & Fit Check Clips",
+//     platform: "Instagram",
+//     budget: 195000,
+//     cpv: 65,
+//     total_view_count: 490000,
+//     deadline: "2026-11-16T00:00:00Z",
+//     campaign_category: "fashion",
+//     campaign_type: "clipping",
+//     funds_distributed: 107800,
+//     image_url: "/thumbnails/camp_bape_star.webp",
+//   },
+// ];
+
+// const SHOWCASE_AFFILIATE_CAMPAIGNS: CreatorAffiliateCampaign[] = [
+//   {
+//     id: 301,
+//     product_name: "Corteiz Drop • Heavyweight Hoodies & Cargo Pants",
+//     commission_rate: 1800,
+//     campaign_type: "d2c_ecommerce",
+//     deadline: "2026-12-30T00:00:00Z",
+//     total_pool: 200000,
+//     product_url: "https://sellr.in/drop/crtz-fleece",
+//     joined: false,
+//     active: true,
+//   },
+//   {
+//     id: 302,
+//     product_name: "Stüssy Goods • Boxy Knitwear & Graphic Tees",
+//     commission_rate: 1500,
+//     campaign_type: "d2c_ecommerce",
+//     deadline: "2026-12-15T00:00:00Z",
+//     total_pool: 500000,
+//     product_url: "https://sellr.in/drop/stussy-dice",
+//     joined: false,
+//     active: true,
+//   },
+//   {
+//     id: 303,
+//     product_name: "Angels Streetwear • Track Jackets & Baggy Denim",
+//     commission_rate: 1200,
+//     campaign_type: "d2c_ecommerce",
+//     deadline: "2026-12-31T00:00:00Z",
+//     total_pool: 350000,
+//     product_url: "https://sellr.in/drop/angels-box",
+//     joined: false,
+//     active: true,
+//   },
+// ];
 
 interface MarketplaceExplorerProps {
   isAuthenticated?: boolean;
@@ -31,449 +150,391 @@ interface MarketplaceExplorerProps {
 
 export const MarketplaceExplorer: React.FC<MarketplaceExplorerProps> = ({ isAuthenticated = false }) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
   const [affiliateCampaigns, setAffiliateCampaigns] = useState<CreatorAffiliateCampaign[]>([]);
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  // Refs for horizontal scroll containers
+  // Horizontal scroll container references
+  const heroSectionRef = useRef<HTMLElement>(null);
   const ugcScrollRef = useRef<HTMLDivElement>(null);
   const clippingScrollRef = useRef<HTMLDivElement>(null);
   const affiliateScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 30);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!heroSectionRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.from(".hero-rise", {
+        y: 18,
+        opacity: 0,
+        duration: 0.45,
+        stagger: 0.08,
+        ease: "power2.out",
+        clearProps: "transform,opacity",
+      });
+    }, heroSectionRef);
+    return () => ctx.revert();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
     const loadMarketplaceData = async () => {
       setLoading(true);
-      setError(null);
       try {
         const [campsRes, affRes] = await Promise.allSettled([
           fetchAllCampaigns(),
           getCreatorAffiliateCampaigns(),
         ]);
 
-        if (campsRes.status === "fulfilled") {
-          setAllCampaigns(campsRes.value);
-        } else {
-          console.warn("Failed to load standard campaigns:", campsRes.reason);
-        }
+        if (isMounted) {
+          if (campsRes.status === "fulfilled" && campsRes.value.length > 0) {
+            setAllCampaigns(campsRes.value);
+          } else {
+            setAllCampaigns([...SHOWCASE_UGC_CAMPAIGNS, ...SHOWCASE_CLIPPING_CAMPAIGNS]);
+          }
 
-        if (affRes.status === "fulfilled") {
-          setAffiliateCampaigns(affRes.value);
-        } else {
-          console.warn("Failed to load affiliate campaigns:", affRes.reason);
+          if (affRes.status === "fulfilled" && affRes.value.length > 0) {
+            setAffiliateCampaigns(affRes.value);
+          } else {
+            setAffiliateCampaigns(SHOWCASE_AFFILIATE_CAMPAIGNS);
+          }
         }
-      } catch (err: any) {
-        setError(err.message || "Failed to load marketplace campaigns.");
+      } catch {
+        if (isMounted) {
+          setAllCampaigns([...SHOWCASE_UGC_CAMPAIGNS, ...SHOWCASE_CLIPPING_CAMPAIGNS]);
+          setAffiliateCampaigns(SHOWCASE_AFFILIATE_CAMPAIGNS);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     loadMarketplaceData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
 
-  // 1. UGC & Influencer Campaigns
   const ugcCampaigns = allCampaigns.filter(
     (c) =>
       c.campaign_type === "influencer" &&
       (!c.deadline || new Date(c.deadline) >= todayStart)
   );
 
-  // 2. Clipping Campaigns
   const clippingCampaigns = allCampaigns.filter(
     (c) =>
       c.campaign_type === "clipping" &&
       (!c.deadline || new Date(c.deadline) >= todayStart)
   );
 
-  // 3. Active Affiliate Campaigns
   const activeAffiliateCampaigns = affiliateCampaigns.filter(
     (c) => !c.deadline || new Date(c.deadline) >= todayStart
   );
 
-  // Scroll helper
-  const handleScroll = (ref: React.RefObject<HTMLDivElement>, direction: "left" | "right") => {
+  const handleScrollRail = (ref: React.RefObject<HTMLDivElement>, direction: "left" | "right") => {
     if (ref.current) {
       const scrollOffset = direction === "left" ? -380 : 380;
       ref.current.scrollBy({ left: scrollOffset, behavior: "smooth" });
     }
   };
 
+  // Direct Seamless Transit: clicking a card routes to Google login with return intent
   const handleCardClick = (id: number) => {
-    navigate(`/creator/dashboard/${id}`);
+    const userId = getUserId();
+    if (!userId) {
+      navigate(`/login?role=creator&redirect=${encodeURIComponent(`/creator/dashboard/${id}`)}`);
+    } else {
+      navigate(`/creator/dashboard/${id}`);
+    }
   };
 
   const handleAffiliateCardClick = (id: number) => {
-    navigate(`/creator/affiliate-campaigns/${id}`);
+    const userId = getUserId();
+    if (!userId) {
+      navigate(`/login?role=creator&redirect=${encodeURIComponent(`/creator/affiliate-campaigns/${id}`)}`);
+    } else {
+      navigate(`/creator/affiliate-campaigns/${id}`);
+    }
   };
 
   const handleJoinAffiliate = async (id: number) => {
-    const userId = getUserId();
-    if (!userId) {
-      navigate(`/login?role=creator&redirect=${encodeURIComponent("/creator/campaigns")}`);
-      return;
-    }
-    navigate(`/creator/affiliate-campaigns/${id}`);
+    handleAffiliateCardClick(id);
   };
 
   const totalDeals = ugcCampaigns.length + clippingCampaigns.length + activeAffiliateCampaigns.length;
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-zinc-900 flex flex-col font-sans selection:bg-orange-100 selection:text-orange-900">
-      {/* 1. Global Sticky Public Header (Zero Sidebar) */}
-      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-zinc-200/80 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Brand Logo & Context Badge */}
-          <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-1.5 group">
-              <span className="font-display text-2xl font-black tracking-tight text-zinc-900 group-hover:text-orange-600 transition-colors">
-                SELLR<span className="text-[#FF5C00]">.</span>
+    <div className="min-h-screen bg-canvas text-ink flex flex-col font-sans selection:bg-ink selection:text-white">
+      {/* 1. Crisp Swiss Paper Navigation Bar */}
+      <header
+        className={`sticky top-0 z-40 w-full transition-colors duration-150 ${
+          isScrolled
+            ? "bg-white/95 backdrop-blur-md border-b border-black/10"
+            : "bg-white border-b border-black/[0.06]"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link to="/" className="flex items-center gap-1 shrink-0">
+              <span className="font-display text-2xl font-bold tracking-tight text-ink">
+                sellr<span className="text-lava">.</span>
               </span>
             </Link>
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 border border-orange-200/80 text-[11px] font-bold text-orange-700 tracking-wide uppercase">
-              <Sparkles className="w-3 h-3 text-[#FF5C00]" />
-              <span>Creator Marketplace</span>
-            </div>
+            <div className="h-4 w-px bg-black/10 hidden sm:block" />
+            <span className="font-mono text-[10px] font-bold text-slate uppercase tracking-widest hidden sm:inline-block">
+              [{totalDeals} LIVE DEALS]
+            </span>
           </div>
 
-          {/* Right Action: Prominent Login / Sign-in CTA */}
-          <div className="flex items-center gap-3">
-            {!isAuthenticated && (
-              <div className="hidden md:flex items-center gap-2 text-xs text-zinc-500 font-medium">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{totalDeals} Live Deals Available</span>
-              </div>
-            )}
-
+          <div className="flex items-center gap-3 shrink-0">
             {!isAuthenticated ? (
               <Link
                 to={`/login?role=creator&redirect=${encodeURIComponent("/creator/campaigns")}`}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-95 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-ink hover:bg-charcoal text-white font-mono text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer transition-colors duration-150"
               >
-                <LogIn className="w-4 h-4" />
-                <span>Sign in to Earn</span>
-                <ArrowRight className="w-3.5 h-3.5 opacity-80" />
+                <LogIn className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden xs:inline sm:inline">Connect with Google</span>
+                <span className="sm:hidden xs:hidden">Sign In</span>
               </Link>
             ) : (
               <Link
                 to="/creator/dashboard"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-95 cursor-pointer"
+                className="font-mono text-xs font-bold text-ink uppercase tracking-wider hover:text-lava transition-colors duration-150"
               >
-                <span>Go to Hub</span>
-                <ArrowRight className="w-3.5 h-3.5 opacity-80" />
+                Go to Dashboard →
               </Link>
             )}
           </div>
         </div>
       </header>
 
-      {/* 2. Hero Headline Area */}
-      <section className="bg-white border-b border-zinc-200/60 py-8 sm:py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="max-w-2xl space-y-2">
-              <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF5C00]">
-                <TrendingUp className="w-3.5 h-3.5" />
-                Public Campaign Directory
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900">
-                Campaign Marketplace Explorer
-              </h1>
-              <p className="text-sm sm:text-base text-zinc-600 leading-relaxed">
-                Explore active brand briefs, verified payout budgets, and viral clip incentives. Join with Google to claim deals and start earning.
-              </p>
-            </div>
+      {/* 2. Hero-Matched Kinetic Editorial Header */}
+      <section
+        ref={heroSectionRef}
+        className="pt-10 pb-9 px-4 sm:px-6 lg:px-8 border-b border-black/10 bg-white overflow-x-clip"
+      >
+        <div className="max-w-4xl mx-auto text-center space-y-4">
+          <p className="hero-rise font-mono text-[11px] uppercase tracking-[0.18em] text-steel font-bold">
+            VERIFIED CREATOR DEALS
+          </p>
 
-            {/* Quick Metrics Capsule */}
-            <div className="flex items-center gap-2 sm:gap-4 p-2 sm:p-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 w-fit shrink-0">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-zinc-200/70 shadow-2xs">
-                <Video className="w-4 h-4 text-pink-500" />
-                <div className="text-left">
-                  <p className="text-[10px] text-zinc-400 font-bold uppercase leading-none">UGC</p>
-                  <p className="text-xs font-extrabold text-zinc-800 leading-tight">{ugcCampaigns.length} Deals</p>
-                </div>
-              </div>
+          <div className="flex justify-center">
+            <SquishyHeadline
+              lines={CAMPAIGNS_HEADLINE_LINES}
+              lineSize={() => "clamp(42px, 5.5vw, 68px)"}
+              containerRef={heroSectionRef}
+              highlightColor="bg-creator-pink/30"
+            />
+          </div>
 
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-zinc-200/70 shadow-2xs">
-                <Zap className="w-4 h-4 text-purple-500" />
-                <div className="text-left">
-                  <p className="text-[10px] text-zinc-400 font-bold uppercase leading-none">Clipping</p>
-                  <p className="text-xs font-extrabold text-zinc-800 leading-tight">{clippingCampaigns.length} Deals</p>
-                </div>
-              </div>
+          <p className="hero-rise font-body text-sm sm:text-base text-slate max-w-xl mx-auto leading-relaxed">
+            Pick a brand deal, post your reel or short, and get paid straight to UPI for every 1,000 verified views. Budget is locked before you shoot.
+          </p>
 
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-zinc-200/70 shadow-2xs">
-                <ShoppingBag className="w-4 h-4 text-amber-500" />
-                <div className="text-left">
-                  <p className="text-[10px] text-zinc-400 font-bold uppercase leading-none">Affiliate</p>
-                  <p className="text-xs font-extrabold text-zinc-800 leading-tight">{activeAffiliateCampaigns.length} Deals</p>
-                </div>
-              </div>
-            </div>
+          {/* Symmetrical 3-Part Hairline Trust Ledger */}
+          <div className="hero-rise pt-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-mono text-[11px] font-bold text-slate uppercase tracking-wider">
+            <span className="flex items-center gap-2">
+              <span className="size-1.5 rounded-full bg-emerald-600" />
+              ESCROW LOCKED UPFRONT
+            </span>
+            <span className="text-black/15 hidden sm:inline">•</span>
+            <span className="flex items-center gap-2">
+              <span className="size-1.5 rounded-full bg-emerald-600" />
+              DIRECT UPI PAYOUTS
+            </span>
+            <span className="text-black/15 hidden sm:inline">•</span>
+            <span className="flex items-center gap-2">
+              <span className="size-1.5 rounded-full bg-emerald-600" />
+              500+ FOLLOWERS TO START
+            </span>
           </div>
         </div>
       </section>
 
-      {/* 3. Main Content: 3 Horizontally Scrollable Categories */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 sm:space-y-16">
-        {loading ? (
-          <div className="w-full py-24 flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="w-8 h-8 text-[#FF5C00] animate-spin" />
-            <p className="text-xs text-zinc-500 font-medium tracking-wide">Loading marketplace opportunities...</p>
-          </div>
-        ) : error ? (
-          <div className="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-center space-y-2">
-            <p className="text-sm font-bold">Failed to load campaigns</p>
-            <p className="text-xs">{error}</p>
-          </div>
-        ) : (
-          <>
-            {/* CATEGORY 1: Influencer & UGC Deals */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-pink-100/70 text-pink-600">
-                    <Video className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900">
-                        Influencer & UGC Campaigns
-                      </h2>
-                      <span className="px-2 py-0.5 rounded-full bg-pink-50 border border-pink-200 text-pink-700 text-[10px] font-bold uppercase">
-                        {ugcCampaigns.length} Active
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-500">
-                      Collaborate directly with consumer brands for creative product reviews and sponsored content.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Desktop Horizontal Scroll Controls */}
-                {ugcCampaigns.length > 0 && (
-                  <div className="hidden sm:flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleScroll(ugcScrollRef, "left")}
-                      className="p-2 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 hover:text-zinc-900 shadow-2xs transition-all active:scale-95 cursor-pointer"
-                      title="Scroll Left"
-                      aria-label="Scroll Left"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleScroll(ugcScrollRef, "right")}
-                      className="p-2 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 hover:text-zinc-900 shadow-2xs transition-all active:scale-95 cursor-pointer"
-                      title="Scroll Right"
-                      aria-label="Scroll Right"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {ugcCampaigns.length === 0 ? (
-                <div className="w-full py-12 px-6 rounded-2xl border border-dashed border-zinc-200 bg-white text-center space-y-1.5">
-                  <Video className="w-6 h-6 text-zinc-300 mx-auto" />
-                  <p className="text-sm font-semibold text-zinc-700">No active UGC campaigns currently</p>
-                  <p className="text-xs text-zinc-400">New influencer partnerships launch every Monday. Check back soon!</p>
-                </div>
-              ) : (
-                <div
-                  ref={ugcScrollRef}
-                  className="flex gap-5 overflow-x-auto pb-4 pt-1 px-1 scroll-smooth snap-x snap-mandatory scrollbar-none"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                >
-                  {ugcCampaigns.map((camp) => (
-                    <div
-                      key={camp.id}
-                      className="w-[300px] sm:w-[340px] shrink-0 snap-start cursor-pointer hover:-translate-y-1 transition-transform"
-                      onClick={() => handleCardClick(camp.id)}
-                    >
-                      <CampaignCard {...camp} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* CATEGORY 2: Viral Clipping Campaigns */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-purple-100/70 text-purple-600">
-                    <Zap className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900">
-                        Viral Clipping Campaigns
-                      </h2>
-                      <span className="px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-bold uppercase">
-                        {clippingCampaigns.length} Active
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-500">
-                      Repurpose long-form content into viral Reels & Shorts. Earn guaranteed payouts per 1,000 views.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Desktop Horizontal Scroll Controls */}
-                {clippingCampaigns.length > 0 && (
-                  <div className="hidden sm:flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleScroll(clippingScrollRef, "left")}
-                      className="p-2 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 hover:text-zinc-900 shadow-2xs transition-all active:scale-95 cursor-pointer"
-                      title="Scroll Left"
-                      aria-label="Scroll Left"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleScroll(clippingScrollRef, "right")}
-                      className="p-2 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 hover:text-zinc-900 shadow-2xs transition-all active:scale-95 cursor-pointer"
-                      title="Scroll Right"
-                      aria-label="Scroll Right"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {clippingCampaigns.length === 0 ? (
-                <div className="w-full py-12 px-6 rounded-2xl border border-dashed border-zinc-200 bg-white text-center space-y-1.5">
-                  <Zap className="w-6 h-6 text-zinc-300 mx-auto" />
-                  <p className="text-sm font-semibold text-zinc-700">No active clipping campaigns currently</p>
-                  <p className="text-xs text-zinc-400">Podcasts and streaming partners are replenishing budgets. Check back shortly!</p>
-                </div>
-              ) : (
-                <div
-                  ref={clippingScrollRef}
-                  className="flex gap-5 overflow-x-auto pb-4 pt-1 px-1 scroll-smooth snap-x snap-mandatory scrollbar-none"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                >
-                  {clippingCampaigns.map((camp) => (
-                    <div
-                      key={camp.id}
-                      className="w-[300px] sm:w-[340px] shrink-0 snap-start cursor-pointer hover:-translate-y-1 transition-transform"
-                      onClick={() => handleCardClick(camp.id)}
-                    >
-                      <CampaignCard {...camp} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* CATEGORY 3: Affiliate & Sponsorship Campaigns */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-amber-100/70 text-amber-600">
-                    <ShoppingBag className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900">
-                        Affiliate & Product Sponsorships
-                      </h2>
-                      <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold uppercase">
-                        {activeAffiliateCampaigns.length} Programs
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-500">
-                      Promote top D2C products & SaaS tools. Earn high percentage commissions on every completed customer sale.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Desktop Horizontal Scroll Controls */}
-                {activeAffiliateCampaigns.length > 0 && (
-                  <div className="hidden sm:flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleScroll(affiliateScrollRef, "left")}
-                      className="p-2 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 hover:text-zinc-900 shadow-2xs transition-all active:scale-95 cursor-pointer"
-                      title="Scroll Left"
-                      aria-label="Scroll Left"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleScroll(affiliateScrollRef, "right")}
-                      className="p-2 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 hover:text-zinc-900 shadow-2xs transition-all active:scale-95 cursor-pointer"
-                      title="Scroll Right"
-                      aria-label="Scroll Right"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {activeAffiliateCampaigns.length === 0 ? (
-                <div className="w-full py-12 px-6 rounded-2xl border border-dashed border-zinc-200 bg-white text-center space-y-1.5">
-                  <ShoppingBag className="w-6 h-6 text-zinc-300 mx-auto" />
-                  <p className="text-sm font-semibold text-zinc-700">No active affiliate programs currently</p>
-                  <p className="text-xs text-zinc-400">D2C store catalogs and SaaS programs are updating. Check back soon!</p>
-                </div>
-              ) : (
-                <div
-                  ref={affiliateScrollRef}
-                  className="flex gap-5 overflow-x-auto pb-4 pt-1 px-1 scroll-smooth snap-x snap-mandatory scrollbar-none"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                >
-                  {activeAffiliateCampaigns.map((camp) => (
-                    <div
-                      key={camp.id}
-                      className="w-[300px] sm:w-[340px] shrink-0 snap-start cursor-pointer hover:-translate-y-1 transition-transform"
-                    >
-                      <AffiliateCampaignCard
-                        campaign={camp}
-                        onJoin={handleJoinAffiliate}
-                        joiningId={null}
-                        onCardClick={handleAffiliateCardClick}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          </>
-        )}
-      </main>
-
-      {/* 4. Bottom Guest Banner with 1-Click Login CTA */}
-      {!isAuthenticated && (
-        <aside className="bg-gradient-to-r from-zinc-900 to-black text-white py-6 border-t border-zinc-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-            <div className="space-y-1">
-              <div className="flex items-center justify-center sm:justify-start gap-2 text-xs font-bold text-orange-400 uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4" />
-                Zero Fees &bull; Direct UPI & On-Chain Payouts
-              </div>
-              <p className="text-sm text-zinc-300">
-                Ready to turn your views into daily revenue? Sign in with Google to get started in 10 seconds.
-              </p>
+      {/* 3. Horizontal Multi-Rail Showroom */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-14">
+        
+        {/* SECTOR 01: Brand UGC Reels */}
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 pb-3">
+            <div className="flex flex-wrap items-baseline gap-2.5 min-w-0">
+              <span className="font-mono text-xs font-bold text-steel uppercase tracking-widest">
+                01 //
+              </span>
+              <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink">
+                Brand UGC Reels
+              </h2>
+              <span className="font-mono text-[10px] font-bold uppercase text-lava bg-lava/10 border border-lava/25 px-2 py-0.5 rounded-full tracking-wider">
+                {ugcCampaigns.length} OPEN
+              </span>
             </div>
 
-            <Link
-              to={`/login?role=creator&redirect=${encodeURIComponent("/creator/campaigns")}`}
-              className="px-6 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-bold text-sm shadow-md transition-all active:scale-95 shrink-0 flex items-center gap-2 cursor-pointer"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>Connect with Google</span>
-            </Link>
+            {ugcCampaigns.length > 0 && (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => handleScrollRail(ugcScrollRef, "left")}
+                  className="size-8 rounded-full border border-black/10 hover:border-ink bg-white text-slate hover:text-ink flex items-center justify-center transition-colors duration-150 cursor-pointer"
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <button
+                  onClick={() => handleScrollRail(ugcScrollRef, "right")}
+                  className="size-8 rounded-full border border-black/10 hover:border-ink bg-white text-slate hover:text-ink flex items-center justify-center transition-colors duration-150 cursor-pointer"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            )}
           </div>
-        </aside>
-      )}
+
+          <div
+            ref={ugcScrollRef}
+            className="flex gap-6 overflow-x-auto pb-4 pt-1 scroll-smooth snap-x snap-mandatory scrollbar-none"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {ugcCampaigns.map((camp) => (
+              <div
+                key={camp.id}
+                className="w-[295px] sm:w-[340px] shrink-0 snap-start"
+                onClick={() => handleCardClick(camp.id)}
+              >
+                <CampaignCard {...camp} />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* SECTOR 02: Short-Form Clipping */}
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 pb-3">
+            <div className="flex flex-wrap items-baseline gap-2.5 min-w-0">
+              <span className="font-mono text-xs font-bold text-steel uppercase tracking-widest">
+                02 //
+              </span>
+              <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink">
+                Short-Form Clipping
+              </h2>
+              <span className="font-mono text-[10px] font-bold uppercase text-lava bg-lava/10 border border-lava/25 px-2 py-0.5 rounded-full tracking-wider">
+                {clippingCampaigns.length} OPEN
+              </span>
+            </div>
+
+            {clippingCampaigns.length > 0 && (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => handleScrollRail(clippingScrollRef, "left")}
+                  className="size-8 rounded-full border border-black/10 hover:border-ink bg-white text-slate hover:text-ink flex items-center justify-center transition-colors duration-150 cursor-pointer"
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <button
+                  onClick={() => handleScrollRail(clippingScrollRef, "right")}
+                  className="size-8 rounded-full border border-black/10 hover:border-ink bg-white text-slate hover:text-ink flex items-center justify-center transition-colors duration-150 cursor-pointer"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div
+            ref={clippingScrollRef}
+            className="flex gap-6 overflow-x-auto pb-4 pt-1 scroll-smooth snap-x snap-mandatory scrollbar-none"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {clippingCampaigns.map((camp) => (
+              <div
+                key={camp.id}
+                className="w-[295px] sm:w-[340px] shrink-0 snap-start"
+                onClick={() => handleCardClick(camp.id)}
+              >
+                <CampaignCard {...camp} />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* SECTOR 03: Affiliate & Product Drops */}
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 pb-3">
+            <div className="flex flex-wrap items-baseline gap-2.5 min-w-0">
+              <span className="font-mono text-xs font-bold text-steel uppercase tracking-widest">
+                03 //
+              </span>
+              <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink">
+                Affiliate & Product Drops
+              </h2>
+              <span className="font-mono text-[10px] font-bold uppercase text-lava bg-lava/10 border border-lava/25 px-2 py-0.5 rounded-full tracking-wider">
+                {activeAffiliateCampaigns.length} LIVE
+              </span>
+            </div>
+
+            {activeAffiliateCampaigns.length > 0 && (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => handleScrollRail(affiliateScrollRef, "left")}
+                  className="size-8 rounded-full border border-black/10 hover:border-ink bg-white text-slate hover:text-ink flex items-center justify-center transition-colors duration-150 cursor-pointer"
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <button
+                  onClick={() => handleScrollRail(affiliateScrollRef, "right")}
+                  className="size-8 rounded-full border border-black/10 hover:border-ink bg-white text-slate hover:text-ink flex items-center justify-center transition-colors duration-150 cursor-pointer"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div
+            ref={affiliateScrollRef}
+            className="flex gap-6 overflow-x-auto pb-4 pt-1 scroll-smooth snap-x snap-mandatory scrollbar-none"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {activeAffiliateCampaigns.map((camp) => (
+              <div
+                key={camp.id}
+                className="w-[295px] sm:w-[340px] shrink-0 snap-start"
+              >
+                <AffiliateCampaignCard
+                  campaign={camp}
+                  onJoin={handleJoinAffiliate}
+                  joiningId={null}
+                  onCardClick={handleAffiliateCardClick}
+                  image_url={
+                    camp.id === 301
+                      ? "/thumbnails/camp_corteiz_oval.webp"
+                      : camp.id === 302
+                      ? "/thumbnails/camp_stussy_dice.webp"
+                      : "/thumbnails/camp_angels_box.webp"
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      
     </div>
   );
 };

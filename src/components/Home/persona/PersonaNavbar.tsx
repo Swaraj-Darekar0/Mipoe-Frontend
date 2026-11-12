@@ -27,7 +27,28 @@ const PersonaNavbar: React.FC = () => {
   //    the top of the hero — began mid-air instead of at the screen edge. The
   //    full-width bar used to hide that; a centred pill does not.
   const [host, setHost] = useState<HTMLElement | null>(null);
-  useEffect(() => setHost(document.body), []);
+  const [isDarkSection, setIsDarkSection] = useState(false);
+
+  useEffect(() => {
+    setHost(document.body);
+
+    const handleScroll = () => {
+      const darkSections = document.querySelectorAll("#featured-drops, footer");
+      let overDark = false;
+      const navY = 32;
+      darkSections.forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (r.top <= navY && r.bottom >= navY) {
+          overDark = true;
+        }
+      });
+      setIsDarkSection(overDark);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const nav = (
     // Floating pill that hugs its own content instead of spanning the page:
@@ -36,15 +57,19 @@ const PersonaNavbar: React.FC = () => {
     // inherited, because the portal puts this outside the page's font wrapper.
     <div className="fixed inset-x-0 top-3 md:top-4 z-50 px-4 font-body pointer-events-none">
       <nav
-        className="pointer-events-auto mx-auto flex h-11 md:h-12 w-fit max-w-full items-center gap-3 md:gap-5
-                   rounded-full border border-hairline bg-canvas/85 backdrop-blur-md
-                   pl-3.5 pr-1.5 md:pl-4 md:pr-2
-                   shadow-[0_1px_2px_rgba(15,15,15,0.04),0_10px_28px_-16px_rgba(15,15,15,0.16)]"
+        className={`pointer-events-auto mx-auto flex h-11 md:h-12 w-fit max-w-full items-center gap-3 md:gap-5
+                   rounded-full border pl-3.5 pr-1.5 md:pl-4 md:pr-2 backdrop-blur-md transition-colors duration-300
+                   ${
+                     isDarkSection
+                       ? "bg-[#0a0a0c]/90 border-white/20 text-white shadow-[0_4px_30px_rgba(0,0,0,0.6)]"
+                       : "bg-canvas/85 border-hairline text-ink-deep shadow-[0_1px_2px_rgba(15,15,15,0.04),0_10px_28px_-16px_rgba(15,15,15,0.16)]"
+                   }`}
       >
         <a
           href="#"
-          className="font-bold text-[20px] md:text-[23px] leading-none tracking-[-0.02em]
-                     text-ink-deep shrink-0 whitespace-nowrap"
+          className={`font-bold text-[20px] md:text-[23px] leading-none tracking-[-0.02em] shrink-0 whitespace-nowrap transition-colors duration-300 ${
+            isDarkSection ? "text-white" : "text-ink-deep"
+          }`}
         >
           sellr.
         </a>
@@ -54,7 +79,9 @@ const PersonaNavbar: React.FC = () => {
         <div
           role="group"
           aria-label="Choose your view"
-          className="relative flex h-8 md:h-9 shrink-0 items-center rounded-full bg-surface p-[3px]"
+          className={`relative flex h-8 md:h-9 shrink-0 items-center rounded-full p-[3px] transition-colors duration-300 ${
+            isDarkSection ? "bg-white/10" : "bg-surface"
+          }`}
         >
           {PERSONAS.map(({ id, label }) => {
             const active = persona === id;
@@ -71,11 +98,12 @@ const PersonaNavbar: React.FC = () => {
                            focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
               >
                 {active && (
-                  // Shared layoutId: the black pill travels between segments
-                  // rather than cutting, which is what reads as a switch.
+                  // Shared layoutId: the black/white pill travels between segments
                   <motion.span
                     layoutId="persona-switch-thumb"
-                    className="absolute inset-0 rounded-full bg-ink-deep"
+                    className={`absolute inset-0 rounded-full transition-colors duration-300 ${
+                      isDarkSection ? "bg-white" : "bg-ink-deep"
+                    }`}
                     transition={
                       reduceMotion
                         ? { duration: 0 }
@@ -85,7 +113,13 @@ const PersonaNavbar: React.FC = () => {
                 )}
                 <span
                   className={`relative z-10 transition-colors duration-150 ${
-                    active ? "text-canvas" : "text-steel hover:text-ink"
+                    active
+                      ? isDarkSection
+                        ? "text-black font-bold"
+                        : "text-canvas"
+                      : isDarkSection
+                      ? "text-white/70 hover:text-white"
+                      : "text-steel hover:text-ink"
                   }`}
                 >
                   {label}

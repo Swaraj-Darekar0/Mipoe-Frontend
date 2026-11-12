@@ -51,6 +51,24 @@ interface StripInfo {
   payoutUnitWidth: number;
 }
 
+const INITIAL_BRAND_STRIP_DESKTOP: StripInfo = {
+  total: 4986.4,
+  split: 3171.2,
+  count: 19,
+  step: 194,
+  payoutTotal: 1815.6,
+  payoutUnitWidth: 1100,
+};
+
+const INITIAL_BRAND_STRIP_COMPACT: StripInfo = {
+  total: 2407.4,
+  split: 1384.6,
+  count: 12,
+  step: 152,
+  payoutTotal: 1023.1,
+  payoutUnitWidth: 750,
+};
+
 export interface BrandRibbonProps {
   mode: BrandMode;
   onToggleMode: () => void;
@@ -75,7 +93,10 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
 
   const geomRef = useRef<SVGPathElement>(null);
   const payoutGeomRef = useRef<SVGPathElement>(null);
-  const payoutMeasureRef = useRef<SVGTextElement>(null);
+  const payoutTradMeasureRef = useRef<SVGTextElement>(null);
+  const payoutSellrMeasureRef = useRef<SVGTextElement>(null);
+  const payoutTradWidthRef = useRef<number>(isWide ? 1100 : 750);
+  const payoutSellrWidthRef = useRef<number>(isWide ? 1100 : 750);
 
   // SVG Layers for painter-order self-crossing
   const underCapsulesRef = useRef<SVGGElement>(null);
@@ -88,7 +109,9 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
   const payoutTradPathRef = useRef<SVGTextPathElement>(null);
   const payoutSellrPathRef = useRef<SVGTextPathElement>(null);
 
-  const [strip, setStrip] = useState<StripInfo | null>(null);
+  const [strip, setStrip] = useState<StripInfo>(() =>
+    isWide ? INITIAL_BRAND_STRIP_DESKTOP : INITIAL_BRAND_STRIP_COMPACT
+  );
   const modeRef = useRef(mode);
   modeRef.current = mode;
 
@@ -161,8 +184,10 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
     }
   }, [mode]);
 
-  // Reset between breakpoints
-  useEffect(() => setStrip(null), [scene]);
+  // Switch between precomputed initial strips when breakpoint changes
+  useEffect(() => {
+    setStrip(isWide ? INITIAL_BRAND_STRIP_DESKTOP : INITIAL_BRAND_STRIP_COMPACT);
+  }, [isWide]);
 
   // Floating bounce animation for the "try me" first-arrival hint
   useEffect(() => {
@@ -179,7 +204,7 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
     };
   }, [hasInteractedPill]);
 
-  // Measure path, split, and payout text metrics
+  // Measure path, split, and dual payout text metrics
   useEffect(() => {
     const path = geomRef.current;
     const payoutPath = payoutGeomRef.current;
@@ -201,9 +226,13 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
     const count = Math.max(8, Math.ceil((split + avgPitch * 2) / avgPitch));
     const step = avgPitch;
 
-    const payoutTotal = payoutPath.getTotalLength() || 1800;
-    const measuredUnit = payoutMeasureRef.current?.getComputedTextLength() || 1100;
-    const payoutUnitWidth = Math.max(300, measuredUnit);
+    const payoutTotal = payoutPath.getTotalLength() || (isWide ? 1800 : 1100);
+    const measuredTradUnit = payoutTradMeasureRef.current?.getComputedTextLength() || (isWide ? 1100 : 750);
+    const measuredSellrUnit = payoutSellrMeasureRef.current?.getComputedTextLength() || (isWide ? 1100 : 750);
+    const tradWidth = Math.max(300, measuredTradUnit);
+    const sellrWidth = Math.max(300, measuredSellrUnit);
+    payoutTradWidthRef.current = tradWidth;
+    payoutSellrWidthRef.current = sellrWidth;
 
     setStrip({
       total,
@@ -211,11 +240,11 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
       count,
       step,
       payoutTotal,
-      payoutUnitWidth,
+      payoutUnitWidth: tradWidth,
     });
   }, [scene, d, payoutD, isWide]);
 
-  // Pre-sample geometry and drive GSAP animation ticker
+  // Pre-sample geometry and drive GSAP animation ticker with zero DOM queries
   useEffect(() => {
     const path = geomRef.current;
     const underGroup = underCapsulesRef.current;
@@ -255,8 +284,8 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
     }
     const crownAt = crown * RES;
 
-    // Over band stroke covers crossing
-    const bandFrom = crownAt + scene.capsule.w / 2 + 2;
+    // Over band stroke covers the self-crossing on descending chute below the crown
+    const bandFrom = scene.bandFrom;
     overBand.setAttribute(
       "stroke-dasharray",
       `0 ${bandFrom.toFixed(1)} ${(strip.split - bandFrom).toFixed(1)} ${strip.total.toFixed(1)}`
@@ -268,78 +297,91 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
     ];
     const inOver = capsules.map((c) => c.parentNode === overGroup);
 
+    // Cache element references ONCE at mount to eliminate 80+ DOM queries per frame
+    const cached = capsules.map((el, i) => ({
+      el,
+      pathEl: el.querySelector("path.capsule-outline") as SVGPathElement | null,
+      guidePath: document.getElementById(`capsule-guide-${uid}-${i}`) as SVGPathElement | null,
+      thumbAnchor: el.querySelector("g.capsule-thumb-anchor") as SVGGElement | null,
+      sepAnchor: el.querySelector("g.capsule-sep-anchor") as SVGGElement | null,
+    }));
+
+    // Precalculate static widths and centers outside the RAF loop
+    const G = scene.capsule.gap;
+    const N = capsules.length;
+
+    const tradWidths = new Float32Array(N);
+    const sellrWidths = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      const tradItem = TRADITIONAL_CAPSULES[i % TRADITIONAL_CAPSULES.length];
+      const sellrItem = SELLR_CAPSULES[i % SELLR_CAPSULES.length];
+      tradWidths[i] = isWide ? tradItem.w : tradItem.compactW;
+      sellrWidths[i] = isWide ? sellrItem.w : sellrItem.compactW;
+    }
+
+    const tradCenters = new Float32Array(N);
+    let tradCum = 0;
+    for (let i = 0; i < N; i++) {
+      tradCenters[i] = tradCum + tradWidths[i] / 2;
+      tradCum += tradWidths[i] + G;
+    }
+    const tradP = tradCum;
+
+    const sellrCenters = new Float32Array(N);
+    let sellrCum = 0;
+    for (let i = 0; i < N; i++) {
+      sellrCenters[i] = sellrCum + sellrWidths[i] / 2;
+      sellrCum += sellrWidths[i] + G;
+    }
+    const sellrP = sellrCum;
+
     const place = (shift: number) => {
-      // 1. Inbound cylindrical capsules with common gap G and centered separators
       const isSellrNow = modeRef.current === "sellr";
-      const G = scene.capsule.gap;
-      const N = capsules.length;
-
-      const widths = new Float32Array(N);
-      for (let i = 0; i < N; i++) {
-        const tradItem = TRADITIONAL_CAPSULES[i % TRADITIONAL_CAPSULES.length];
-        const sellrItem = SELLR_CAPSULES[i % SELLR_CAPSULES.length];
-        widths[i] = isSellrNow
-          ? (isWide ? sellrItem.w : sellrItem.compactW)
-          : (isWide ? tradItem.w : tradItem.compactW);
-      }
-
-      const centers = new Float32Array(N);
-      let cum = 0;
-      for (let i = 0; i < N; i++) {
-        centers[i] = cum + widths[i] / 2;
-        cum += widths[i] + G;
-      }
-      const P = cum;
+      const widths = isSellrNow ? sellrWidths : tradWidths;
+      const centers = isSellrNow ? sellrCenters : tradCenters;
+      const P = isSellrNow ? sellrP : tradP;
 
       for (let i = 0; i < N; i++) {
         const targetW = widths[i];
         const at = (centers[i] + shift) % P;
-        const over = at >= crownAt;
+        const over = (at + targetW / 2) >= bandFrom;
 
         if (over !== inOver[i]) {
           (over ? overGroup : underGroup).appendChild(capsules[i]);
           inOver[i] = over;
         }
 
-        // True cylindrical capsule outline that bends with the ribbon curve
         const curvedD = buildCurvedCapsuleD(
           pathSamples,
           at,
           targetW,
           scene.capsule.h
         );
-        const pathEl = capsules[i].querySelector("path.capsule-outline");
-        if (pathEl) {
-          pathEl.setAttribute("d", curvedD);
+        if (cached[i].pathEl) {
+          cached[i].pathEl.setAttribute("d", curvedD);
         }
 
-        // Option 1 continuous centerline guide path for textPath (bends with curve, no snaps)
         const guide = buildCapsuleCenterline(
           pathSamples,
           at,
           targetW,
           scene.capsule.h
         );
-        const guideEl = document.getElementById(`capsule-guide-${uid}-${i}`);
-        if (guideEl) {
-          guideEl.setAttribute("d", guide.d);
+        if (cached[i].guidePath) {
+          cached[i].guidePath.setAttribute("d", guide.d);
         }
 
-        // Position thumbnail on leading nose of capsule in sellr mode
-        const thumbAnchor = capsules[i].querySelector("g.capsule-thumb-anchor");
-        if (thumbAnchor) {
-          thumbAnchor.setAttribute(
+        if (cached[i].thumbAnchor) {
+          cached[i].thumbAnchor.setAttribute(
             "transform",
             `translate(${guide.thumbX.toFixed(1)} ${guide.thumbY.toFixed(1)}) rotate(${guide.thumbAngle.toFixed(1)})`
           );
         }
 
-        // Position separator star midway in the common gap between capsule i and capsule i+1
-        const sepAnchor = capsules[i].querySelector("g.capsule-sep-anchor") as SVGGElement | null;
-        if (sepAnchor) {
+        if (cached[i].sepAnchor) {
           const sepAt = (centers[i] + targetW / 2 + G / 2 + shift) % P;
           if (sepAt >= strip.split || sepAt < 0) {
-            sepAnchor.style.opacity = "0";
+            cached[i].sepAnchor.style.opacity = "0";
           } else {
             const kSep = Math.min(
               pathSamples.xs.length - 1,
@@ -348,20 +390,19 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
             const sepX = pathSamples.xs[kSep];
             const sepY = pathSamples.ys[kSep];
             const sepAngle = pathSamples.angles[kSep];
-            sepAnchor.setAttribute(
+            cached[i].sepAnchor.setAttribute(
               "transform",
               `translate(${sepX.toFixed(1)} ${sepY.toFixed(1)}) rotate(${sepAngle.toFixed(1)})`
             );
             const distToPill = strip.split - sepAt;
             if (distToPill < 45) {
-              sepAnchor.style.opacity = Math.max(0, distToPill / 35).toFixed(2);
+              cached[i].sepAnchor.style.opacity = Math.max(0, distToPill / 35).toFixed(2);
             } else {
-              sepAnchor.style.opacity = "1";
+              cached[i].sepAnchor.style.opacity = "1";
             }
           }
         }
 
-        // Smooth opacity fade out as capsule enters pill to prevent pop/boundary artifacts
         if (at >= strip.split) {
           capsules[i].style.opacity = "0";
         } else {
@@ -375,8 +416,9 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
         }
       }
 
-      // 2. Outbound money stream (continuous marquee on payout path sliding leftwards)
-      const payoutOffset = -(shift % strip.payoutUnitWidth);
+      // 2. Outbound money stream (continuous marquee on payout path using active mode's measured unit width)
+      const activeUnitWidth = isSellrNow ? payoutSellrWidthRef.current : payoutTradWidthRef.current;
+      const payoutOffset = -(shift % activeUnitWidth);
       if (payoutTradPathRef.current) {
         payoutTradPathRef.current.setAttribute("startOffset", `${payoutOffset.toFixed(1)}px`);
       }
@@ -565,17 +607,17 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
 
             .aura-outer-pulse {
               transform-origin: 0px 0px;
-              animation: auraOuterBreathe 3.4s ease-in-out infinite;
+              opacity: 0.85;
             }
 
             .aura-core-pulse {
               transform-origin: 0px 0px;
-              animation: auraCoreBreathe 3.4s ease-in-out infinite;
+              opacity: 0.9;
             }
 
             .aura-corona-pulse {
               transform-origin: 0px 0px;
-              animation: auraCoronaPulse 3.4s ease-in-out infinite;
+              opacity: 0.85;
             }
           `}</style>
 
@@ -676,9 +718,9 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
           ))}
         </defs>
 
-        {/* Hidden measurement node for single payout unit */}
+        {/* Hidden measurement nodes for dual payout units */}
         <text
-          ref={payoutMeasureRef}
+          ref={payoutTradMeasureRef}
           className="opacity-0 pointer-events-none absolute"
           fontSize={scene.payoutFontSize}
           fontFamily="'Montserrat', 'Inter', sans-serif"
@@ -688,9 +730,20 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
         >
           {TRADITIONAL_PAYOUTS.map((p) => `${p.text}\u00A0\u00A0✦\u00A0\u00A0`).join("")}
         </text>
+        <text
+          ref={payoutSellrMeasureRef}
+          className="opacity-0 pointer-events-none absolute"
+          fontSize={scene.payoutFontSize}
+          fontFamily="'Montserrat', 'Inter', sans-serif"
+          fontWeight="600"
+          letterSpacing="0.02em"
+          aria-hidden="true"
+        >
+          {SELLR_PAYOUTS.map((p) => `${p.text}\u00A0\u00A0✦\u00A0\u00A0`).join("")}
+        </text>
 
-        {/* 0. Brand Mascot Characters (underlay: sits behind ribbon band, naturally blending without cutting edges) */}
-        <g className="brand-mascot-layer pointer-events-none" mask={`url(#mascot-fade-mask-${uid})`}>
+        {/* 0. Brand Mascot Characters (underlay: sits solid behind ribbon band, naturally occluded without cutting edges) */}
+        <g className="brand-mascot-layer pointer-events-none">
           {/* Traditional Stressed Mascot (working hard on ads) */}
           <image
             ref={tradMascotRef}
@@ -830,7 +883,7 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
           fill="none"
           stroke={INK}
           strokeWidth={scene.band}
-          strokeLinecap="round"
+          strokeLinecap="butt"
           strokeLinejoin="round"
         />
 
@@ -853,18 +906,16 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
               href={`#payout-geom-${uid}`}
               startOffset="0px"
             >
-              {Array.from({ length: payoutReps }).map((_, r) => (
-                <React.Fragment key={`rep-trad-${r}`}>
-                  {TRADITIONAL_PAYOUTS.map((p, idx) => (
-                    <React.Fragment key={`p-trad-${r}-${idx}`}>
-                      <tspan fill={p.isProfit ? "#86efac" : "#fca5a5"}>{p.text}</tspan>
-                      <tspan fill="#fdfbea" fillOpacity={0.9}>
-                        {"\u00A0\u00A0✦\u00A0\u00A0"}
-                      </tspan>
-                    </React.Fragment>
-                  ))}
-                </React.Fragment>
-              ))}
+              {Array.from({ length: payoutReps }).map((_, r) =>
+                TRADITIONAL_PAYOUTS.map((p, idx) => (
+                  <tspan key={`p-trad-${r}-${idx}`}>
+                    <tspan fill={p.isProfit ? "#86efac" : "#fca5a5"}>{p.text}</tspan>
+                    <tspan fill="#fdfbea" fillOpacity={0.9}>
+                      {"\u00A0\u00A0✦\u00A0\u00A0"}
+                    </tspan>
+                  </tspan>
+                ))
+              )}
             </textPath>
           </text>
 
@@ -882,18 +933,16 @@ export const BrandRibbon: React.FC<BrandRibbonProps> = ({
               href={`#payout-geom-${uid}`}
               startOffset="0px"
             >
-              {Array.from({ length: payoutReps }).map((_, r) => (
-                <React.Fragment key={`rep-sellr-${r}`}>
-                  {SELLR_PAYOUTS.map((p, idx) => (
-                    <React.Fragment key={`p-sellr-${r}-${idx}`}>
-                      <tspan fill="#86efac">{p.text}</tspan>
-                      <tspan fill="#ffffff" fillOpacity={0.95}>
-                        {"\u00A0\u00A0✦\u00A0\u00A0"}
-                      </tspan>
-                    </React.Fragment>
-                  ))}
-                </React.Fragment>
-              ))}
+              {Array.from({ length: payoutReps }).map((_, r) =>
+                SELLR_PAYOUTS.map((p, idx) => (
+                  <tspan key={`p-sellr-${r}-${idx}`}>
+                    <tspan fill="#86efac">{p.text}</tspan>
+                    <tspan fill="#ffffff" fillOpacity={0.95}>
+                      {"\u00A0\u00A0✦\u00A0\u00A0"}
+                    </tspan>
+                  </tspan>
+                ))
+              )}
             </textPath>
           </text>
         </g>

@@ -12,7 +12,7 @@
   margin-left: auto;
   margin-right: auto;
   width: 100%;
-  border-radius: 1.5rem;
+  border-radius: 1rem;
 }
 
 .step-indicator-row {
@@ -20,12 +20,11 @@
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.25rem;
 }
 
 .step-content-default {
   position: relative;
-  overflow: hidden;
   width: 100%;
 }
 
@@ -36,14 +35,15 @@
 }
 
 .footer-container {
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-  padding-bottom: 1.5rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  padding-bottom: 1.25rem;
 }
 
 .footer-nav {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   display: flex;
+  gap: 0.75rem;
 }
 
 .footer-nav.spread {
@@ -55,51 +55,56 @@
 }
 
 .back-button {
-  transition: all 300ms;
-  border-radius: 0.5rem;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  border-radius: 0.75rem;
   padding: 0.5rem 1rem;
-  color: #64748b;
+  color: #52525c;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(18, 19, 22, 0.14);
   background-color: #ffffff;
 }
 
 .back-button:hover {
-  color: #1e293b;
-  background-color: #f8fafc;
+  color: #0e0e11;
+  background-color: rgba(14, 14, 17, 0.03);
+  border-color: rgba(18, 19, 22, 0.25);
 }
 
 .back-button.inactive {
   pointer-events: none;
   opacity: 0.5;
-  color: #94a3b8;
+  color: #71717a;
 }
 
 .next-button {
-  transition: all 300ms;
-  display: flex;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.5rem;
-  background-color: #4f46e5;
-  color: #fff;
+  border-radius: 0.75rem;
+  background-color: #0e0e11;
+  color: #ffffff;
   font-weight: 600;
   font-size: 0.875rem;
   letter-spacing: -0.01em;
-  padding: 0.5rem 1.25rem;
+  padding: 0.55rem 1.25rem;
   cursor: pointer;
-  border: none;
-  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+  border: 1px solid #0e0e11;
 }
 
 .next-button:hover {
-  background-color: #4338ca;
+  background-color: #222227;
 }
 
 .next-button:active {
-  background-color: #3730a3;
+  background-color: #050507;
+}
+
+.next-button:disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .step-indicator {
@@ -115,29 +120,30 @@
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  font-weight: 600;
+  font-weight: 700;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 
 .active-dot {
-  height: 0.625rem;
-  width: 0.625rem;
+  height: 0.5rem;
+  width: 0.5rem;
   border-radius: 9999px;
   background-color: #ffffff;
 }
 
 .step-number {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .step-connector {
   position: relative;
   margin-left: 0.5rem;
   margin-right: 0.5rem;
-  height: 0.1875rem;
+  height: 0.125rem;
   flex: 1;
   overflow: hidden;
-  border-radius: 0.25rem;
-  background-color: #e2e8f0;
+  border-radius: 9999px;
+  background-color: rgba(18, 19, 22, 0.1);
 }
 
 .step-connector-inner {

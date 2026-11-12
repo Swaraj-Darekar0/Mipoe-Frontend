@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import AuthLayout from "@/layouts/AuthLayout";
-import { login as loginApi, requestPasswordReset, syncWalletUser, syncGoogleUser, setAuthTokens, clearAuthTokens } from "@/lib/api";
+import { login as loginApi, requestPasswordReset, syncGoogleUser, setAuthTokens, clearAuthTokens } from "@/lib/api";
 import { preloadPostLoginRoutes } from "@/utils/route-preloader";
 import { toast } from "sonner"; 
 import { supabase } from "@/lib/supabaseClient";
@@ -34,6 +34,14 @@ const Login = () => {
   const creatorGoogleButtonRef = useRef<HTMLDivElement>(null);
   const brandGoogleButtonRef = useRef<HTMLDivElement>(null);
   const [isGsiReady, setIsGsiReady] = useState(false);
+  const [roleMismatchData, setRoleMismatchData] = useState<{
+    token: string;
+    requestedRole: string;
+    existingRole: string;
+    email: string;
+    username: string;
+  } | null>(null);
+  const [isConfirmingRole, setIsConfirmingRole] = useState(false);
 
   // Google Popup & Auth State Machine
   const [googleAuthState, setGoogleAuthState] = useState<"idle" | "popup_open" | "verifying" | "success" | "failed">("idle");
@@ -190,10 +198,24 @@ const Login = () => {
         });
 
         const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
-        const tokenToSync = refreshedSession?.access_token || activeSession.access_token;
+        const response = await syncGoogleUser(tokenToSync, roleFromQuery);
 
-        const response = await syncGoogleUser(tokenToSync);
-        setAuthTokens(response.user_id, response.role);
+        if (response.role_mismatch) {
+          setIsOAuthSyncing(false);
+          setLoading(false);
+          setRoleMismatchData({
+            token: tokenToSync,
+            requestedRole: roleFromQuery,
+            existingRole: response.existing_role || "brand",
+            email: response.email || "",
+            username: response.username || "",
+          });
+          return;
+        }
+
+        if (response.user_id && response.role) {
+          setAuthTokens(response.user_id, response.role);
+        }
         preloadPostLoginRoutes();
 
         pendingNavigationRef.current = () => {
@@ -313,8 +335,27 @@ const Login = () => {
       const tokenToSync = refreshedSession?.access_token || data.session.access_token;
 
       // 4. Sync with FastAPI Backend -> Crossmint Base L2 Smart Wallet creation
-      const response = await syncGoogleUser(tokenToSync);
-      setAuthTokens(response.user_id, response.role);
+      const response = await syncGoogleUser(tokenToSync, currentRole);
+
+      // Check if user is already registered under a different role!
+      if (response.role_mismatch) {
+        setGoogleAuthState("idle");
+        setLoading(false);
+        setIsSuccessVideoPlaying(false);
+        isAuthenticatingRef.current = false;
+        setRoleMismatchData({
+          token: tokenToSync,
+          requestedRole: currentRole,
+          existingRole: response.existing_role || "brand",
+          email: response.email || "",
+          username: response.username || "",
+        });
+        return;
+      }
+
+      if (response.user_id && response.role) {
+        setAuthTokens(response.user_id, response.role);
+      }
       preloadPostLoginRoutes();
 
       // 5. SUCCESS: Transition spinner to Emerald Green (different color from initial connecting spinner)
@@ -419,32 +460,53 @@ const Login = () => {
     }
   }, [role]);
 
-  const handleSandboxQuickLogin = async (targetRole: "brand" | "creator") => {
+  const handleConfirmRoleChoice = async (confirmedRole: string) => {
+    if (!roleMismatchData) return;
+    setIsConfirmingRole(true);
     setLoading(true);
     try {
-      const syncRes = await syncWalletUser({
-        auth_token: `crossmint_sandbox_did:crossmint:dev_${targetRole}_99::0x742d35Cc6634C0532925a3b844Bc454e4438f44e::dev_${targetRole}@gmail.com`,
-        role: targetRole,
-        wallet_address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-        email: `dev_${targetRole}@gmail.com`,
-        name: `Dev ${targetRole === "brand" ? "D2C Brand" : "Creator"}`,
-      });
-      toast.success(`Logged in as Sandbox ${targetRole}!`);
+      const response = await syncGoogleUser(roleMismatchData.token, roleMismatchData.requestedRole, confirmedRole);
+      if (response.user_id && response.role) {
+        setAuthTokens(response.user_id, response.role);
+      }
       preloadPostLoginRoutes();
 
+      setRoleMismatchData(null);
+      setGoogleAuthState("success");
+
       pendingNavigationRef.current = () => {
-        if (syncRes.role === "brand") {
+        toast.success(`Successfully signed in as ${confirmedRole === "brand" ? "Brand" : "Creator"}!`);
+        const redirectParam = searchParams.get("redirect");
+        if (redirectParam) {
+          navigate(decodeURIComponent(redirectParam));
+        } else if (response.role === "brand") {
           navigate("/brand/dashboard");
+        } else if (response.profile_completed) {
+          navigate("/creator/dashboard");
         } else {
-          navigate(syncRes.profile_completed ? "/creator/dashboard" : "/creator/complete-profile");
+          navigate("/creator/complete-profile");
         }
       };
 
       setIsSuccessVideoPlaying(true);
+      setLoading(false);
+
+      if (hasNavigatedRef.current && pendingNavigationRef.current) {
+        pendingNavigationRef.current();
+      }
     } catch (err: any) {
-      toast.error(err.message || "Failed sandbox login");
+      toast.error(err.message || "Failed to enter workspace");
+      setIsConfirmingRole(false);
       setLoading(false);
     }
+  };
+
+  const handleCancelRoleMismatch = () => {
+    setRoleMismatchData(null);
+    clearAuthTokens();
+    setGoogleAuthState("idle");
+    setLoading(false);
+    isAuthenticatingRef.current = false;
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -818,30 +880,6 @@ const Login = () => {
               </>
             )}
 
-            {!import.meta.env.PROD && (
-              <div className="mt-6 pt-4 border-t border-zinc-100 flex flex-col gap-1.5">
-                <div className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 text-center">
-                  Dev Sandbox 1-Click Login
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSandboxQuickLogin("creator")}
-                    className="px-2.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
-                  >
-                    <span>⚡</span> Sandbox Creator
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSandboxQuickLogin("brand")}
-                    className="px-2.5 py-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
-                  >
-                    <span>⚡</span> Sandbox Brand
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Register Link only shown for brand */}
             {role === "brand" && (
               <p className="text-center text-sm text-zinc-500 mt-6">
@@ -912,6 +950,57 @@ const Login = () => {
                 </DialogFooter>
               </form>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Role Mismatch Modal Dialog */}
+        <Dialog open={!!roleMismatchData} onOpenChange={(open) => { if (!open) handleCancelRoleMismatch(); }}>
+          <DialogContent className="sm:max-w-[440px] p-6 bg-white border border-zinc-200 rounded-2xl shadow-xl">
+            <DialogHeader className="text-left space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-[#FF5C00] mb-1">
+                <Sparkles className="w-5 h-5 text-[#FF5C00]" />
+              </div>
+              <DialogTitle className="text-xl font-bold tracking-tight text-zinc-900">
+                Existing Account Detected
+              </DialogTitle>
+              <DialogDescription className="text-sm text-zinc-600 leading-relaxed">
+                This Google account (<span className="font-semibold text-zinc-900">{roleMismatchData?.email}</span>) is already registered on Mipoe as a{" "}
+                <span className="font-bold text-[#FF5C00] uppercase tracking-wide">
+                  {roleMismatchData?.existingRole}
+                </span>.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-2 text-xs text-zinc-500 bg-zinc-50 p-3 rounded-lg border border-zinc-100">
+              You clicked Sign In under the <strong className="capitalize">{roleMismatchData?.requestedRole}</strong> view. Would you like to proceed into your registered <strong className="capitalize">{roleMismatchData?.existingRole}</strong> workspace?
+            </div>
+
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isConfirmingRole}
+                onClick={handleCancelRoleMismatch}
+                className="w-full sm:w-auto text-zinc-600 border-zinc-200 hover:bg-zinc-50 font-medium cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={isConfirmingRole}
+                onClick={() => handleConfirmRoleChoice(roleMismatchData!.existingRole)}
+                className="w-full sm:flex-1 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold cursor-pointer shadow-sm"
+              >
+                {isConfirmingRole ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Entering...</span>
+                  </div>
+                ) : (
+                  `Enter as ${roleMismatchData?.existingRole === "brand" ? "Brand" : "Creator"}`
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

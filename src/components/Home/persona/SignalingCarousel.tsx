@@ -3,8 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
-import { MoreHorizontal, X, ChevronUp, Check, Sparkles, ExternalLink } from "lucide-react";
+import { MoreHorizontal, X, ChevronUp, Check, Sparkles, ExternalLink, CheckCircle2, ArrowRight } from "lucide-react";
 import type { CarouselStep } from "./personaContent";
+import { InstagramReelCard } from "./InstagramReelCard";
+import HighlightedText from "./HighlightedText";
+import { SquishyWord } from "./SquishySectionHeading";
 
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -32,35 +35,53 @@ interface SignalingCarouselProps {
   persona?: "creator" | "brand";
 }
 
-// Real Sellr Platform UI Snippets tailored to each persona and step
-const renderPlatformSnippet = (stepNumber: string, persona: "creator" | "brand" = "creator") => {
+// Real Sellr Platform UI Snippets tailored to each persona and step (Authentic platform architecture)
+const renderPlatformSnippet = (
+  stepNumber: string,
+  persona: "creator" | "brand" = "creator",
+  isCompact: boolean = true
+) => {
   if (persona === "brand") {
     switch (stepNumber) {
       case "01":
       case "1":
         return (
-          <div className="w-full min-w-0 rounded-2xl bg-[#141416] text-white p-2.5 sm:p-3 border border-white/10 shadow-md select-none">
-            <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9px] font-mono min-w-0">
-              <span className="text-white/60 truncate">sellr.in/brand</span>
-              <span className="text-emerald-400 font-bold flex items-center gap-1 shrink-0 ml-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live Campaign ✓
+          <div className="w-full min-w-0 rounded-2xl bg-white text-charcoal p-3 sm:p-3.5 border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] select-none">
+            <div className="flex items-center justify-between pb-2 border-b border-black/5 text-[9.5px] font-mono min-w-0">
+              <span className="text-charcoal/70 font-semibold truncate">sellr.in/brand</span>
+              <span className="text-emerald-600 font-bold flex items-center gap-1 shrink-0 ml-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Escrow Locked
               </span>
             </div>
-            <div className="mt-2 min-w-0">
-              <div className="text-xs font-bold text-white tracking-tight truncate">
-                Urban Vault • Tech Audio UGC Drop
+
+            <div className="mt-2.5 min-w-0">
+              <div className="text-[12.5px] font-bold text-charcoal tracking-tight truncate font-display leading-tight">
+                Urban Vault • Tech Audio Drop
               </div>
-              <div className="mt-0.5 flex items-baseline gap-1.5 font-mono min-w-0">
-                <span className="text-sm font-bold text-emerald-400 shrink-0">₹1,50,000</span>
-                <span className="text-[8.5px] text-white/60 truncate">Budget • ₹0.10 / view</span>
+              <div className="mt-1 flex items-baseline gap-2 font-mono min-w-0">
+                <span className="text-lg font-bold text-emerald-600 shrink-0">₹1,50,000</span>
+                <span className="text-[9px] text-charcoal/60 truncate">Smart Contract Escrow</span>
               </div>
             </div>
-            <div className="mt-1.5 w-full bg-white/10 h-1 rounded-full overflow-hidden">
+
+            <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-[9px] font-mono">
+              <div className="p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+                <div className="text-charcoal/50 text-[8px] uppercase">Rate</div>
+                <div className="font-bold text-charcoal text-[9.5px] mt-0.5">₹85 / 1K Views</div>
+              </div>
+              <div className="p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+                <div className="text-charcoal/50 text-[8px] uppercase">Target Views</div>
+                <div className="font-bold text-charcoal text-[9.5px] mt-0.5">17,60,000</div>
+              </div>
+            </div>
+
+            <div className="mt-2.5 w-full bg-black/5 h-1.5 rounded-full overflow-hidden">
               <div className="bg-orange-500 h-full rounded-full w-full" />
             </div>
-            <div className="mt-2 flex items-center justify-between min-w-0">
-              <span className="text-[8.5px] text-white/60 font-mono truncate">15,00,000 Views Target</span>
+
+            <div className="mt-2.5 pt-1.5 border-t border-black/5 flex items-center justify-between min-w-0">
+              <span className="text-[9px] text-charcoal/70 font-mono truncate">100% Escrow Protection</span>
               <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white text-[9px] font-bold font-mono shadow-xs shrink-0 ml-1">
                 Active ⚡
               </span>
@@ -71,30 +92,47 @@ const renderPlatformSnippet = (stepNumber: string, persona: "creator" | "brand" 
       case "02":
       case "2":
         return (
-          <div className="w-full min-w-0 rounded-2xl bg-[#141416] text-white p-2.5 sm:p-3 border border-white/10 shadow-md select-none">
-            <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9px] font-mono min-w-0">
-              <span className="text-white/60 truncate">Creator Pool</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-bold uppercase text-[8px] shrink-0">
-                48 Creators In Review
+          <div className="w-full min-w-0 rounded-2xl bg-white text-charcoal p-3 sm:p-3.5 border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] select-none">
+            <div className="flex items-center justify-between pb-2 border-b border-black/5 text-[9.5px] font-mono min-w-0">
+              <span className="text-charcoal/70 font-semibold truncate">Creator Applications</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-600 font-bold uppercase text-[8px] border border-orange-500/20 shrink-0">
+                48 In Review
               </span>
             </div>
-            <div className="mt-2 flex items-center gap-2 min-w-0">
-              <div className="size-6 sm:size-7 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1.5px] shrink-0">
-                <div className="w-full h-full rounded-full bg-[#1e1e24] flex items-center justify-center text-white font-bold text-[9.5px] font-mono">
+
+            <div className="mt-2.5 flex items-center gap-2 min-w-0">
+              <div className="size-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 p-[1.5px] shrink-0">
+                <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-charcoal font-bold text-[11px] font-mono">
                   R
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold text-white truncate">@rohit.reels (240K)</div>
-                <div className="text-[8.5px] text-white/60 font-mono truncate">6.8% Eng • Tech & Audio</div>
+                <div className="text-[12.5px] font-bold text-charcoal truncate font-display leading-tight">
+                  @rohit.reels
+                </div>
+                <div className="text-[9px] text-charcoal/60 font-mono truncate">
+                  240K Followers • Tech
+                </div>
               </div>
-              <span className="px-1.5 py-0.5 rounded-md bg-emerald-500 text-black font-bold text-[8.5px] font-mono shrink-0">
+              <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[8.5px] font-mono shrink-0 border border-emerald-500/20">
                 Approved ✓
               </span>
             </div>
-            <div className="mt-2 pt-1 border-t border-white/5 flex items-center justify-between text-[8.5px] font-mono text-white/70 min-w-0">
-              <span className="truncate">Audience Match: <strong className="text-white">94% Gen-Z</strong></span>
-              <span className="text-sky-400 font-bold shrink-0 ml-1">Auto-Matched</span>
+
+            <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-[9px] font-mono">
+              <div className="p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+                <div className="text-charcoal/50 text-[8px] uppercase">Engagement</div>
+                <div className="font-bold text-charcoal text-[9.5px] mt-0.5">6.8% Rate</div>
+              </div>
+              <div className="p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+                <div className="text-charcoal/50 text-[8px] uppercase">Audience Fit</div>
+                <div className="font-bold text-emerald-600 text-[9.5px] mt-0.5">94% Gen-Z</div>
+              </div>
+            </div>
+
+            <div className="mt-2.5 pt-1.5 border-t border-black/5 flex items-center justify-between text-[9px] font-mono text-charcoal/70 min-w-0">
+              <span className="truncate">Auto-Matched Algorithmically</span>
+              <span className="text-sky-600 font-bold shrink-0 ml-1">Matched ⚡</span>
             </div>
           </div>
         );
@@ -102,55 +140,62 @@ const renderPlatformSnippet = (stepNumber: string, persona: "creator" | "brand" 
       case "03":
       case "3":
         return (
-          <div className="w-full min-w-0 rounded-2xl bg-[#141416] text-white p-2.5 sm:p-3 border border-white/10 shadow-md select-none">
-            <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9px] font-mono min-w-0">
-              <span className="text-white/60 truncate">Live Campaign UGC</span>
-              <span className="text-emerald-400 font-semibold flex items-center gap-1 shrink-0 ml-1">
-                <Sparkles className="w-3 h-3 text-emerald-400" />
-                34 Clips Live
-              </span>
-            </div>
-            <div className="mt-2 min-w-0">
-              <div className="text-[8.5px] text-white/60 font-mono mb-1 truncate">Native Reel Streaming:</div>
-              <div className="px-2 py-1 rounded-lg bg-black/50 border border-white/15 text-[9.5px] font-mono text-white/90 truncate flex items-center justify-between min-w-0">
-                <span className="truncate">instagram.com/reel/D8xM...</span>
-                <span className="text-[8.5px] text-emerald-400 font-bold font-mono shrink-0 ml-1">420K views</span>
-              </div>
-            </div>
-            <div className="mt-2 flex items-center justify-between min-w-0">
-              <div className="text-[8.5px] text-white/60 font-mono truncate">
-                Authentic UGC • Zero scripts
-              </div>
-              <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[9px] font-bold font-mono shrink-0 ml-1">
-                Live Feed
-              </span>
-            </div>
-          </div>
+          <InstagramReelCard
+            username="rohit.reels"
+            timeAgo="3d"
+            audioTrack="Urban Vault • Authentic Audio Drop"
+            videoSrc="/REFER.mp4"
+            posterSrc="/refer_poster.jpg"
+            caption="Testing the new Urban Vault ANC buds in Mumbai noise 🎧"
+            hashtags={["#urbanvault", "#techreview", "#sellrpartner"]}
+            likesCount={340}
+            commentsCount={18}
+            sharesCount={45}
+            savesCount={82}
+            verifiedReach="520K VERIFIED VIEWS"
+            payoutBadge="6.4x ROAS Delivered ⚡"
+            isCompact={isCompact}
+          />
         );
 
       case "04":
       case "4":
         return (
-          <div className="w-full min-w-0 rounded-2xl bg-[#141416] text-white p-2.5 sm:p-3 border border-white/10 shadow-md select-none">
-            <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9px] font-mono min-w-0">
-              <span className="text-white/60 truncate">Campaign Performance</span>
-              <span className="text-emerald-400 font-bold shrink-0 ml-1">Live Tracking</span>
+          <div className="w-full min-w-0 rounded-2xl bg-white text-charcoal p-3 sm:p-3.5 border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] select-none">
+            <div className="flex items-center justify-between pb-2 border-b border-black/5 text-[9.5px] font-mono min-w-0">
+              <span className="text-charcoal/70 font-semibold truncate">Live Attribution Ledger</span>
+              <span className="text-emerald-600 font-bold shrink-0 ml-1">Live Tracking</span>
             </div>
-            <div className="mt-2 flex items-baseline justify-between min-w-0">
+
+            <div className="mt-2.5 flex items-baseline justify-between min-w-0">
               <div className="min-w-0">
-                <div className="text-[8.5px] text-white/60 font-mono">Attributed Revenue</div>
-                <div className="text-sm sm:text-base font-bold text-emerald-400 font-mono tracking-tight truncate">₹2,84,000</div>
+                <div className="text-[9px] text-charcoal/60 font-mono">Attributed Sales Revenue</div>
+                <div className="text-xl sm:text-2xl font-black text-emerald-600 font-mono tracking-tight truncate mt-0.5">
+                  ₹2,84,000
+                </div>
               </div>
               <div className="text-right shrink-0 ml-1">
-                <div className="text-[8px] text-white/70 font-mono font-semibold">Spend: ₹52,040</div>
-                <div className="text-[8.5px] text-amber-400 font-mono font-bold">5.4x ROAS</div>
+                <div className="text-[9.5px] text-charcoal/70 font-mono font-semibold">Spend: ₹44,200</div>
+                <div className="text-[9.5px] text-amber-600 font-mono font-bold">6.4x ROAS</div>
               </div>
             </div>
-            <div className="mt-2 pt-1 border-t border-white/10 flex items-center justify-between min-w-0">
-              <div className="text-[8.5px] text-white/70 font-mono truncate">
-                Reach: <span className="text-white font-semibold">520,400 Verified Views</span>
+
+            <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-[9px] font-mono">
+              <div className="p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+                <div className="text-charcoal/50 text-[8px] uppercase">Verified Views</div>
+                <div className="font-bold text-charcoal text-[9.5px] mt-0.5">520,000</div>
               </div>
-              <span className="px-2 py-0.5 rounded-md bg-white/15 text-white font-bold text-[9px] font-mono shadow-xs shrink-0 ml-1">
+              <div className="p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+                <div className="text-charcoal/50 text-[8px] uppercase">Avg Rate</div>
+                <div className="font-bold text-emerald-600 text-[9.5px] mt-0.5">₹85 / 1K views</div>
+              </div>
+            </div>
+
+            <div className="mt-2.5 pt-1.5 border-t border-black/5 flex items-center justify-between min-w-0">
+              <div className="text-[9px] text-charcoal/70 font-mono truncate">
+                Ad Fraud Deduplication: <span className="text-charcoal font-semibold">Active</span>
+              </div>
+              <span className="px-2 py-0.5 rounded-md bg-black/5 text-charcoal font-bold text-[9px] font-mono shadow-xs shrink-0 ml-1">
                 Real-Time
               </span>
             </div>
@@ -161,26 +206,41 @@ const renderPlatformSnippet = (stepNumber: string, persona: "creator" | "brand" 
       case "5":
       default:
         return (
-          <div className="w-full min-w-0 rounded-2xl bg-[#141416] text-white p-2.5 sm:p-3 border border-white/10 shadow-md select-none">
-            <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9px] font-mono min-w-0">
-              <span className="text-white/60 truncate">Campaign Settlement</span>
-              <span className="text-emerald-400 font-bold shrink-0 ml-1">Zero Waste Billing ✓</span>
+          <div className="w-full min-w-0 rounded-2xl bg-white text-charcoal p-3 sm:p-3.5 border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] select-none">
+            <div className="flex items-center justify-between pb-2 border-b border-black/5 text-[9.5px] font-mono min-w-0">
+              <span className="text-charcoal/70 font-semibold truncate">Campaign Settlement</span>
+              <span className="text-emerald-600 font-bold shrink-0 ml-1">Zero Waste Billing ✓</span>
             </div>
-            <div className="mt-2 flex items-baseline justify-between min-w-0">
+
+            <div className="mt-2.5 flex items-baseline justify-between min-w-0">
               <div className="min-w-0">
-                <div className="text-[8.5px] text-white/60 font-mono">Delivered Performance</div>
-                <div className="text-sm sm:text-base font-bold text-white font-mono tracking-tight truncate">1.5M Verified Views</div>
+                <div className="text-[9px] text-charcoal/60 font-mono">Delivered Reach</div>
+                <div className="text-xl sm:text-2xl font-black text-charcoal font-mono tracking-tight truncate mt-0.5">
+                  1.5M Views
+                </div>
               </div>
               <div className="text-right shrink-0 ml-1">
-                <div className="text-[8px] text-emerald-400 font-mono font-semibold">100% Target Met</div>
-                <div className="text-[8px] text-white/50 font-mono">₹0 Upfront Risk</div>
+                <div className="text-[9.5px] text-emerald-600 font-mono font-bold">100% Target Met</div>
+                <div className="text-[8px] text-charcoal/50 font-mono">₹0 Unused Escrow</div>
               </div>
             </div>
-            <div className="mt-2 pt-1 border-t border-white/10 flex items-center justify-between min-w-0">
-              <div className="text-[8.5px] text-white/70 font-mono truncate">
-                Billed: <span className="text-white font-semibold">₹1,50,000 (CPV Only)</span>
+
+            <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-[9px] font-mono">
+              <div className="p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+                <div className="text-charcoal/50 text-[8px] uppercase">Retainers Paid</div>
+                <div className="font-bold text-emerald-600 text-[9.5px] mt-0.5">₹0 Wasted</div>
               </div>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-black font-bold text-[9px] font-mono shadow-xs shrink-0 ml-1">
+              <div className="p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+                <div className="text-charcoal/50 text-[8px] uppercase">Settlement Model</div>
+                <div className="font-bold text-charcoal text-[9.5px] mt-0.5">Pay-Per-View</div>
+              </div>
+            </div>
+
+            <div className="mt-2.5 pt-1.5 border-t border-black/5 flex items-center justify-between min-w-0">
+              <div className="text-[9px] text-charcoal/70 font-mono truncate">
+                Contract: <span className="text-charcoal font-semibold">100% Settled</span>
+              </div>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-white font-bold text-[9px] font-mono shadow-xs shrink-0 ml-1">
                 Settled ⚡
               </span>
             </div>
@@ -194,31 +254,49 @@ const renderPlatformSnippet = (stepNumber: string, persona: "creator" | "brand" 
     case "01":
     case "1":
       return (
-        <div className="w-full min-w-0 rounded-2xl bg-[#141416] text-white p-2.5 sm:p-3 border border-white/10 shadow-md select-none">
-          <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9px] font-mono min-w-0">
-            <span className="text-white/60 truncate">sellr.in/creator</span>
-            <span className="text-emerald-400 font-bold flex items-center gap-1 shrink-0 ml-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Verified ✓
+        <div className="w-full min-w-0 rounded-2xl bg-white text-charcoal p-3 sm:p-3.5 border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] select-none">
+          <div className="flex items-center justify-between pb-2 border-b border-black/5 text-[9.5px] font-mono min-w-0">
+            <span className="text-charcoal/70 font-semibold shrink-0">sellr.in</span>
+            <span className="text-emerald-600 font-bold flex items-center gap-1 shrink-0 ml-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Verified Creator
             </span>
           </div>
-          <div className="mt-2 flex items-center gap-2 min-w-0">
-            <div className="size-6 sm:size-7 rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-pink-500 p-[1.5px] shrink-0">
-              <div className="w-full h-full rounded-full bg-[#1e1e24] flex items-center justify-center text-white font-bold text-[9.5px] font-mono">
+
+          <div className="mt-2.5 flex items-center gap-2 min-w-0">
+            <div className="size-8 rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-pink-500 p-[1.5px] shrink-0">
+              <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-charcoal font-bold text-[11px] font-mono">
                 S
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-white truncate">@swaraj.reels</div>
-              <div className="text-[8.5px] text-white/60 font-mono truncate">Instagram & YouTube Linked</div>
+              <div className="text-[12px] font-bold text-charcoal truncate font-display leading-tight">
+                @swaraj
+              </div>
+              <div className="text-[9px] text-charcoal/60 font-mono truncate">
+                500+ Followers • Nano
+              </div>
             </div>
-            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[8.5px] font-mono font-bold shrink-0">
+            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[8.5px] font-mono font-bold shrink-0 border border-emerald-500/20">
               Active
             </span>
           </div>
-          <div className="mt-2 pt-1 border-t border-white/5 flex items-center justify-between text-[8.5px] font-mono text-white/70 min-w-0">
-            <span className="truncate">Gatekeeping: <strong className="text-white">None (0+)</strong></span>
-            <span className="text-orange-400 font-bold shrink-0 ml-1">Instant Access</span>
+
+          {/* Social Channels Linked */}
+          <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-[9px] font-mono">
+            <div className="p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+              <div className="text-charcoal/50 text-[8px] uppercase">Instagram</div>
+              <div className="font-bold text-charcoal text-[9.5px] mt-0.5">Connected ✓</div>
+            </div>
+            <div className="p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+              <div className="text-charcoal/50 text-[8px] uppercase">YouTube</div>
+              <div className="font-bold text-charcoal text-[9.5px] mt-0.5">Connected ✓</div>
+            </div>
+          </div>
+
+          <div className="mt-2.5 pt-1.5 border-t border-black/5 flex items-center justify-between text-[9px] font-mono text-charcoal/70 min-w-0">
+            <span className="text-charcoal/80 font-semibold truncate">Smart Escrow</span>
+            <span className="text-orange-600 font-bold shrink-0 ml-1">Instant Payouts ⚡</span>
           </div>
         </div>
       );
@@ -226,29 +304,91 @@ const renderPlatformSnippet = (stepNumber: string, persona: "creator" | "brand" 
     case "02":
     case "2":
       return (
-        <div className="w-full min-w-0 rounded-2xl bg-[#141416] text-white p-2.5 sm:p-3 border border-white/10 shadow-md select-none">
-          <div className="flex items-center justify-between text-[9px] font-mono pb-1.5 border-b border-white/10 min-w-0">
-            <span className="px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-bold uppercase text-[8px] shrink-0">
-              Active UGC Brief
+        <div className="w-full min-w-0 rounded-2xl bg-zinc-950 text-white p-3 sm:p-3.5 border border-white/15 shadow-[0_12px_36px_-6px_rgba(0,0,0,0.35)] select-none">
+          {/* Top Header: Brand Identity + Platform Badge (Faithfully mirroring CampaignCard.tsx) */}
+          <div className="flex items-center justify-between pb-2 border-b border-white/10 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="size-6 rounded-full bg-white/10 border border-white/20 text-white font-mono font-bold text-[10px] flex items-center justify-center shrink-0">
+                UV
+              </div>
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="font-display font-bold text-[12px] text-white tracking-tight truncate">
+                  Urban Vault
+                </span>
+                <CheckCircle2 className="size-3 text-emerald-400 shrink-0" strokeWidth={2.5} />
+              </div>
+            </div>
+            <span className="font-mono text-[9px] font-bold text-zinc-400 tracking-wider shrink-0 uppercase">
+              [ IG REELS ]
             </span>
-            <span className="text-white/60 text-[8.5px] shrink-0 ml-1">74% Budget Left</span>
           </div>
-          <div className="mt-2 min-w-0">
-            <div className="text-xs font-bold text-white tracking-tight truncate">
-              Urban Vault • Tech Audio Drop
+
+          {/* Monetary Anchor: Exact Rate Per 1,000 Views */}
+          <div className="pt-2">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-white drop-shadow-sm">
+                ₹85
+              </span>
+              <span className="font-mono text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                / 1K VIEWS
+              </span>
             </div>
-            <div className="mt-0.5 flex items-baseline gap-1.5 font-mono min-w-0">
-              <span className="text-sm font-bold text-emerald-400 shrink-0">₹500</span>
-              <span className="text-[8.5px] text-white/60 truncate">/ 10,000 verified views</span>
+            <p className="font-mono text-[8.5px] font-semibold tracking-wider uppercase text-zinc-400 mt-0.5">
+              PER 1,000 VERIFIED VIEWS • ESCROW LOCKED
+            </p>
+          </div>
+
+          {/* Authentic UGC Campaign Brief Description */}
+          <p className="mt-2 text-[10px] text-zinc-300 font-normal leading-snug line-clamp-2">
+            Film a quick vertical reel showing how you use our ANC earbuds in real life. No stiff corporate scripts.
+          </p>
+
+          {/* Symmetrical 3-Column Financial Grid */}
+          <div className="mt-2.5 grid grid-cols-3 gap-1 py-1.5 px-2 rounded-xl bg-white/5 border border-white/10 text-center">
+            <div>
+              <p className="font-mono text-[7.5px] font-bold uppercase tracking-wider text-zinc-400">
+                POOL
+              </p>
+              <p className="font-mono text-[10.5px] font-bold text-white mt-0.5">
+                ₹1,50,000
+              </p>
+            </div>
+            <div className="border-x border-white/10">
+              <p className="font-mono text-[7.5px] font-bold uppercase tracking-wider text-zinc-400">
+                TARGET
+              </p>
+              <p className="font-mono text-[10.5px] font-bold text-white mt-0.5">
+                1.76M
+              </p>
+            </div>
+            <div>
+              <p className="font-mono text-[7.5px] font-bold uppercase tracking-wider text-zinc-400">
+                ENDS IN
+              </p>
+              <p className="font-mono text-[10.5px] font-bold text-white mt-0.5">
+                12D LEFT
+              </p>
             </div>
           </div>
-          <div className="mt-1.5 w-full bg-white/10 h-1 rounded-full overflow-hidden">
-            <div className="bg-orange-500 h-full rounded-full w-3/4" />
+
+          {/* Escrow Progress Bar */}
+          <div className="mt-2 space-y-1">
+            <div className="flex justify-between items-center text-[8px] font-mono text-zinc-400 uppercase tracking-wider">
+              <span>BUDGET USED</span>
+              <span className="font-bold text-white">68%</span>
+            </div>
+            <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full bg-orange-500 rounded-full w-[68%]" />
+            </div>
           </div>
-          <div className="mt-2 flex items-center justify-between min-w-0">
-            <span className="text-[8.5px] text-white/60 font-mono truncate">1 Clip Brief</span>
-            <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white text-[9px] font-bold font-mono shadow-xs shrink-0 ml-1">
-              Apply Now ⚡
+
+          {/* Action Callout */}
+          <div className="mt-2.5 pt-1.5 border-t border-white/10 flex items-center justify-between">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-orange-400">
+              VIEW DEAL & JOIN
+            </span>
+            <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white font-mono font-bold text-[9px] shadow-xs flex items-center gap-1">
+              JOIN <ArrowRight className="size-2.5" />
             </span>
           </div>
         </div>
@@ -257,56 +397,73 @@ const renderPlatformSnippet = (stepNumber: string, persona: "creator" | "brand" 
     case "03":
     case "3":
       return (
-        <div className="w-full min-w-0 rounded-2xl bg-[#141416] text-white p-2.5 sm:p-3 border border-white/10 shadow-md select-none">
-          <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9px] font-mono min-w-0">
-            <span className="text-white/60 truncate">Submit Clip URL</span>
-            <span className="text-sky-400 font-semibold flex items-center gap-1 shrink-0 ml-1">
-              <Sparkles className="w-3 h-3 text-sky-400" />
-              Live Tracking
-            </span>
-          </div>
-          <div className="mt-2 min-w-0">
-            <div className="text-[8.5px] text-white/60 font-mono mb-1 truncate">Reel / YouTube Short:</div>
-            <div className="px-2 py-1 rounded-lg bg-black/50 border border-white/15 text-[9.5px] font-mono text-white/90 truncate flex items-center justify-between min-w-0">
-              <span className="truncate">https://instagram.com/reel/D8xM...</span>
-              <Check className="w-3 h-3 text-emerald-400 shrink-0 ml-1" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-center justify-between min-w-0">
-            <div className="text-[8.5px] text-white/60 font-mono truncate">
-              Real views verified hourly
-            </div>
-            <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[9px] font-bold font-mono shrink-0 ml-1">
-              Submit Clip
-            </span>
-          </div>
-        </div>
+        <InstagramReelCard
+          username="varenform"
+          timeAgo="1w"
+          audioTrack="Whitney Houston • Call You Tonight"
+          videoSrc="/REFER.mp4"
+          posterSrc="/refer_poster.jpg"
+          caption="The cleanest wireless audio drop this year"
+          hashtags={["#ootd", "#fit", "#mensstyle", "#sellr"]}
+          likesCount={174}
+          commentsCount={2}
+          sharesCount={3}
+          savesCount={20}
+          verifiedReach="210K VIEWS ✓"
+          payoutBadge="₹17,850 Credited ⚡"
+          isCompact={isCompact}
+        />
       );
 
     case "04":
     case "4":
       return (
-        <div className="w-full min-w-0 rounded-2xl bg-[#141416] text-white p-2.5 sm:p-3 border border-white/10 shadow-md select-none">
-          <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9px] font-mono min-w-0">
-            <span className="text-white/60 truncate">Sellr Creator Wallet</span>
-            <span className="text-emerald-400 font-bold shrink-0 ml-1">Instant Payouts</span>
+        <div className="w-full min-w-0 rounded-2xl bg-white text-charcoal p-3 sm:p-3.5 border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] select-none">
+          <div className="flex items-center justify-between pb-2 border-b border-black/5 text-[9.5px] font-mono min-w-0">
+            <span className="text-charcoal/70 font-semibold truncate">Sellr Creator Wallet</span>
+            <span className="text-emerald-600 font-bold flex items-center gap-1 shrink-0 ml-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Instant UPI Ready
+            </span>
           </div>
-          <div className="mt-2 flex items-baseline justify-between min-w-0">
+
+          <div className="mt-2.5 flex items-baseline justify-between min-w-0">
             <div className="min-w-0">
-              <div className="text-[8.5px] text-white/60 font-mono">Available Balance</div>
-              <div className="text-sm sm:text-base font-bold text-white font-mono tracking-tight truncate">₹38,450.00</div>
+              <div className="text-[9px] text-charcoal/60 font-mono">Available to Withdraw</div>
+              <div className="text-xl sm:text-2xl font-black text-charcoal font-mono tracking-tight truncate mt-0.5">
+                ₹26,350.00
+              </div>
             </div>
             <div className="text-right shrink-0 ml-1">
-              <div className="text-[8px] text-emerald-400 font-mono font-semibold">+₹4,200 today</div>
-              <div className="text-[8px] text-white/50 font-mono">CPV + Affiliate</div>
+              <div className="text-[9.5px] text-emerald-600 font-mono font-bold">+₹4,250 today</div>
+              <div className="text-[8px] text-charcoal/50 font-mono">From Verified Views</div>
             </div>
           </div>
-          <div className="mt-2 pt-1 border-t border-white/10 flex items-center justify-between min-w-0">
-            <div className="text-[8.5px] text-white/70 font-mono truncate">
-              UPI: <span className="text-white font-semibold">swaraj@okaxis</span>
+
+          {/* Recent View Settlements */}
+          <div className="mt-2.5 space-y-1.5 text-[9px] font-mono">
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+              <div className="truncate">
+                <span className="font-semibold text-charcoal">Urban Vault ANC Drop</span>
+                <span className="text-charcoal/50 block text-[8px]">210K Verified Views</span>
+              </div>
+              <span className="font-bold text-emerald-600 shrink-0 ml-1">+₹17,850 ✓</span>
             </div>
-            <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-black font-bold text-[9px] font-mono shadow-xs shrink-0 ml-1">
-              Withdraw ⚡
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+              <div className="truncate">
+                <span className="font-semibold text-charcoal">Wireless Audio Review</span>
+                <span className="text-charcoal/50 block text-[8px]">100K Verified Views</span>
+              </div>
+              <span className="font-bold text-emerald-600 shrink-0 ml-1">+₹8,500 ✓</span>
+            </div>
+          </div>
+
+          <div className="mt-2.5 pt-1.5 border-t border-black/5 flex items-center justify-between min-w-0">
+            <div className="text-[9px] text-charcoal/70 font-mono truncate">
+              UPI: <span className="text-charcoal font-semibold">swaraj@okaxis</span>
+            </div>
+            <span className="px-2.5 py-1 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[9px] font-mono shadow-xs shrink-0 ml-1">
+              Withdraw to Bank ⚡
             </span>
           </div>
         </div>
@@ -316,28 +473,52 @@ const renderPlatformSnippet = (stepNumber: string, persona: "creator" | "brand" 
     case "5":
     default:
       return (
-        <div className="w-full min-w-0 rounded-2xl bg-[#141416] text-white p-2.5 sm:p-3 border border-white/10 shadow-md select-none">
-          <div className="flex items-center justify-between pb-1.5 border-b border-white/10 text-[9px] font-mono min-w-0">
-            <span className="text-white/60 truncate">Creator Public Store</span>
-            <span className="text-amber-400 font-bold shrink-0 ml-1">Top 5% ★</span>
+        <div className="w-full min-w-0 rounded-2xl bg-white text-charcoal p-3 sm:p-3.5 border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] select-none">
+          <div className="flex items-center justify-between pb-2 border-b border-black/5 text-[9.5px] font-mono min-w-0">
+            <span className="text-charcoal/70 font-semibold truncate">sellr.in/store/swaraj</span>
+            <span className="text-amber-600 font-bold shrink-0 ml-1">Top 5% Creator ★</span>
           </div>
-          <div className="mt-2 flex items-center gap-2 min-w-0">
-            <div className="size-6 sm:size-7 rounded-full bg-gradient-to-tr from-purple-500 to-orange-500 p-[1.5px] shrink-0">
-              <div className="w-full h-full rounded-full bg-[#181820] flex items-center justify-center text-white font-bold text-[9.5px] font-mono">
+
+          <div className="mt-2.5 flex items-center gap-2 min-w-0">
+            <div className="size-8 rounded-full bg-gradient-to-tr from-purple-500 to-orange-500 p-[1.5px] shrink-0">
+              <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-charcoal font-bold text-[11px] font-mono">
                 S
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-white truncate">sellr.in/store/swaraj</div>
-              <div className="text-[8.5px] text-white/60 font-mono truncate">14 Live Brand Deals Curated</div>
+              <div className="text-[12.5px] font-bold text-charcoal truncate font-display leading-tight">
+                Swaraj's Audio Picks
+              </div>
+              <div className="text-[9px] text-charcoal/60 font-mono truncate">
+                14 Live Brand Drops Curated
+              </div>
             </div>
-            <span className="px-1.5 py-0.5 rounded-full bg-white/15 text-[8px] font-mono text-white/90 shrink-0">
+            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[8.5px] font-mono font-bold shrink-0 border border-emerald-500/20">
               Live
             </span>
           </div>
-          <div className="mt-2 pt-1 border-t border-white/10 flex items-center justify-between text-[8.5px] min-w-0">
-            <span className="text-white/60 font-mono truncate">Store Conv: 4.8%</span>
-            <span className="text-orange-400 font-bold font-mono flex items-center gap-0.5 shrink-0 ml-1">
+
+          {/* Curated Drops */}
+          <div className="mt-2.5 space-y-1.5 text-[9px] font-mono">
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+              <div className="truncate">
+                <span className="font-semibold text-charcoal">Urban Vault ANC Buds</span>
+                <span className="text-charcoal/50 block text-[8px]">₹3,499 retail</span>
+              </div>
+              <span className="font-bold text-orange-600 shrink-0 ml-1">12% Comm.</span>
+            </div>
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-black/[0.03] border border-black/5">
+              <div className="truncate">
+                <span className="font-semibold text-charcoal">Minimalist Desk Mat</span>
+                <span className="text-charcoal/50 block text-[8px]">₹1,299 retail</span>
+              </div>
+              <span className="font-bold text-orange-600 shrink-0 ml-1">15% Comm.</span>
+            </div>
+          </div>
+
+          <div className="mt-2.5 pt-1.5 border-t border-black/5 flex items-center justify-between text-[9px] min-w-0">
+            <span className="text-charcoal/70 font-mono truncate">Store Conv: <strong className="text-charcoal">4.8%</strong></span>
+            <span className="text-orange-600 font-bold font-mono flex items-center gap-1 shrink-0 ml-1">
               Share Store <ExternalLink className="w-2.5 h-2.5" />
             </span>
           </div>
@@ -393,12 +574,14 @@ const MobileSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, intr
   return (
     <div ref={containerRef} className="w-full bg-canvas py-10 sm:py-14 overflow-hidden">
       <div className="flex flex-col items-center justify-between w-full max-w-sm mx-auto px-2 min-h-[560px] sm:min-h-[620px] gap-3.5">
-        <div className="text-center max-w-sm mx-auto shrink-0">
-          <span className="inline-block text-[10px] sm:text-[11px] font-mono font-semibold uppercase tracking-[1.5px] text-slate/80">
-            {label}
-          </span>
-          <h2 className="mt-0.5 font-semibold text-[17px] sm:text-[20px] leading-tight tracking-[-0.02em] text-ink">
-            {intro}
+        <div className="text-center max-w-sm mx-auto shrink-0 px-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/5 text-[10px] font-mono font-bold uppercase tracking-wider text-charcoal/70 mb-1">
+            <span>{label}</span>
+            <span>•</span>
+            <span>Step {currentStep.number}/05</span>
+          </div>
+          <h2 className="font-display font-bold text-[18px] sm:text-[21px] leading-tight tracking-tight text-ink">
+            {currentStep.title}
           </h2>
         </div>
 
@@ -492,7 +675,7 @@ const MobileSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, intr
               </div>
 
               {/* Middle Story Canvas with smooth Animated transition */}
-              <div className="relative z-10 flex-1 min-h-0 w-full overflow-hidden my-auto flex flex-col justify-center">
+              <div className="relative z-10 flex-1 min-h-0 w-full overflow-y-auto scrollbar-none my-auto flex flex-col justify-center">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeIndex}
@@ -500,27 +683,18 @@ const MobileSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, intr
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -28 }}
                     transition={{ duration: 0.28, ease: "easeOut" }}
-                    className={`w-full h-full flex flex-col justify-center px-3.5 py-1.5 relative overflow-hidden select-none ${TINT_CLASS[currentStep.tint]}`}
+                    className={`w-full h-full flex flex-col justify-center px-3 sm:px-3.5 py-1 relative select-none ${TINT_CLASS[currentStep.tint]}`}
                   >
                     <span className="absolute -top-2 -right-1 text-[60px] font-bold leading-none text-charcoal/[0.04] select-none pointer-events-none font-display">
                       {currentStep.number}
                     </span>
 
-                    <div className="relative z-10 my-auto py-1 flex flex-col gap-2 min-h-0 justify-center">
-                      <div className="shrink-0">
-                        <span className="inline-block text-[9px] font-mono font-bold uppercase tracking-wider text-charcoal/50">
-                          Step {currentStep.number} • Walkthrough
-                        </span>
-                        <h3 className="mt-0.5 font-display font-bold text-[15.5px] leading-tight text-charcoal tracking-tight">
-                          {currentStep.title}
-                        </h3>
+                    <div className="relative z-10 my-auto py-0.5 flex flex-col gap-1 min-h-0 justify-center">
+                      <div className="w-full shrink-0 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                        {renderPlatformSnippet(currentStep.number, persona, true)}
                       </div>
 
-                      <div className="w-full my-0.5 shrink-0 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-                        {renderPlatformSnippet(currentStep.number, persona)}
-                      </div>
-
-                      <p className="text-[10.5px] leading-snug text-charcoal/80 shrink-0">
+                      <p className="text-[9.5px] sm:text-[10px] leading-snug text-charcoal/75 shrink-0 px-1 text-center font-medium line-clamp-2 mt-0.5">
                         {currentStep.description}
                       </p>
                     </div>
@@ -600,8 +774,10 @@ const MobileSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, intr
 // ============================================================================
 const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, intro, steps, persona }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const pinRef = useRef<HTMLDivElement>(null);
   const scrollTriggerRef = useRef<ScrollTrigger | null>(null);
   const activeIndexRef = useRef(0);
+  const isProgrammaticScrollRef = useRef(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [isInView, setIsInView] = useState(false);
@@ -625,28 +801,17 @@ const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, int
     return () => observer.disconnect();
   }, []);
 
-  // Jump to specific step, smoothly scrolling the window
+  // Jump to specific step directly and smoothly
   const scrollToStep = useCallback((idx: number) => {
     const safeIndex = Math.min(steps.length - 1, Math.max(0, idx));
+    isProgrammaticScrollRef.current = true;
     setDirection(safeIndex >= activeIndexRef.current ? 1 : -1);
     setActiveIndex(safeIndex);
     activeIndexRef.current = safeIndex;
     setTimerResetCount((c) => c + 1);
-
-    if (scrollTriggerRef.current) {
-      const st = scrollTriggerRef.current;
-      const progressFraction = (safeIndex + 0.5) / steps.length;
-      const targetY = st.start + progressFraction * (st.end - st.start);
-      const smoother = ScrollSmoother.get();
-      if (smoother) {
-        smoother.scrollTo(targetY, true);
-      } else {
-        window.scrollTo({ top: targetY, behavior: "smooth" });
-      }
-    }
   }, [steps.length]);
 
-  // When the 10-second timer completes on desktop, advance to next story via scrollToStep
+  // When the 10-second timer completes on desktop, advance to next story
   const handleDesktopTimerComplete = useCallback(() => {
     const next = (activeIndexRef.current + 1) % steps.length;
     scrollToStep(next);
@@ -655,24 +820,45 @@ const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, int
   // Desktop scroll-driven progression using ScrollTrigger with matchMedia
   useEffect(() => {
     const container = containerRef.current;
+    const pinEl = pinRef.current;
     if (!container || steps.length < 2) return;
 
-    const scrollDistance = Math.max(1, steps.length - 1) * 600;
+    const scrollDistance = steps.length * 850;
 
     const mm = gsap.matchMedia();
     mm.add("(min-width: 1024px)", () => {
       const st = ScrollTrigger.create({
         trigger: container,
+        pin: pinEl || container,
         start: "top top",
         end: () => `+=${scrollDistance}`,
-        pin: true,
         anticipatePin: 0,
+        refreshPriority: 10,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
-          const next = Math.min(
-            steps.length - 1,
-            Math.max(0, Math.floor(self.progress * steps.length))
-          );
+          if (isProgrammaticScrollRef.current) {
+            if (Math.abs(self.getVelocity()) > 20) {
+              isProgrammaticScrollRef.current = false;
+            } else {
+              return;
+            }
+          }
+
+          // Active dwell mapping:
+          // Allocate 0.0 to 0.82 for sequential progression through steps 0..4 (all 5 steps complete smoothly).
+          // Progress 0.82 to 1.0 is a complete dwell period holding Step 5 (flip-flip slide)
+          // fully settled and visible before unpinning into the next section.
+          const activeRatio = 0.82;
+          let next: number;
+          if (self.progress >= activeRatio) {
+            next = steps.length - 1;
+          } else {
+            const normalizedProgress = self.progress / activeRatio;
+            next = Math.min(
+              steps.length - 1,
+              Math.max(0, Math.floor(normalizedProgress * steps.length))
+            );
+          }
 
           if (next !== activeIndexRef.current) {
             setDirection(next >= activeIndexRef.current ? 1 : -1);
@@ -686,7 +872,7 @@ const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, int
       scrollTriggerRef.current = st;
 
       return () => {
-        st.kill();
+        st.kill(true);
         scrollTriggerRef.current = null;
       };
     });
@@ -694,30 +880,128 @@ const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, int
     return () => mm.revert();
   }, [steps.length]);
 
+  const chassisRef = useRef<HTMLDivElement>(null);
+  const glareRef = useRef<HTMLDivElement>(null);
+
+  // 3D Chassis Tilt and Specular Glare Reacting to Cursor
+  useEffect(() => {
+    const container = containerRef.current;
+    const chassis = chassisRef.current;
+    const glare = glareRef.current;
+    if (!container || !chassis || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+    const xTo = gsap.quickTo(chassis, "rotationY", { duration: 0.5, ease: "power2.out" });
+    const yTo = gsap.quickTo(chassis, "rotationX", { duration: 0.5, ease: "power2.out" });
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const xRel = (e.clientX - rect.left) / rect.width - 0.5; // -0.5 to 0.5
+      const yRel = (e.clientY - rect.top) / rect.height - 0.5;
+
+      xTo(xRel * 14); // -7deg to +7deg
+      yTo(-yRel * 12); // +6deg to -6deg
+
+      if (glare) {
+        const px = Math.round((xRel + 0.5) * 100);
+        const py = Math.round((yRel + 0.5) * 100);
+        glare.style.background = `radial-gradient(circle 340px at ${px}% ${py}%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 70%)`;
+      }
+    };
+
+    const handleMouseLeave = () => {
+      xTo(0);
+      yTo(0);
+      if (glare) {
+        glare.style.background = "radial-gradient(circle 340px at 50% 50%, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)";
+      }
+    };
+
+    container.addEventListener("mousemove", handleMouseMove, { passive: true });
+    container.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
+
   const currentStep = steps[activeIndex] || steps[0];
+
+  const renderHybridTitle = (title: string) => {
+    if (title.includes(".")) {
+      const dotIdx = title.indexOf(".");
+      const primary = title.slice(0, dotIdx + 1).trim();
+      const secondary = title.slice(dotIdx + 1).trim();
+      return (
+        <div className="flex flex-col">
+          <span className="font-display font-black uppercase text-ink tracking-tight block">
+            <SquishyWord text={primary} />
+          </span>
+          {secondary && (
+            <div className="mt-1.5">
+              <HighlightedText
+                colorClass="bg-creator-pink/25"
+                textColorClass="text-slate-800"
+              >
+                {secondary}
+              </HighlightedText>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const words = title.split(" ");
+    if (words.length <= 3) {
+      return (
+        <span className="font-display font-black uppercase text-ink tracking-tight block">
+          <SquishyWord text={title} />
+        </span>
+      );
+    }
+    const splitPoint = Math.min(3, Math.ceil(words.length / 2));
+    const primary = words.slice(0, splitPoint).join(" ");
+    const secondary = words.slice(splitPoint).join(" ");
+    return (
+      <div className="flex flex-col">
+        <span className="font-display font-black uppercase text-ink tracking-tight block">
+          <SquishyWord text={`${primary}.`} />
+        </span>
+        <div className="mt-1.5">
+          <HighlightedText
+            colorClass="bg-creator-pink/25"
+            textColorClass="text-slate-800"
+          >
+            {secondary}
+          </HighlightedText>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-[100svh] max-h-[1020px] min-h-[680px] bg-canvas overflow-hidden flex flex-col justify-center"
+      className="relative w-full bg-canvas"
     >
-      {/* Center Top Pill Badge without dirty blur */}
-      <div
-        className="absolute top-20 lg:top-24 inset-x-0 mx-auto w-fit z-20 flex items-center justify-center pointer-events-none"
-        style={{ left: 0, right: 0, margin: "0 auto" }}
-      >
-        <div className="relative pointer-events-auto inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-hairline-strong text-charcoal text-[11px] font-mono font-semibold uppercase tracking-wider whitespace-nowrap shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-          {label}
+      <div ref={pinRef} className="w-full h-[100svh] max-h-[100svh] min-h-[580px] overflow-hidden flex flex-col justify-center relative py-2">
+        {/* Center Top Pill Badge without dirty blur */}
+        <div
+          className="absolute top-16 lg:top-20 inset-x-0 mx-auto w-fit z-20 flex items-center justify-center pointer-events-none"
+          style={{ left: 0, right: 0, margin: "0 auto" }}
+        >
+          <div className="relative pointer-events-auto inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-hairline-strong text-charcoal text-[11px] font-mono font-semibold uppercase tracking-wider whitespace-nowrap shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+            {label}
+          </div>
         </div>
-      </div>
 
       <div className="max-w-7xl mx-auto px-5 sm:px-8 md:px-12 w-full h-full flex flex-col justify-center">
         {/* Two Column Grid */}
-        <div className="relative w-full grid grid-cols-2 gap-8 lg:gap-14 items-center max-w-6xl mx-auto px-6">
-          {/* Left Section: Smooth Vertical Sliding Title */}
-          <div className="flex flex-col justify-center min-h-[180px] lg:min-h-[220px] relative pr-6">
-            <div className="relative z-10 min-h-[150px] flex flex-col justify-center overflow-hidden">
+        <div className="relative w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center max-w-6xl mx-auto px-6">
+          {/* Left Section: Smooth Vertical Sliding Title & Persistent Step Navigation */}
+          <div className="lg:col-span-5 flex flex-col justify-center min-h-[380px] relative pr-4">
+            <div className="relative z-10 min-h-[220px] flex flex-col justify-center overflow-visible">
               <AnimatePresence mode="popLayout" custom={direction}>
                 <motion.div
                   key={activeIndex}
@@ -725,7 +1009,7 @@ const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, int
                   variants={{
                     enter: (dir: number) => ({
                       opacity: 0,
-                      y: dir >= 0 ? 36 : -36,
+                      y: dir >= 0 ? 32 : -32,
                     }),
                     center: {
                       opacity: 1,
@@ -733,39 +1017,61 @@ const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, int
                     },
                     exit: (dir: number) => ({
                       opacity: 0,
-                      y: dir >= 0 ? -36 : 36,
+                      y: dir >= 0 ? -32 : 32,
                     }),
                   }}
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="text-[12px] font-mono font-semibold uppercase tracking-[1.8px] text-slate/80 mb-3">
-                    Step {currentStep.number}
+                  <div className="text-[12px] font-mono font-semibold uppercase tracking-[1.8px] text-slate/80 mb-2.5">
+                    Step {currentStep.number} of 05
                   </div>
-                  <h2 className="font-display font-bold text-[36px] lg:text-[44px] xl:text-[50px] leading-[1.08] text-ink tracking-[-0.03em]">
-                    {currentStep.title}
+                  <h2 className="text-[34px] lg:text-[40px] xl:text-[44px] leading-[1.08] tracking-[-0.03em]">
+                    {renderHybridTitle(currentStep.title)}
                   </h2>
+                  <p className="mt-3.5 text-[14px] lg:text-[15px] leading-relaxed text-charcoal/70 max-w-md">
+                    {currentStep.description}
+                  </p>
                 </motion.div>
               </AnimatePresence>
             </div>
+
+            {/* Persistent, stable Step Navigation Buttons */}
+            <div className="mt-6 flex items-center gap-2 pt-3 border-t border-black/5">
+              {steps.map((step, idx) => (
+                <button
+                  key={step.number}
+                  type="button"
+                  onClick={() => scrollToStep(idx)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-mono font-semibold transition-all cursor-pointer ${
+                    idx === activeIndex
+                      ? "bg-charcoal text-white shadow-xs scale-105"
+                      : "bg-black/5 hover:bg-black/10 text-charcoal/60"
+                  }`}
+                  aria-label={`Go to Step ${step.number}`}
+                >
+                  0{idx + 1}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Right Section: Stationary Phone Mockup with Vertical Inner Sliding */}
-          <div className="flex items-center justify-center relative">
+          {/* Right Section: Stationary Phone Mockup with 3D Chassis Tilt and Specular Glare */}
+          <div className="lg:col-span-7 flex items-center justify-center relative perspective-1200">
             <div
-              className="relative shrink-0 flex items-center justify-center select-none will-change-transform"
+              ref={chassisRef}
+              className="relative shrink-0 flex items-center justify-center select-none will-change-transform transform-style-3d transition-transform duration-100 ease-out"
               onMouseEnter={() => setPaused(true)}
               onMouseLeave={() => setPaused(false)}
               style={{
-                height: "clamp(480px, 68svh, 590px)",
-                width: "calc(clamp(480px, 68svh, 590px) / 2.048)",
-                minHeight: "clamp(480px, 68svh, 590px)",
-                maxHeight: "clamp(480px, 68svh, 590px)",
-                minWidth: "calc(clamp(480px, 68svh, 590px) / 2.048)",
-                maxWidth: "calc(clamp(480px, 68svh, 590px) / 2.048)",
-                transform: "translate3d(0, 0, 0)",
+                height: "clamp(480px, 72svh, 680px)",
+                width: "calc(clamp(480px, 72svh, 680px) / 2.02)",
+                minHeight: "clamp(480px, 72svh, 680px)",
+                maxHeight: "clamp(480px, 72svh, 680px)",
+                minWidth: "calc(clamp(480px, 72svh, 680px) / 2.02)",
+                maxWidth: "calc(clamp(480px, 72svh, 680px) / 2.02)",
                 backfaceVisibility: "hidden",
               }}
             >
@@ -777,6 +1083,15 @@ const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, int
                 {/* Right Buttons: Power + Camera Control */}
                 <div className="absolute -right-[2.5px] top-[29%] h-14 w-[2.5px] rounded-r-full bg-[#25252a]" />
                 <div className="absolute -right-[2px] top-[67%] h-11 w-[2px] rounded-r-full bg-[#222226]" />
+
+                {/* Dynamic Specular Glare Sheen Layer */}
+                <div
+                  ref={glareRef}
+                  className="absolute inset-0 z-50 pointer-events-none rounded-[2.85rem] transition-all duration-200 opacity-60"
+                  style={{
+                    background: "radial-gradient(circle 340px at 50% 50%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%)",
+                  }}
+                />
 
                 {/* Inner Screen */}
                 <div className="relative w-full h-full rounded-[2.7rem] overflow-hidden bg-white ring-1 ring-white/10 flex flex-col justify-between min-w-0 min-h-0 border border-black/5 select-none">
@@ -845,7 +1160,7 @@ const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, int
                   </div>
 
                   {/* Middle Story Canvas with smooth Vertical Animated transition */}
-                  <div className="relative z-10 flex-1 min-h-0 w-full overflow-hidden my-auto flex flex-col justify-center">
+                  <div className="relative z-10 flex-1 min-h-0 w-full overflow-y-auto sm:overflow-hidden scrollbar-none my-auto flex flex-col justify-center">
                     <AnimatePresence mode="popLayout" custom={direction}>
                       <motion.div
                         key={activeIndex}
@@ -868,29 +1183,16 @@ const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, int
                         animate="center"
                         exit="exit"
                         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                        className={`w-full h-full flex flex-col justify-center px-4 py-1.5 relative overflow-hidden select-none ${TINT_CLASS[currentStep.tint]}`}
+                        className={`w-full h-full flex flex-col justify-center px-3.5 sm:px-4 py-1 relative select-none ${TINT_CLASS[currentStep.tint]}`}
                       >
                         <span className="absolute -top-2 -right-1 text-[75px] font-bold leading-none text-charcoal/[0.04] select-none pointer-events-none font-display">
                           {currentStep.number}
                         </span>
 
-                        <div className="relative z-10 my-auto py-1 flex flex-col gap-2 min-h-0 justify-center">
-                          <div className="shrink-0">
-                            <span className="inline-block text-[9px] font-mono font-bold uppercase tracking-wider text-charcoal/50">
-                              Step {currentStep.number} • Walkthrough
-                            </span>
-                            <h3 className="mt-0.5 font-display font-bold text-[17px] leading-tight text-charcoal tracking-tight">
-                              {currentStep.title}
-                            </h3>
+                        <div className="relative z-10 my-auto py-0.5 flex flex-col min-h-0 justify-center">
+                          <div className="w-full shrink-0 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                            {renderPlatformSnippet(currentStep.number, persona, true)}
                           </div>
-
-                          <div className="w-full my-0.5 shrink-0 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-                            {renderPlatformSnippet(currentStep.number, persona)}
-                          </div>
-
-                          <p className="text-[11px] leading-snug text-charcoal/80 shrink-0">
-                            {currentStep.description}
-                          </p>
                         </div>
                       </motion.div>
                     </AnimatePresence>
@@ -920,7 +1222,8 @@ const DesktopSignalingCarousel: React.FC<SignalingCarouselProps> = ({ label, int
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 // ============================================================================

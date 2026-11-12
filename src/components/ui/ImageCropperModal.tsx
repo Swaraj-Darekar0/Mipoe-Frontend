@@ -1,14 +1,51 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "./button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./dialog";
+import { cn } from "@/lib/utils";
 
-interface ImageCropperModalProps {
+export type ImageCropperAccent = "brand" | "creator" | "neutral";
+
+export interface ImageCropperModalProps {
   isOpen: boolean;
   onClose: () => void;
   imageSrc: string;
   fileName: string;
   aspectRatio: "1:1" | "16:9" | "3:1";
   onCropComplete: (file: File, previewUrl: string) => void;
+  accent?: ImageCropperAccent;
 }
+
+const ACCENT_STYLES: Record<
+  ImageCropperAccent,
+  {
+    cropOutline: string;
+    rangeAccent: string;
+    applyButton: string;
+  }
+> = {
+  brand: {
+    cropOutline: "border-brand-blue",
+    rangeAccent: "accent-brand-blue",
+    applyButton: "bg-brand-blue hover:bg-brand-blue/90 text-white",
+  },
+  creator: {
+    cropOutline: "border-lava",
+    rangeAccent: "accent-lava",
+    applyButton: "bg-lava hover:bg-lava/90 text-white",
+  },
+  neutral: {
+    cropOutline: "border-white/90",
+    rangeAccent: "accent-ink",
+    applyButton: "bg-ink hover:bg-charcoal text-white",
+  },
+};
 
 export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   isOpen,
@@ -17,6 +54,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   fileName,
   aspectRatio,
   onCropComplete,
+  accent = "neutral",
 }) => {
   const [naturalWidth, setNaturalWidth] = useState(0);
   const [naturalHeight, setNaturalHeight] = useState(0);
@@ -26,6 +64,8 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [error, setError] = useState("");
+
+  const accentStyle = ACCENT_STYLES[accent] ?? ACCENT_STYLES.neutral;
 
   // Load natural dimensions whenever a new image source is supplied
   useEffect(() => {
@@ -42,8 +82,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
       setError("");
     }
   }, [imageSrc]);
-
-  if (!isOpen || !imageSrc) return null;
 
   const is1to1 = aspectRatio === "1:1";
   const is3to1 = aspectRatio === "3:1";
@@ -75,7 +113,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
       return { panX: 0, panY: 0, xOffset: 0, yOffset: 0 };
     }
 
-    const { W, H, targetW, targetH } = getScaleAndSize(currentZoom);
+    const { W, H } = getScaleAndSize(currentZoom);
 
     // Initial base centering coordinates inside the 320x320 workspace container
     const xOffsetBase = (320 - W) / 2;
@@ -241,120 +279,136 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
     img.src = imageSrc;
   };
 
+  if (!isOpen || !imageSrc) return null;
+
   const { W, H } = getScaleAndSize(zoom);
   const clamped = clampOffsets(panX, panY, zoom);
   const left = clamped.xOffset;
   const top = clamped.yOffset;
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-150 animate-in zoom-in-95 duration-200 text-left">
-        <h3 className="text-xl font-bold text-gray-900 mb-1">
-          {is1to1 ? "Crop Brand Logo" : is3to1 ? "Crop Store Banner" : "Crop Campaign Cover"}
-        </h3>
-        <p className="text-xs text-gray-500 mb-6">
-          Drag to position the image inside the crop frame. Use the slider to zoom.
-        </p>
+    <Dialog
+      open={isOpen && Boolean(imageSrc)}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-md rounded-2xl border border-black/10 bg-white p-4 sm:p-6 text-ink shadow-[0_16px_48px_-12px_rgba(0,0,0,0.16)] data-[state=open]:animate-none data-[state=closed]:animate-none">
+        <DialogHeader className="text-left">
+          <DialogTitle className="font-display text-lg sm:text-xl font-bold tracking-tight text-ink">
+            {is1to1 ? "Crop Brand Logo" : is3to1 ? "Crop Store Banner" : "Crop Campaign Cover"}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate">
+            Drag to position the image inside the crop frame. Use the slider to zoom.
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Viewport Workspace Box (320x320) */}
-        <div
-          className="w-[320px] h-[320px] rounded-xl relative overflow-hidden bg-gray-950 cursor-move mx-auto shadow-inner select-none touch-none border border-gray-200 flex items-center justify-center"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleMouseUp}
-        >
-          {/* Draggable scaled image */}
-          <img
-            src={imageSrc}
-            alt="Cropping workspace"
-            style={{
-              width: `${W}px`,
-              height: `${H}px`,
-              left: `${left}px`,
-              top: `${top}px`,
-            }}
-            className="absolute select-none pointer-events-none max-w-none"
-          />
+        <div className="w-full overflow-x-auto flex justify-center">
+          <div
+            className="w-[320px] h-[320px] shrink-0 rounded-xl relative overflow-hidden bg-ink cursor-move select-none touch-none border border-black/15 flex items-center justify-center"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleMouseUp}
+          >
+            {/* Draggable scaled image */}
+            <img
+              src={imageSrc}
+              alt="Cropping workspace"
+              style={{
+                width: `${W}px`,
+                height: `${H}px`,
+                left: `${left}px`,
+                top: `${top}px`,
+              }}
+              className="absolute select-none pointer-events-none max-w-none"
+            />
 
-          {/* WhatsApp-Style Dark Blurred Overlay & Guides */}
-          {is1to1 ? (
-            <>
-              {/* Circular Cutout Backdrop Blur Overlay */}
-              <div
-                className="absolute inset-0 bg-black/70 backdrop-blur-md pointer-events-none z-10"
-                style={{
-                  maskImage: "radial-gradient(circle 140px at center, transparent 140px, black 141px)",
-                  WebkitMaskImage: "radial-gradient(circle 140px at center, transparent 140px, black 141px)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                }}
-              />
-              {/* Crop bounds outline */}
-              <div className="absolute top-[20px] left-[20px] w-[280px] h-[280px] rounded-full border-2 border-indigo-600 pointer-events-none z-20" />
-              <div className="absolute top-[20px] left-[20px] w-[280px] h-[280px] rounded-full border border-white/30 pointer-events-none z-20" />
-              {/* Overlay guides */}
-              <div className="absolute top-[160px] left-[20px] right-[20px] border-t border-dashed border-white/20 pointer-events-none z-20" />
-              <div className="absolute left-[160px] top-[20px] bottom-[20px] border-l border-dashed border-white/20 pointer-events-none z-20" />
-            </>
-          ) : is3to1 ? (
-            <>
-              {/* Top/Bottom Overlay panels for 3:1 crop blur */}
-              <div 
-                className="absolute top-0 left-0 right-0 h-[110px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-b border-white/10" 
-                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
-              />
-              <div 
-                className="absolute bottom-0 left-0 right-0 h-[110px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-t border-white/10" 
-                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
-              />
-              {/* Side overlay panels to constraint from 320 to 300 width (10px on each side) */}
-              <div 
-                className="absolute top-[110px] bottom-[110px] left-0 w-[10px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-r border-white/10" 
-                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
-              />
-              <div 
-                className="absolute top-[110px] bottom-[110px] right-0 w-[10px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-l border-white/10" 
-                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
-              />
-              {/* Crop bounds outline */}
-              <div className="absolute top-[110px] left-[10px] w-[300px] h-[100px] border-2 border-indigo-600 pointer-events-none z-20" />
-              <div className="absolute top-[110px] left-[10px] w-[300px] h-[100px] border border-white/30 pointer-events-none z-20" />
-              {/* Overlay guides */}
-              <div className="absolute left-[110px] top-[110px] bottom-[110px] border-l border-dashed border-white/20 pointer-events-none z-25" />
-              <div className="absolute left-[210px] top-[110px] bottom-[110px] border-l border-dashed border-white/20 pointer-events-none z-25" />
-            </>
-          ) : (
-            <>
-              {/* Top/Bottom Overlay panels for 16:9 crop blur */}
-              <div 
-                className="absolute top-0 left-0 right-0 h-[70px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-b border-white/10" 
-                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
-              />
-              <div 
-                className="absolute bottom-0 left-0 right-0 h-[70px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-t border-white/10" 
-                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
-              />
-              {/* Crop bounds outline */}
-              <div className="absolute top-[70px] left-0 right-0 h-[180px] border-2 border-indigo-600 pointer-events-none z-20" />
-              <div className="absolute top-[70px] left-0 right-0 h-[180px] border border-white/30 pointer-events-none z-20" />
-              {/* Overlay guides */}
-              <div className="absolute top-[130px] left-0 right-0 border-t border-dashed border-white/20 pointer-events-none z-25" />
-              <div className="absolute top-[190px] left-0 right-0 border-t border-dashed border-white/20 pointer-events-none z-25" />
-              <div className="absolute left-1/3 top-[70px] bottom-[70px] border-l border-dashed border-white/20 pointer-events-none z-25" />
-              <div className="absolute left-2/3 top-[70px] bottom-[70px] border-l border-dashed border-white/20 pointer-events-none z-25" />
-            </>
-          )}
+            {/* Blurred Crop Cutout Overlay & Guides */}
+            {is1to1 ? (
+              <>
+                <div
+                  className="absolute inset-0 bg-black/70 backdrop-blur-md pointer-events-none z-10"
+                  style={{
+                    maskImage: "radial-gradient(circle 140px at center, transparent 140px, black 141px)",
+                    WebkitMaskImage: "radial-gradient(circle 140px at center, transparent 140px, black 141px)",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
+                  }}
+                />
+                <div
+                  className={cn(
+                    "absolute top-[20px] left-[20px] w-[280px] h-[280px] rounded-full border-2 pointer-events-none z-20",
+                    accentStyle.cropOutline
+                  )}
+                />
+                <div className="absolute top-[20px] left-[20px] w-[280px] h-[280px] rounded-full border border-white/30 pointer-events-none z-20" />
+                <div className="absolute top-[160px] left-[20px] right-[20px] border-t border-dashed border-white/25 pointer-events-none z-20" />
+                <div className="absolute left-[160px] top-[20px] bottom-[20px] border-l border-dashed border-white/25 pointer-events-none z-20" />
+              </>
+            ) : is3to1 ? (
+              <>
+                <div
+                  className="absolute top-0 left-0 right-0 h-[110px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-b border-white/10"
+                  style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+                />
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-[110px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-t border-white/10"
+                  style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+                />
+                <div
+                  className="absolute top-[110px] bottom-[110px] left-0 w-[10px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-r border-white/10"
+                  style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+                />
+                <div
+                  className="absolute top-[110px] bottom-[110px] right-0 w-[10px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-l border-white/10"
+                  style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+                />
+                <div
+                  className={cn(
+                    "absolute top-[110px] left-[10px] w-[300px] h-[100px] border-2 pointer-events-none z-20",
+                    accentStyle.cropOutline
+                  )}
+                />
+                <div className="absolute top-[110px] left-[10px] w-[300px] h-[100px] border border-white/30 pointer-events-none z-20" />
+                <div className="absolute left-[110px] top-[110px] bottom-[110px] border-l border-dashed border-white/25 pointer-events-none z-20" />
+                <div className="absolute left-[210px] top-[110px] bottom-[110px] border-l border-dashed border-white/25 pointer-events-none z-20" />
+              </>
+            ) : (
+              <>
+                <div
+                  className="absolute top-0 left-0 right-0 h-[70px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-b border-white/10"
+                  style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+                />
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-[70px] bg-black/70 backdrop-blur-md pointer-events-none z-10 border-t border-white/10"
+                  style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+                />
+                <div
+                  className={cn(
+                    "absolute top-[70px] left-0 right-0 h-[180px] border-2 pointer-events-none z-20",
+                    accentStyle.cropOutline
+                  )}
+                />
+                <div className="absolute top-[70px] left-0 right-0 h-[180px] border border-white/30 pointer-events-none z-20" />
+                <div className="absolute top-[130px] left-0 right-0 border-t border-dashed border-white/25 pointer-events-none z-20" />
+                <div className="absolute top-[190px] left-0 right-0 border-t border-dashed border-white/25 pointer-events-none z-20" />
+                <div className="absolute left-1/3 top-[70px] bottom-[70px] border-l border-dashed border-white/25 pointer-events-none z-20" />
+                <div className="absolute left-2/3 top-[70px] bottom-[70px] border-l border-dashed border-white/25 pointer-events-none z-20" />
+              </>
+            )}
+          </div>
         </div>
 
         {/* Zoom Slider */}
-        <div className="mt-6 space-y-2">
-          <div className="flex justify-between text-xs text-gray-500 font-bold">
+        <div className="space-y-2">
+          <div className="flex justify-between items-center font-mono text-[11px] uppercase tracking-wider text-slate font-bold">
             <span>Zoom</span>
-            <span>{Math.round(zoom * 100)}%</span>
+            <span className="tabular-nums text-ink">{Math.round(zoom * 100)}%</span>
           </div>
           <input
             title="Zoom"
@@ -364,22 +418,29 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
             step="0.01"
             value={zoom}
             onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
-            className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus:outline-none"
+            className={cn(
+              "w-full h-1.5 bg-black/10 rounded-lg appearance-none cursor-pointer focus:outline-none",
+              accentStyle.rangeAccent
+            )}
           />
         </div>
 
-        {error && <p className="text-red-500 text-xs font-semibold mt-4">{error}</p>}
+        {error && <p className="text-rose-600 text-xs font-semibold">{error}</p>}
 
         {/* Action Controls */}
-        <div className="flex justify-end gap-3 mt-8">
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="gap-2 pt-1">
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleApplyCrop} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
+          <Button
+            type="button"
+            onClick={handleApplyCrop}
+            className={cn("font-semibold", accentStyle.applyButton)}
+          >
             Apply Crop
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

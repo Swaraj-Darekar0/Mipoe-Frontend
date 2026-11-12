@@ -1,5 +1,4 @@
-import React, { useState, Children, useRef, useLayoutEffect, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, Children, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import './Stepper.css';
 
@@ -11,11 +10,43 @@ function ChevronLeft({ className = '' }: { className?: string }) {
   );
 }
 
+export type StepperAccent = 'brand' | 'creator';
+
+const ACCENT_STYLES: Record<
+  StepperAccent,
+  {
+    eyebrowText: string;
+    badge: string;
+    sidebarActive: string;
+    circleActive: string;
+    barActive: string;
+    horizontalLabelActive: string;
+  }
+> = {
+  brand: {
+    eyebrowText: 'text-brand-blue',
+    badge: 'bg-brand-blue/10 text-brand-blue border border-brand-blue/25',
+    sidebarActive: 'border-brand-blue bg-brand-blue/[0.06] text-ink font-semibold',
+    circleActive: 'bg-brand-blue text-white border border-brand-blue',
+    barActive: 'bg-brand-blue',
+    horizontalLabelActive: 'text-brand-blue font-bold',
+  },
+  creator: {
+    eyebrowText: 'text-lava',
+    badge: 'bg-lava/10 text-lava border border-lava/25',
+    sidebarActive: 'border-lava bg-lava/[0.06] text-ink font-semibold',
+    circleActive: 'bg-lava text-white border border-lava',
+    barActive: 'bg-lava',
+    horizontalLabelActive: 'text-lava font-bold',
+  },
+};
+
 export interface StepperProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   initialStep?: number;
   activeStep?: number;
   onStepChange?: (step: number) => void;
+  onBeforeNext?: (currentStep: number) => boolean | Promise<boolean>;
   onFinalStepCompleted?: () => void;
   stepCircleContainerClassName?: string;
   stepContainerClassName?: string;
@@ -36,17 +67,22 @@ export interface StepperProps extends React.HTMLAttributes<HTMLDivElement> {
 
   // Split Layout Props
   layout?: 'horizontal' | 'split';
+  accent?: StepperAccent;
   onboardingTitle?: string;
+  sidebarBrandSubtitle?: string;
   sidebarHeader?: React.ReactNode;
   sidebarFooter?: React.ReactNode;
+  sidebarFooterContent?: React.ReactNode;
+  /** @deprecated Light Paper Canvas is always enforced per DESIGN.md. */
   isDarkTheme?: boolean;
 }
 
-export default function Stepper({
+export function Stepper({
   children,
   initialStep = 1,
   activeStep,
   onStepChange = () => {},
+  onBeforeNext,
   onFinalStepCompleted = () => {},
   stepCircleContainerClassName = '',
   stepContainerClassName = '',
@@ -63,26 +99,30 @@ export default function Stepper({
 
   // Split Layout Props
   layout = 'horizontal',
+  accent = 'brand',
   onboardingTitle = 'Onboarding Process',
+  sidebarBrandSubtitle = 'Verification Setup',
   sidebarHeader,
   sidebarFooter,
-  isDarkTheme = false,
+  sidebarFooterContent,
+  isDarkTheme: _isDarkTheme = false,
   className,
   ...rest
 }: StepperProps) {
   const [currentStep, setCurrentStep] = useState(activeStep !== undefined ? activeStep : initialStep);
-  const [direction, setDirection] = useState(0);
   const stepsArray = Children.toArray(children);
   const totalSteps = stepsArray.length;
   const isCompleted = currentStep > totalSteps;
   const isLastStep = currentStep === totalSteps;
 
+  const accentStyle = ACCENT_STYLES[accent] ?? ACCENT_STYLES.brand;
+  const resolvedSidebarFooter = sidebarFooter ?? sidebarFooterContent;
+
   useEffect(() => {
     if (activeStep !== undefined && activeStep !== currentStep) {
-      setDirection(activeStep > currentStep ? 1 : -1);
       setCurrentStep(activeStep);
     }
-  }, [activeStep]);
+  }, [activeStep, currentStep]);
 
   const updateStep = (newStep: number) => {
     setCurrentStep(newStep);
@@ -95,29 +135,41 @@ export default function Stepper({
 
   const handleBack = () => {
     if (currentStep > 1) {
-      setDirection(-1);
       updateStep(currentStep - 1);
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (onBeforeNext) {
+      const result = onBeforeNext(currentStep);
+      const canProceed = result instanceof Promise ? await result : result;
+      if (!canProceed) return;
+    }
     if (!isLastStep) {
-      setDirection(1);
       updateStep(currentStep + 1);
     }
   };
 
-  const handleComplete = () => {
-    setDirection(1);
+  const handleComplete = async () => {
+    if (onBeforeNext) {
+      const result = onBeforeNext(currentStep);
+      const canProceed = result instanceof Promise ? await result : result;
+      if (!canProceed) return;
+    }
     updateStep(totalSteps + 1);
   };
 
-  // Render Horizontal Layout (Default React Bits style)
+  // Render Horizontal Layout
   if (layout === 'horizontal') {
     return (
-      <div className="outer-container" {...rest}>
-        <div className={`step-circle-container ${stepCircleContainerClassName}`}>
-          <div className={`step-indicator-row ${stepContainerClassName}`}>
+      <div className={cn('outer-container text-ink', className)} {...rest}>
+        <div
+          className={cn(
+            'step-circle-container rounded-2xl bg-white border border-black/10',
+            stepCircleContainerClassName
+          )}
+        >
+          <div className={cn('step-indicator-row border-b border-black/10', stepContainerClassName)}>
             {stepsArray.map((_, index) => {
               const stepNumber = index + 1;
               const isNotLastStep = index < totalSteps - 1;
@@ -129,24 +181,25 @@ export default function Stepper({
                       step: stepNumber,
                       currentStep,
                       onStepClick: (clicked) => {
-                        const clickedStatus = currentStep === clicked ? 'active' : currentStep > clicked ? 'complete' : 'inactive';
+                        const clickedStatus =
+                          currentStep === clicked ? 'active' : currentStep > clicked ? 'complete' : 'inactive';
                         // Linear navigation control: cannot jump forward to inactive steps
                         if (clickedStatus !== 'inactive') {
-                          setDirection(clicked > currentStep ? 1 : -1);
                           updateStep(clicked);
                         }
-                      }
+                      },
                     })
                   ) : (
                     <StepIndicator
                       step={stepNumber}
                       disableStepIndicators={disableStepIndicators}
                       currentStep={currentStep}
+                      accent={accent}
                       onClickStep={(clicked) => {
-                        const clickedStatus = currentStep === clicked ? 'active' : currentStep > clicked ? 'complete' : 'inactive';
+                        const clickedStatus =
+                          currentStep === clicked ? 'active' : currentStep > clicked ? 'complete' : 'inactive';
                         // Linear navigation control: cannot jump forward to inactive steps
                         if (clickedStatus !== 'inactive') {
-                          setDirection(clicked > currentStep ? 1 : -1);
                           updateStep(clicked);
                         }
                       }}
@@ -162,30 +215,50 @@ export default function Stepper({
           <StepContentWrapper
             isCompleted={isCompleted}
             currentStep={currentStep}
-            direction={direction}
-            className={`step-content-default ${contentClassName}`}
+            className={cn('step-content-default p-4 sm:p-6', contentClassName)}
           >
             {stepsArray[currentStep - 1]}
           </StepContentWrapper>
 
           {!isCompleted && !hideFooter && (
-            <div className={`footer-container ${footerClassName}`}>
-              <div className={`footer-nav ${currentStep !== 1 ? 'spread' : 'end'}`}>
+            <div className={cn('footer-container border-t border-black/10 pt-4', footerClassName)}>
+              <div className={cn('footer-nav mt-0', currentStep !== 1 ? 'spread' : 'end')}>
                 {currentStep !== 1 && (
                   <button
                     type="button"
-                    onClick={handleBack}
-                    className={`back-button ${currentStep === 1 ? 'inactive' : ''}`}
                     {...backButtonProps}
+                    onClick={(e) => {
+                      backButtonProps.onClick?.(e);
+                      if (!e.defaultPrevented) {
+                        handleBack();
+                      }
+                    }}
+                    className={cn(
+                      'back-button transition-colors duration-150',
+                      currentStep === 1 && 'inactive',
+                      backButtonProps.className
+                    )}
                   >
                     {backButtonText}
                   </button>
                 )}
                 <button
                   type="button"
-                  onClick={isLastStep ? handleComplete : handleNext}
-                  className="next-button"
                   {...nextButtonProps}
+                  onClick={(e) => {
+                    nextButtonProps.onClick?.(e);
+                    if (!e.defaultPrevented) {
+                      if (isLastStep) {
+                        void handleComplete();
+                      } else {
+                        void handleNext();
+                      }
+                    }
+                  }}
+                  className={cn(
+                    'next-button bg-ink text-white hover:bg-charcoal transition-colors duration-150',
+                    nextButtonProps.className
+                  )}
                 >
                   {isLastStep ? 'Complete' : nextButtonText}
                 </button>
@@ -197,40 +270,36 @@ export default function Stepper({
     );
   }
 
-  // Render Split Layout (Evolved Vertical Step panel)
+  // Render Split Layout (Vertical Step Tracker on Light Paper Canvas)
   return (
-    <div 
+    <div
       className={cn(
-        'flex w-full min-h-screen flex-col md:flex-row transition-all duration-300',
-        isDarkTheme
-          ? 'bg-[#09090b] text-white'
-          : 'bg-[#f8fafc] text-slate-800',
+        'flex w-full min-h-screen flex-col md:flex-row bg-canvas text-ink',
         className
       )}
       {...rest}
     >
       {/* Left panel: Vertical Steps Tracker */}
-      <div 
-        className={`hidden md:flex flex-col w-full md:w-[320px] shrink-0 md:min-h-screen p-8 justify-between border-b md:border-b-0 md:border-r transition-all duration-300 ${
-          isDarkTheme 
-            ? 'bg-[#121214] border-white/5' 
-            : 'bg-white border-slate-200/80'
-        }`}
-      >
-        <div className="space-y-8">
+      <aside className="hidden md:flex flex-col w-full md:w-[300px] lg:w-[320px] shrink-0 md:min-h-screen p-4 sm:p-6 justify-between bg-white border-r border-black/10">
+        <div className="space-y-6 min-w-0">
           {/* Header section (e.g. Profile banner) */}
           {sidebarHeader && (
-            <div className="pb-6 border-b border-dashed border-slate-250/60 dark:border-white/5">
+            <div className="pb-5 border-b border-dashed border-black/10">
               {sidebarHeader}
             </div>
           )}
 
           {/* Onboarding title */}
-          <div>
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkTheme ? 'text-indigo-400' : 'text-indigo-600'}`}>
-              Verification Setup
+          <div className="min-w-0">
+            <span
+              className={cn(
+                'font-mono text-[10px] font-bold uppercase tracking-[0.14em]',
+                accentStyle.eyebrowText
+              )}
+            >
+              {sidebarBrandSubtitle}
             </span>
-            <h3 className="text-xl font-extrabold tracking-tight mt-1">
+            <h3 className="font-display text-xl font-bold tracking-tight text-ink mt-1">
               {onboardingTitle}
             </h3>
           </div>
@@ -241,58 +310,71 @@ export default function Stepper({
               const stepNumber = index + 1;
               const isNotLastStep = index < totalSteps - 1;
               const label = stepLabels && stepLabels[index] ? stepLabels[index] : `Step ${stepNumber}`;
-              const status = currentStep === stepNumber ? 'active' : currentStep > stepNumber ? 'complete' : 'inactive';
+              const status =
+                currentStep === stepNumber ? 'active' : currentStep > stepNumber ? 'complete' : 'inactive';
+              const isInteractive = !disableStepIndicators && status !== 'inactive';
 
               return (
                 <div key={stepNumber} className="relative">
                   <div
+                    role={isInteractive ? 'button' : undefined}
+                    tabIndex={isInteractive ? 0 : undefined}
                     onClick={() => {
-                      // Linear navigation control: cannot jump forward to inactive steps
-                      if (!disableStepIndicators && status !== 'inactive') {
-                        setDirection(stepNumber > currentStep ? 1 : -1);
+                      if (isInteractive) {
                         updateStep(stepNumber);
                       }
                     }}
-                    className={`flex items-center gap-4 px-4 py-3.5 rounded-xl cursor-pointer transition-all duration-200 border-l-4 ${
+                    onKeyDown={(e) => {
+                      if (isInteractive && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        updateStep(stepNumber);
+                      }
+                    }}
+                    className={cn(
+                      'flex items-center gap-3.5 px-4 py-3 rounded-xl border-l-4 transition-colors duration-150 min-w-0',
                       status === 'active'
-                        ? isDarkTheme
-                          ? 'border-indigo-500 bg-white/5 text-white font-semibold shadow-sm'
-                          : 'border-indigo-600 bg-slate-100 text-slate-900 font-semibold shadow-sm'
-                        : 'border-transparent text-slate-400 hover:text-slate-650 dark:hover:text-slate-200'
-                    } ${disableStepIndicators || status === 'inactive' ? 'cursor-not-allowed opacity-60' : ''}`}
+                        ? accentStyle.sidebarActive
+                        : 'border-transparent text-slate hover:text-ink hover:bg-black/[0.02]',
+                      isInteractive ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+                    )}
                   >
                     {/* Circle Indicator */}
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
-                      status === 'active'
-                        ? 'bg-indigo-600 text-white shadow-sm ring-4 ring-indigo-500/10'
-                        : status === 'complete'
-                        ? 'bg-emerald-500 text-white'
-                        : isDarkTheme 
-                          ? 'bg-white/5 text-slate-500 border border-white/10' 
-                          : 'bg-slate-50 text-slate-400 border border-slate-200'
-                    }`}>
+                    <div
+                      className={cn(
+                        'w-8 h-8 rounded-full flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-colors duration-150',
+                        status === 'active'
+                          ? accentStyle.circleActive
+                          : status === 'complete'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-black/[0.03] text-steel border border-black/10'
+                      )}
+                    >
                       {status === 'complete' ? <CheckIcon className="w-4 h-4 text-white" /> : stepNumber}
                     </div>
 
                     {/* Step label text */}
-                    <span className={`text-xs sm:text-sm tracking-wide transition-all ${
-                      status === 'active'
-                        ? isDarkTheme ? 'text-white font-bold' : 'text-slate-900 font-bold'
-                        : status === 'complete'
-                        ? 'text-emerald-500 font-medium'
-                        : isDarkTheme ? 'text-slate-500' : 'text-slate-400'
-                    }`}>
+                    <span
+                      className={cn(
+                        'text-xs sm:text-sm tracking-tight min-w-0 truncate',
+                        status === 'active'
+                          ? 'text-ink font-bold'
+                          : status === 'complete'
+                          ? 'text-emerald-700 font-medium'
+                          : 'text-steel'
+                      )}
+                    >
                       {label}
                     </span>
                   </div>
 
                   {/* Vertical connecting line */}
                   {isNotLastStep && (
-                    <div className={`absolute left-[30px] top-[48px] w-[2px] h-[22px] z-0 ${
-                      currentStep > stepNumber 
-                        ? 'bg-emerald-500' 
-                        : isDarkTheme ? 'bg-white/10' : 'bg-slate-200'
-                    }`} />
+                    <div
+                      className={cn(
+                        'absolute left-[35px] top-[46px] w-[2px] h-[30px] z-0',
+                        currentStep > stepNumber ? 'bg-emerald-600' : 'bg-black/10'
+                      )}
+                    />
                   )}
                 </div>
               );
@@ -301,43 +383,52 @@ export default function Stepper({
         </div>
 
         {/* Sidebar footer section */}
-        {sidebarFooter && (
-          <div className="pt-6 border-t border-dashed border-slate-250/60 dark:border-white/5">
-            {sidebarFooter}
+        {resolvedSidebarFooter && (
+          <div className="pt-5 border-t border-dashed border-black/10">
+            {resolvedSidebarFooter}
           </div>
         )}
-      </div>
+      </aside>
 
       {/* Right panel: Centered Active Step Container */}
-      <div className={`flex-1 min-h-screen md:min-h-screen p-3 sm:p-8 md:p-16 flex items-start md:items-center justify-center transition-all duration-300 ${
-        isDarkTheme ? 'bg-[#0b0b0d]' : 'bg-[#f8fafc]'
-      }`}>
-        <div className={`w-full max-w-xl rounded-2xl sm:rounded-3xl border shadow-2xl p-4 sm:p-8 md:p-10 flex flex-col justify-between transition-all duration-300 ${
-          isDarkTheme ? 'bg-[#18181b] border-white/5 text-white' : 'bg-white border-slate-200/60 text-slate-800'
-        }`}>
+      <div className="flex-1 min-w-0 min-h-screen bg-canvas p-3 sm:p-5 md:p-6 flex items-start md:items-center justify-center">
+        <div className="w-full max-w-xl rounded-2xl bg-white text-ink border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-4 sm:p-6 flex flex-col justify-between min-w-0">
           {/* Mobile progress: replaces the hidden split sidebar below md. */}
           <div className="md:hidden mb-5">
             <div className="flex items-center justify-between gap-2 mb-3">
-              <div>
-                <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkTheme ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                  Verification Setup
+              <div className="min-w-0">
+                <span
+                  className={cn(
+                    'font-mono text-[10px] font-bold uppercase tracking-[0.14em] block',
+                    accentStyle.eyebrowText
+                  )}
+                >
+                  {sidebarBrandSubtitle}
                 </span>
-                <h3 className="text-base font-extrabold tracking-tight">
+                <h3 className="font-display text-base font-bold tracking-tight text-ink mt-0.5 truncate">
                   {onboardingTitle}
                 </h3>
               </div>
-              <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                isDarkTheme ? 'bg-white/5 text-indigo-400' : 'bg-indigo-50 text-indigo-700'
-              }`}>
+              <span
+                className={cn(
+                  'shrink-0 font-mono tabular-nums text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full',
+                  accentStyle.badge
+                )}
+              >
                 {currentStep}/{totalSteps}
               </span>
             </div>
 
-            <div className="grid grid-cols-4 gap-1.5" aria-label={`${onboardingTitle} progress`}>
+            <div
+              className="grid gap-1.5"
+              style={{ gridTemplateColumns: `repeat(${Math.max(1, totalSteps)}, minmax(0, 1fr))` }}
+              aria-label={`${onboardingTitle} progress`}
+            >
               {stepsArray.map((_, index) => {
                 const stepNumber = index + 1;
                 const label = stepLabels && stepLabels[index] ? stepLabels[index] : `Step ${stepNumber}`;
-                const status = currentStep === stepNumber ? 'active' : currentStep > stepNumber ? 'complete' : 'inactive';
+                const status =
+                  currentStep === stepNumber ? 'active' : currentStep > stepNumber ? 'complete' : 'inactive';
 
                 return (
                   <button
@@ -348,19 +439,18 @@ export default function Stepper({
                     disabled={disableStepIndicators || status === 'inactive'}
                     onClick={() => {
                       if (!disableStepIndicators && status !== 'inactive') {
-                        setDirection(stepNumber > currentStep ? 1 : -1);
                         updateStep(stepNumber);
                       }
                     }}
-                    className={`h-2 rounded-full transition-all ${
+                    className={cn(
+                      'h-2 rounded-full transition-colors duration-150',
                       status === 'active'
-                        ? 'bg-indigo-600'
+                        ? accentStyle.barActive
                         : status === 'complete'
-                        ? 'bg-emerald-500'
-                        : isDarkTheme
-                          ? 'bg-white/10'
-                          : 'bg-slate-200'
-                    } ${disableStepIndicators || status === 'inactive' ? 'cursor-default' : 'cursor-pointer'}`}
+                        ? 'bg-emerald-600'
+                        : 'bg-black/10',
+                      disableStepIndicators || status === 'inactive' ? 'cursor-default' : 'cursor-pointer'
+                    )}
                   />
                 );
               })}
@@ -368,14 +458,12 @@ export default function Stepper({
           </div>
 
           {/* Header of Content card: Back button and progress */}
-          <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100 dark:border-white/5">
+          <div className="flex justify-between items-center gap-2 mb-5 pb-3.5 border-b border-black/10">
             {currentStep > 1 ? (
               <button
                 type="button"
                 onClick={handleBack}
-                className={`flex items-center gap-1.5 text-xs font-semibold hover:opacity-80 transition-all ${
-                  isDarkTheme ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
-                }`}
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate hover:text-ink transition-colors duration-150 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back
@@ -383,20 +471,22 @@ export default function Stepper({
             ) : (
               <div />
             )}
-            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-              isDarkTheme ? 'bg-white/5 text-indigo-400' : 'bg-indigo-50 text-indigo-700'
-            }`}>
+            <span
+              className={cn(
+                'font-mono tabular-nums text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shrink-0',
+                accentStyle.badge
+              )}
+            >
               Step {currentStep} of {totalSteps}
             </span>
           </div>
 
           {/* Active Step Content */}
-          <div className="flex-1 flex flex-col justify-center">
+          <div className="flex-1 flex flex-col justify-center min-w-0">
             <StepContentWrapper
               isCompleted={isCompleted}
               currentStep={currentStep}
-              direction={direction}
-              className={`step-content-default ${contentClassName}`}
+              className={cn('step-content-default', contentClassName)}
             >
               {stepsArray[currentStep - 1]}
             </StepContentWrapper>
@@ -404,12 +494,24 @@ export default function Stepper({
 
           {/* Footer Controls */}
           {!isCompleted && !hideFooter && (
-            <div className={`flex justify-end items-center pt-6 border-t border-slate-100 dark:border-white/5 mt-6 ${footerClassName}`}>
+            <div className={cn('flex justify-end items-center pt-5 border-t border-black/10 mt-5', footerClassName)}>
               <button
                 type="button"
-                onClick={isLastStep ? handleComplete : handleNext}
-                className="next-button"
                 {...nextButtonProps}
+                onClick={(e) => {
+                  nextButtonProps.onClick?.(e);
+                  if (!e.defaultPrevented) {
+                    if (isLastStep) {
+                      void handleComplete();
+                    } else {
+                      void handleNext();
+                    }
+                  }
+                }}
+                className={cn(
+                  'next-button bg-ink text-white hover:bg-charcoal transition-colors duration-150',
+                  nextButtonProps.className
+                )}
               >
                 {isLastStep ? 'Complete' : nextButtonText}
               </button>
@@ -421,97 +523,30 @@ export default function Stepper({
   );
 }
 
+export default Stepper;
+
 function StepContentWrapper({
   isCompleted,
   currentStep,
-  direction,
   children,
-  className
+  className,
 }: {
   isCompleted: boolean;
   currentStep: number;
-  direction: number;
   children: React.ReactNode;
   className?: string;
 }) {
-  const [parentHeight, setParentHeight] = useState<number | 'auto'>('auto');
+  if (isCompleted) return null;
 
   return (
-    <motion.div
-      className={className}
-      style={{ position: 'relative', overflow: 'hidden' }}
-      animate={{ height: isCompleted ? 0 : parentHeight }}
-      transition={{ type: 'spring', duration: 0.4 }}
-    >
-      <AnimatePresence initial={false} mode="sync" custom={direction}>
-        {!isCompleted && (
-          <SlideTransition key={currentStep} direction={direction} onHeightReady={(h) => setParentHeight(h)}>
-            {children}
-          </SlideTransition>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
-
-function SlideTransition({
-  children,
-  direction,
-  onHeightReady
-}: {
-  children: React.ReactNode;
-  direction: number;
-  onHeightReady: (height: number) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        if (entry.target) {
-          onHeightReady((entry.target as HTMLElement).offsetHeight);
-        }
-      }
-    });
-    observer.observe(containerRef.current);
-    onHeightReady(containerRef.current.offsetHeight);
-    return () => observer.disconnect();
-  }, [children, onHeightReady]);
-
-  return (
-    <motion.div
-      ref={containerRef}
-      custom={direction}
-      variants={stepVariants}
-      initial="enter"
-      animate="center"
-      exit="exit"
-      transition={{ duration: 0.4 }}
-      style={{ position: 'relative', width: '100%' }}
-    >
+    <div key={currentStep} className={cn('w-full min-w-0', className)}>
       {children}
-    </motion.div>
+    </div>
   );
 }
-
-const stepVariants = {
-  enter: (dir: number) => ({
-    x: dir >= 0 ? '50%' : '-50%',
-    opacity: 0
-  }),
-  center: {
-    x: '0%',
-    opacity: 1
-  },
-  exit: (dir: number) => ({
-    x: dir >= 0 ? '-30%' : '30%',
-    opacity: 0
-  })
-};
 
 export function Step({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`step-default ${className}`}>{children}</div>;
+  return <div className={cn('step-default', className)}>{children}</div>;
 }
 
 function StepIndicator({
@@ -519,55 +554,61 @@ function StepIndicator({
   currentStep,
   onClickStep,
   disableStepIndicators,
-  label
+  accent = 'brand',
+  label,
 }: {
   step: number;
   currentStep: number;
   onClickStep: (clicked: number) => void;
   disableStepIndicators?: boolean;
+  accent?: StepperAccent;
   label?: string;
 }) {
   const status = currentStep === step ? 'active' : currentStep < step ? 'inactive' : 'complete';
+  const accentStyle = ACCENT_STYLES[accent] ?? ACCENT_STYLES.brand;
 
   const handleClick = () => {
     if (step !== currentStep && !disableStepIndicators) onClickStep(step);
   };
 
   return (
-    <div className="flex flex-col items-center gap-1.5 cursor-pointer z-10" onClick={handleClick}>
-      <motion.div
-        className="step-indicator"
-        style={disableStepIndicators ? { pointerEvents: 'none', opacity: 0.5 } : {}}
-        animate={status}
-        initial={false}
-      >
-        <motion.div
-          variants={{
-            inactive: { scale: 1, backgroundColor: '#f1f5f9', color: '#64748b' },
-            active: { scale: 1.08, backgroundColor: '#4f46e5', color: '#ffffff' },
-            complete: { scale: 1, backgroundColor: '#10b981', color: '#ffffff' }
-          }}
-          transition={{ duration: 0.3 }}
-          className="step-indicator-inner shadow-sm border border-slate-200/60"
+    <div
+      className={cn(
+        'flex flex-col items-center gap-1.5 z-10',
+        disableStepIndicators ? 'cursor-default opacity-50 pointer-events-none' : 'cursor-pointer'
+      )}
+      onClick={handleClick}
+    >
+      <div className="step-indicator">
+        <div
+          className={cn(
+            'step-indicator-inner border',
+            status === 'active'
+              ? accentStyle.circleActive
+              : status === 'complete'
+              ? 'bg-emerald-600 text-white border-emerald-600'
+              : 'bg-black/[0.03] text-steel border-black/10'
+          )}
         >
           {status === 'complete' ? (
             <CheckIcon className="check-icon" />
           ) : status === 'active' ? (
             <div className="active-dot" />
           ) : (
-            <span className="step-number">{step}</span>
+            <span className="step-number font-mono tabular-nums">{step}</span>
           )}
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
       {label && (
         <span
-          className={`text-[11px] font-semibold text-center transition-colors duration-300 max-w-[80px] sm:max-w-none leading-tight ${
+          className={cn(
+            'text-[11px] font-semibold text-center transition-colors duration-150 max-w-[80px] sm:max-w-none leading-tight',
             status === 'active'
-              ? 'text-indigo-600 font-bold'
+              ? accentStyle.horizontalLabelActive
               : status === 'complete'
-              ? 'text-emerald-600'
-              : 'text-slate-400'
-          }`}
+              ? 'text-emerald-700'
+              : 'text-steel'
+          )}
         >
           {label}
         </span>
@@ -577,19 +618,11 @@ function StepIndicator({
 }
 
 function StepConnector({ isComplete }: { isComplete: boolean }) {
-  const lineVariants = {
-    incomplete: { width: 0, backgroundColor: 'transparent' },
-    complete: { width: '100%', backgroundColor: '#10b981' }
-  };
-
   return (
     <div className="step-connector mt-[-1.25rem]">
-      <motion.div
-        className="step-connector-inner"
-        variants={lineVariants}
-        initial={false}
-        animate={isComplete ? 'complete' : 'incomplete'}
-        transition={{ duration: 0.4 }}
+      <div
+        className="step-connector-inner bg-emerald-600 transition-colors duration-150"
+        style={{ width: isComplete ? '100%' : '0%' }}
       />
     </div>
   );
@@ -598,14 +631,7 @@ function StepConnector({ isComplete }: { isComplete: boolean }) {
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-      <motion.path
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ delay: 0.1, type: 'tween', ease: 'easeOut', duration: 0.3 }}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M5 13l4 4L19 7"
-      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
     </svg>
   );
 }

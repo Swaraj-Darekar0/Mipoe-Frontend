@@ -1,34 +1,34 @@
 import React, { useEffect, useState } from "react";
-import { 
-  getBrandAffiliateCampaigns, 
-  getAffiliateCampaignDetails, 
-  createAffiliateCampaign, 
-  allocateAffiliateBudget, 
-  reclaimAffiliateBudget, 
+import {
+  getBrandAffiliateCampaigns,
+  createAffiliateCampaign,
+  allocateAffiliateBudget,
+  reclaimAffiliateBudget,
   getBrandProducts,
   getWalletBalance,
   uploadCampaignImage,
-  deleteAffiliateCampaign
+  deleteAffiliateCampaign,
 } from "@/lib/api";
 import { compressImage } from "@/utils/imageCompression";
 import { ImageCropInput } from "@/components/ui/ImageCropInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ConfirmDialog, StatusPill } from "@/components/ui/PortalPrimitives";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Megaphone, 
-  Plus, 
-  Clock, 
-  DollarSign, 
-  TrendingUp, 
-  Layers, 
-  UserPlus, 
-  Coins, 
-  ArrowLeftRight,
-  ShieldCheck,
-  CheckCircle,
-  HelpCircle,
-  Trash2
+import {
+  Megaphone,
+  Plus,
+  Loader2,
+  Coins,
+  Trash2,
 } from "lucide-react";
 
 import { SaasCampaignBuilder } from "./SaasCampaignBuilder";
@@ -39,9 +39,9 @@ interface AffiliateCampaignsProps {
   brandWebsiteUrl?: string;
 }
 
-export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({ 
+export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
   brandCategory = "Product Based",
-  brandWebsiteUrl = ""
+  brandWebsiteUrl = "",
 }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -70,19 +70,27 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
   const [budgetAction, setBudgetAction] = useState<"allocate" | "reclaim">("allocate");
   const [submittingBudget, setSubmittingBudget] = useState(false);
 
+  // Delete Confirmation Dialog
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const [campData, prodData, walletData] = await Promise.all([
         getBrandAffiliateCampaigns(),
         getBrandProducts(),
-        getWalletBalance()
+        getWalletBalance(),
       ]);
       setCampaigns(campData);
       setProducts(prodData);
       setWalletBalance(walletData.balance);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Failed to load dashboard data", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err.message || "Failed to load dashboard data",
+        variant: "destructive",
+      });
     } finally {
       if (!silent) setLoading(false);
     }
@@ -95,7 +103,11 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !deadline || !commValue.trim()) {
-      toast({ title: "Validation Error", description: "Name, deadline, and commission are required.", variant: "destructive" });
+      toast({
+        title: "Validation Error",
+        description: "Name, deadline, and commission are required.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -106,7 +118,7 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
         try {
           const compressed = await compressImage(imageFile);
           finalImageUrl = await uploadCampaignImage(compressed);
-        } catch (uploadErr) {
+        } catch {
           throw new Error("Failed to compress or upload cover image");
         }
       }
@@ -119,10 +131,13 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
         deadline,
         commission_type: commType,
         commission_value: parseFloat(commValue),
-        product_ids: selectedProductIds
+        product_ids: selectedProductIds,
       });
-      toast({ title: "Campaign Created", description: "Your campaign is submitted for compliance review." });
-      
+      toast({
+        title: "Campaign Created",
+        description: "Your campaign is submitted for compliance review.",
+      });
+
       // Reset
       setName("");
       setDesc("");
@@ -133,10 +148,14 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
       setCommValue("");
       setSelectedProductIds([]);
       setShowCreateModal(false);
-      
+
       await loadData(true);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Failed to create campaign", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err.message || "Failed to create campaign",
+        variant: "destructive",
+      });
     } finally {
       setSubmittingCampaign(false);
     }
@@ -146,7 +165,11 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
     e.preventDefault();
     const amount = parseFloat(budgetAmount);
     if (isNaN(amount) || amount <= 0) {
-      toast({ title: "Validation Error", description: "Invalid amount input.", variant: "destructive" });
+      toast({
+        title: "Validation Error",
+        description: "Invalid amount input.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -154,75 +177,111 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
     try {
       if (budgetAction === "allocate") {
         if (walletBalance < amount) {
-          toast({ title: "Error", description: "Insufficient wallet balance", variant: "destructive" });
+          toast({
+            title: "Error",
+            description: "Insufficient wallet balance",
+            variant: "destructive",
+          });
           setSubmittingBudget(false);
           return;
         }
         await allocateAffiliateBudget(budgetModalCampaign.id, amount);
-        toast({ title: "Budget Allocated", description: `Added ₹${amount} to campaign budget.` });
+        toast({
+          title: "Budget Allocated",
+          description: `Added ₹${amount} to campaign budget.`,
+        });
       } else {
-        const available = budgetModalCampaign.funds_allocated - budgetModalCampaign.funds_distributed;
+        const available =
+          budgetModalCampaign.funds_allocated - budgetModalCampaign.funds_distributed;
         if (available < amount) {
-          toast({ title: "Error", description: "Cannot reclaim more than campaign's free budget.", variant: "destructive" });
+          toast({
+            title: "Error",
+            description: "Cannot reclaim more than campaign's free budget.",
+            variant: "destructive",
+          });
           setSubmittingBudget(false);
           return;
         }
         await reclaimAffiliateBudget(budgetModalCampaign.id, amount);
-        toast({ title: "Budget Reclaimed", description: `Returned ₹${amount} back to wallet.` });
+        toast({
+          title: "Budget Reclaimed",
+          description: `Returned ₹${amount} back to wallet.`,
+        });
       }
-      
+
       setBudgetAmount("");
       setBudgetModalCampaign(null);
       await loadData(true);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Budget transaction failed.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err.message || "Budget transaction failed.",
+        variant: "destructive",
+      });
     } finally {
       setSubmittingBudget(false);
     }
   };
 
-  const handleDeleteCampaign = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this campaign? Any remaining allocated budget will be refunded to your brand wallet.")) {
-      return;
-    }
-
+  const confirmDeleteCampaign = async () => {
+    if (deleteConfirmId === null) return;
+    setDeleting(true);
     try {
-      await deleteAffiliateCampaign(id);
-      toast({ title: "Campaign Deleted", description: "Your campaign has been deleted successfully." });
+      await deleteAffiliateCampaign(deleteConfirmId);
+      toast({
+        title: "Campaign Deleted",
+        description: "Your campaign has been deleted successfully.",
+      });
+      setDeleteConfirmId(null);
       await loadData(true);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Failed to delete campaign", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err.message || "Failed to delete campaign",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
   const toggleProductSelect = (id: number) => {
-    setSelectedProductIds(prev => 
-      prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
+    setSelectedProductIds((prev) =>
+      prev.includes(id) ? prev.filter((pId) => pId !== id) : [...prev, id]
     );
   };
 
   return (
     <div className="space-y-6">
-      
       {/* Overview Block */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-150 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-black/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Affiliate Campaigns</h2>
-          <p className="text-xs text-gray-500 mt-1">
-            Launch campaign rules and fund them using your brand wallet balance: <span className="font-extrabold text-indigo-650">₹{walletBalance.toLocaleString()}</span>
+          <h2 className="font-display text-xl font-bold text-ink tracking-tight">
+            Affiliate Campaigns
+          </h2>
+          <p className="text-xs text-slate mt-1">
+            Launch campaign rules and fund them using your brand wallet balance:{" "}
+            <span className="font-mono font-bold tabular-nums text-brand-blue">
+              ₹{walletBalance.toLocaleString()}
+            </span>
           </p>
         </div>
-        
-        <Button 
+
+        <Button
+          variant="brand"
           onClick={() => {
             const isSaas = brandCategory?.toLowerCase().includes("saas");
             if (!isSaas && products.length === 0) {
-              toast({ title: "Products Needed", description: "Please add products to your catalog first.", variant: "destructive" });
+              toast({
+                title: "Products Needed",
+                description: "Please add products to your catalog first.",
+                variant: "destructive",
+              });
               return;
             }
             setShowCreateModal(true);
           }}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-2"
+          className="gap-2"
         >
           <Plus className="w-4 h-4" />
           Launch Campaign
@@ -231,80 +290,101 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
 
       {/* Campaigns Listing */}
       {loading ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-gray-150 text-gray-400">
-          <Clock className="w-8 h-8 animate-spin mx-auto text-indigo-500 mb-2" />
-          <p className="font-semibold text-sm">Loading affiliate campaigns...</p>
+        <div className="bg-white rounded-2xl p-12 text-center border border-black/10 text-slate">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto text-brand-blue mb-2" />
+          <p className="font-medium text-sm">Loading affiliate campaigns...</p>
         </div>
       ) : campaigns.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-gray-150">
-          <Megaphone className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="font-bold text-gray-700 text-base">No active affiliate campaigns</p>
-          <p className="text-gray-400 text-xs mt-1">Create your first cost-per-conversion campaign to start partnering with creators.</p>
+        <div className="bg-white rounded-2xl p-12 text-center border border-black/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+          <Megaphone className="w-10 h-10 text-steel mx-auto mb-3" />
+          <p className="font-display font-bold text-ink text-base">
+            No active affiliate campaigns
+          </p>
+          <p className="text-slate text-xs mt-1">
+            Create your first cost-per-conversion campaign to start partnering with creators.
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {campaigns.map(c => {
+          {campaigns.map((c) => {
             const freeBudget = c.funds_allocated - c.funds_distributed;
             return (
-              <div key={c.id} className="bg-white rounded-2xl border border-gray-150 shadow-sm p-6 hover:shadow-md transition duration-150">
+              <div
+                key={c.id}
+                className="bg-white rounded-2xl border border-black/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] p-6"
+              >
                 <div className="flex flex-col md:flex-row justify-between gap-6">
-                  <div className="space-y-4 flex-1">
-                    
+                  <div className="space-y-4 flex-1 min-w-0">
                     {/* Header */}
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-start sm:items-center justify-between gap-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-bold text-gray-900">{c.name}</h3>
-                        
+                        <h3 className="font-display text-lg font-bold text-ink">
+                          {c.name}
+                        </h3>
+
                         {c.campaign_approval === "pending_approval" ? (
-                          <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                            Pending Approval
-                          </span>
+                          <StatusPill tone="warning">Pending Approval</StatusPill>
                         ) : c.campaign_approval === "rejected" ? (
-                          <span className="bg-red-50 border border-red-200 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                            Rejected
-                          </span>
+                          <StatusPill tone="danger">Rejected</StatusPill>
                         ) : c.is_active ? (
-                          <span className="bg-green-50 border border-green-200 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                          <StatusPill tone="success" showDot>
                             Active
-                          </span>
+                          </StatusPill>
                         ) : (
-                          <span className="bg-gray-50 border border-gray-200 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                          <StatusPill tone="neutral">
                             Draft (Fund to activate)
-                          </span>
+                          </StatusPill>
                         )}
                       </div>
-                      
+
                       <button
+                        type="button"
                         title="Delete Campaign"
-                        onClick={() => handleDeleteCampaign(c.id)}
-                        className="text-red-500 hover:text-red-750 hover:bg-red-50 p-1.5 rounded-xl transition-colors flex items-center gap-1 text-xs font-bold"
+                        onClick={() => setDeleteConfirmId(c.id)}
+                        className="text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors duration-150 inline-flex items-center gap-1.5 text-xs font-medium shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         <span>Delete</span>
                       </button>
                     </div>
 
-                    <p className="text-xs text-gray-550 leading-relaxed">{c.description || "No description provided."}</p>
+                    <p className="text-xs text-slate leading-relaxed">
+                      {c.description || "No description provided."}
+                    </p>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 bg-black/[0.03] p-4 rounded-xl border border-black/[0.06]">
                       <div>
-                        <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Allocated Budget</span>
-                        <span className="font-extrabold text-sm text-gray-800">₹{c.funds_allocated.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Distributed</span>
-                        <span className="font-extrabold text-sm text-gray-800">₹{c.funds_distributed.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Commission Rule</span>
-                        <span className="font-extrabold text-sm text-indigo-650">
-                          {c.commission_type === "percentage" ? `${c.commission_value}% per sale` : `₹${c.commission_value} fixed`}
+                        <span className="font-mono text-[10px] text-steel font-medium block uppercase tracking-wider">
+                          Allocated Budget
+                        </span>
+                        <span className="font-mono font-bold tabular-nums text-sm text-ink">
+                          ₹{c.funds_allocated.toLocaleString()}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Deadline</span>
-                        <span className="font-bold text-xs text-gray-700">
+                        <span className="font-mono text-[10px] text-steel font-medium block uppercase tracking-wider">
+                          Distributed
+                        </span>
+                        <span className="font-mono font-bold tabular-nums text-sm text-ink">
+                          ₹{c.funds_distributed.toLocaleString()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-mono text-[10px] text-steel font-medium block uppercase tracking-wider">
+                          Commission Rule
+                        </span>
+                        <span className="font-mono font-bold tabular-nums text-sm text-brand-blue">
+                          {c.commission_type === "percentage"
+                            ? `${c.commission_value}% per sale`
+                            : `₹${c.commission_value} fixed`}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-mono text-[10px] text-steel font-medium block uppercase tracking-wider">
+                          Deadline
+                        </span>
+                        <span className="font-mono font-semibold tabular-nums text-xs text-ink">
                           {new Date(c.deadline).toLocaleDateString()}
                         </span>
                       </div>
@@ -312,17 +392,24 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
                   </div>
 
                   {/* Actions Drawer */}
-                  <div className="flex flex-col justify-between sm:items-end gap-4 min-w-[200px]">
-                    <div className="text-left sm:text-right space-y-1">
-                      <span className="text-[10px] text-gray-400 block font-bold uppercase tracking-wider">Free Campaign Budget</span>
-                      <span className="text-xl font-black text-gray-800 block">₹{freeBudget.toLocaleString()}</span>
+                  <div className="flex flex-col justify-between md:items-end gap-4 md:min-w-[220px]">
+                    <div className="text-left md:text-right space-y-1">
+                      <span className="font-mono text-[10px] text-steel block font-medium uppercase tracking-wider">
+                        Free Campaign Budget
+                      </span>
+                      <span className="font-mono text-xl font-bold tabular-nums text-ink block">
+                        ₹{freeBudget.toLocaleString()}
+                      </span>
                     </div>
 
                     <div className="flex flex-col gap-2 w-full">
                       <Button
                         size="sm"
-                        onClick={() => navigate(`/brand/affiliate-dashboard/${c.id}`)}
-                        className="w-full text-xs bg-zinc-900 hover:bg-zinc-800 text-white font-semibold"
+                        variant="ink"
+                        onClick={() =>
+                          navigate(`/brand/affiliate-dashboard/${c.id}`)
+                        }
+                        className="w-full text-xs"
                       >
                         View Analytics & Partners
                       </Button>
@@ -341,18 +428,18 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
                         </Button>
                         <Button
                           size="sm"
+                          variant="brand"
                           onClick={() => {
                             setBudgetModalCampaign(c);
                             setBudgetAction("allocate");
                           }}
-                          className="flex-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                          className="flex-1 text-xs"
                         >
                           Add Budget
                         </Button>
                       </div>
                     </div>
                   </div>
-
                 </div>
               </div>
             );
@@ -361,9 +448,20 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
       )}
 
       {/* CREATE CAMPAIGN MODAL */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          {brandCategory?.toLowerCase().includes("saas") ? (
+      <Dialog
+        open={showCreateModal}
+        onOpenChange={(open) => {
+          if (!open && !submittingCampaign) setShowCreateModal(false);
+        }}
+      >
+        {brandCategory?.toLowerCase().includes("saas") ? (
+          <DialogContent className="max-w-2xl p-0 border-0 bg-transparent shadow-none max-h-[92vh] overflow-y-auto [&>button]:hidden">
+            <DialogTitle className="sr-only">
+              Launch SaaS Affiliate Campaign
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Configure SaaS affiliate campaign milestones, attribution URL, and reward structure.
+            </DialogDescription>
             <SaasCampaignBuilder
               products={products}
               brandWebsiteUrl={brandWebsiteUrl}
@@ -373,197 +471,252 @@ export const AffiliateCampaigns: React.FC<AffiliateCampaignsProps> = ({
                 setSubmittingCampaign(true);
                 try {
                   await createAffiliateCampaign(campaignData);
-                  toast({ title: "Campaign Created", description: "Your SaaS affiliate campaign has been submitted for compliance review." });
+                  toast({
+                    title: "Campaign Created",
+                    description:
+                      "Your SaaS affiliate campaign has been submitted for compliance review.",
+                  });
                   setShowCreateModal(false);
                   await loadData(true);
                 } catch (err: any) {
-                  toast({ title: "Error", description: err.message || "Failed to create campaign", variant: "destructive" });
+                  toast({
+                    title: "Error",
+                    description: err.message || "Failed to create campaign",
+                    variant: "destructive",
+                  });
                 } finally {
                   setSubmittingCampaign(false);
                 }
               }}
             />
-          ) : (
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Megaphone className="w-5 h-5 text-indigo-600" />
+          </DialogContent>
+        ) : (
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-white border border-black/10 rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="font-display text-lg font-bold text-ink flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-brand-blue" />
                 Launch Affiliate Campaign
-              </h3>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate">
+                Set your commission model and link store products before funding the campaign.
+              </DialogDescription>
+            </DialogHeader>
 
-              <form onSubmit={handleCreateSubmit} className="space-y-4">
-                <div className="space-y-1">
-                  <ImageCropInput
-                    value={imagePreview || ""}
-                    onChange={(file, previewUrl) => {
-                      setImagePreview(previewUrl);
-                      setImageFile(file);
-                    }}
-                    aspectRatio="16:9"
-                    label="Campaign Cover Image"
-                    placeholder="Upload a campaign cover image"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Campaign Name</label>
-                  <Input
-                    type="text"
-                    placeholder="e.g. Summer Skincare Referral Boost"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Campaign Description</label>
-                  <Input
-                    type="text"
-                    placeholder="Tell creators how to promote..."
-                    value={desc}
-                    onChange={(e) => setDesc(e.target.value)}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Start Date</label>
-                    <Input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">End Date (Deadline)</label>
-                    <Input
-                      type="date"
-                      value={deadline}
-                      onChange={(e) => setDeadline(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Commission Type</label>
-                    <select
-                    title="adsa"
-                      className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm"
-                      value={commType}
-                      onChange={(e) => setCommType(e.target.value as any)}
-                    >
-                      <option value="percentage">Percentage (%)</option>
-                      <option value="fixed">Fixed Flat INR (₹)</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Value</label>
-                    <Input
-                      type="number"
-                      placeholder={commType === "percentage" ? "e.g. 10" : "e.g. 150"}
-                      value={commValue}
-                      onChange={(e) => setCommValue(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Product Picker */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Select Associated Store Products</label>
-                  <div className="border border-gray-200 rounded-xl p-3 max-h-[150px] overflow-y-auto space-y-2 bg-gray-50/50">
-                    {products.map(p => (
-                      <div 
-                        key={p.id}
-                        onClick={() => toggleProductSelect(p.id)}
-                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer border transition text-xs ${
-                          selectedProductIds.includes(p.id)
-                            ? "bg-indigo-50 border-indigo-200 text-indigo-900 font-semibold"
-                            : "bg-white border-gray-100 hover:bg-gray-50"
-                        }`}
-                      >
-                        <span>{p.name}</span>
-                        <span className="font-bold">₹{p.price}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2 justify-end pt-3">
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCreateModal(false)}
-                    disabled={submittingCampaign}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit"
-                    disabled={submittingCampaign}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
-                  >
-                    {submittingCampaign ? "Launching..." : "Launch Draft"}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* BUDGET ALLOCATION MODAL */}
-      {budgetModalCampaign && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-150 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
-              <Coins className="w-5 h-5 text-indigo-600" />
-              {budgetAction === "allocate" ? "Add Campaign Funds" : "Reclaim Campaign Funds"}
-            </h3>
-            
-            <p className="text-xs text-gray-500 leading-relaxed mb-4">
-              {budgetAction === "allocate" 
-                ? `Allocate budget to fund creator payouts. Your available wallet balance is ₹${walletBalance.toLocaleString()}.`
-                : `Reclaim unspent pre-allocated funds from this campaign back to your wallet balance.`}
-            </p>
-
-            <form onSubmit={handleBudgetSubmit} className="space-y-4">
+            <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div className="space-y-1">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Amount (INR)</label>
+                <ImageCropInput
+                  accent="brand"
+                  value={imagePreview || ""}
+                  onChange={(file, previewUrl) => {
+                    setImagePreview(previewUrl);
+                    setImageFile(file);
+                  }}
+                  aspectRatio="16:9"
+                  label="Campaign Cover Image"
+                  placeholder="Upload a campaign cover image"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider">
+                  Campaign Name
+                </label>
                 <Input
-                  type="number"
-                  placeholder="e.g. 5000"
-                  value={budgetAmount}
-                  onChange={(e) => setBudgetAmount(e.target.value)}
+                  type="text"
+                  placeholder="e.g. Summer Skincare Referral Boost"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   required
                 />
               </div>
 
-              <div className="flex gap-2 justify-end pt-3">
-                <Button 
+              <div className="space-y-1">
+                <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider">
+                  Campaign Description
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Tell creators how to promote..."
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider">
+                    Start Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider">
+                    End Date (Deadline)
+                  </label>
+                  <Input
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider">
+                    Commission Type
+                  </label>
+                  <select
+                    title="Commission Type"
+                    className="w-full h-10 px-3 rounded-xl border border-black/10 bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                    value={commType}
+                    onChange={(e) => setCommType(e.target.value as any)}
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed">Fixed Flat INR (₹)</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider">
+                    Value
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder={commType === "percentage" ? "e.g. 10" : "e.g. 150"}
+                    value={commValue}
+                    onChange={(e) => setCommValue(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Product Picker */}
+              <div className="space-y-2">
+                <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider">
+                  Select Associated Store Products
+                </label>
+                <div className="border border-black/10 rounded-xl p-3 max-h-[150px] overflow-y-auto space-y-2 bg-black/[0.02]">
+                  {products.map((p) => (
+                    <button
+                      type="button"
+                      key={p.id}
+                      onClick={() => toggleProductSelect(p.id)}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors duration-150 text-xs text-left ${
+                        selectedProductIds.includes(p.id)
+                          ? "bg-brand-blue/[0.08] border-brand-blue/30 text-ink font-semibold"
+                          : "bg-white border-black/10 text-ink hover:bg-black/[0.02]"
+                      }`}
+                    >
+                      <span className="truncate pr-2">{p.name}</span>
+                      <span className="font-mono font-bold tabular-nums shrink-0">
+                        ₹{p.price}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <DialogFooter className="pt-3 gap-2">
+                <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setBudgetModalCampaign(null)}
-                  disabled={submittingBudget}
+                  onClick={() => setShowCreateModal(false)}
+                  disabled={submittingCampaign}
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   type="submit"
-                  disabled={submittingBudget}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                  variant="brand"
+                  disabled={submittingCampaign}
                 >
-                  {submittingBudget ? "Processing..." : budgetAction === "allocate" ? "Add Funds" : "Reclaim"}
+                  {submittingCampaign ? "Launching..." : "Launch Draft"}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
 
+      {/* BUDGET ALLOCATION MODAL */}
+      <Dialog
+        open={!!budgetModalCampaign}
+        onOpenChange={(open) => {
+          if (!open && !submittingBudget) setBudgetModalCampaign(null);
+        }}
+      >
+        <DialogContent className="max-w-md bg-white border border-black/10 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold text-ink flex items-center gap-2">
+              <Coins className="w-5 h-5 text-brand-blue" />
+              {budgetAction === "allocate"
+                ? "Add Campaign Funds"
+                : "Reclaim Campaign Funds"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate leading-relaxed">
+              {budgetAction === "allocate"
+                ? `Allocate budget to fund creator payouts. Your available wallet balance is ₹${walletBalance.toLocaleString()}.`
+                : "Reclaim unspent pre-allocated funds from this campaign back to your wallet balance."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleBudgetSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider">
+                Amount (INR)
+              </label>
+              <Input
+                type="number"
+                placeholder="e.g. 5000"
+                value={budgetAmount}
+                onChange={(e) => setBudgetAmount(e.target.value)}
+                required
+              />
+            </div>
+
+            <DialogFooter className="pt-3 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setBudgetModalCampaign(null)}
+                disabled={submittingBudget}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="brand"
+                disabled={submittingBudget}
+              >
+                {submittingBudget
+                  ? "Processing..."
+                  : budgetAction === "allocate"
+                    ? "Add Funds"
+                    : "Reclaim"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleteConfirmId !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteConfirmId(null);
+        }}
+        title="Delete Affiliate Campaign"
+        description="Are you sure you want to delete this campaign? Any unspent pre-allocated budget will be reclaimed to your wallet."
+        confirmLabel="Delete Campaign"
+        variant="destructive"
+        loading={deleting}
+        onConfirm={confirmDeleteCampaign}
+      />
     </div>
   );
 };

@@ -47,7 +47,7 @@ export const DEFAULT_CLIPS: UGCClip[] = [
     creatorHandle: '@karan_vibe',
     views: '184.2K',
     likes: '22.8K',
-    title: 'Nico sure x Mipoe ',
+    title: 'Nico sure x sellr. ',
     tag: 'Tech & Lifestyle',
     imageUrl: '/thumbnails/real_clip_3.webp',
     storeUsername: 'karanvibe',

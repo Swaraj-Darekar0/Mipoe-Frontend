@@ -355,20 +355,31 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
   return result.clone();
 }
 
-export async function syncGoogleUser(supabaseToken: string): Promise<{ 
-  msg: string; 
-  user_id: string; 
-  role: string; 
+export interface GoogleSyncResponse {
+  msg: string;
+  user_id?: string;
+  role?: string;
   username?: string;
   wallet_address?: string;
-  profile_completed: boolean;
-}> {
+  profile_completed?: boolean;
+  role_mismatch?: boolean;
+  requested_role?: string;
+  existing_role?: string;
+  email?: string;
+}
+
+export async function syncGoogleUser(
+  supabaseToken: string,
+  role?: string,
+  confirmedRole?: string
+): Promise<GoogleSyncResponse> {
   const res = await apiFetch(`${API_BASE}/api/auth/google-sync`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${supabaseToken}`
+      'Authorization': `Bearer ${supabaseToken}`,
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({}) 
+    body: JSON.stringify({ role, confirmed_role: confirmedRole }) 
   });
   
   const data = await res.json();

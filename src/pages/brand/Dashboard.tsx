@@ -17,11 +17,9 @@ import {
 import WalletOverview from "@/components/brand/WalletOverview";
 import { Button } from "@/components/ui/button";
 import { 
-  BarChart3, 
-  Clock, 
   Building2, 
   Lock, 
-  XCircle, 
+  Loader2,
   Instagram, 
   Youtube 
 } from "lucide-react";
@@ -32,6 +30,7 @@ import { ProductCatalog } from "@/components/brand/ProductCatalog";
 import { AffiliateCampaigns } from "@/components/brand/AffiliateCampaigns";
 import { AffiliateCRM } from "@/components/brand/AffiliateCRM";
 import { TaxInvoicesTab } from "@/components/brand/TaxInvoicesTab";
+import { PortalPageHeader, StatusPill, ConfirmDialog } from "@/components/ui/PortalPrimitives";
 
 const BrandDashboard = () => {
   const cachedProfile = getCachedBrandProfile();
@@ -42,6 +41,7 @@ const BrandDashboard = () => {
   const [loading, setLoading] = useState(() => !cachedCampaigns);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDeleteCampaign, setConfirmDeleteCampaign] = useState<Campaign | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -77,7 +77,7 @@ const BrandDashboard = () => {
       toast({ 
         title: "Success!", 
         description: `Deposit verified. New Balance: ₹${data.new_balance}`, 
-        className: "bg-green-50 border-green-200" 
+        className: "bg-emerald-600 border-emerald-500 text-white" 
       });
       navigate("/brand/dashboard", { replace: true });
     } catch (error: any) {
@@ -109,7 +109,6 @@ const BrandDashboard = () => {
     }
   };
 
-  // Synchronize activeTab with URL search params (?tab=...)
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam === "tax_invoices") {
@@ -152,7 +151,7 @@ const BrandDashboard = () => {
       toast({
         title: "Shopify Connected!",
         description: "Your Shopify store has been successfully integrated.",
-        className: "bg-green-50 border-green-200"
+        className: "bg-emerald-600 border-emerald-500 text-white"
       });
       loadProfile(true);
       setActiveTab("product_catalog");
@@ -171,7 +170,6 @@ const BrandDashboard = () => {
     loadProfile(Boolean(cachedProfile));
   }, []);
 
-  // Polling for automated PAN check and admin compliance review updates
   useEffect(() => {
     if (!profile) return;
     const status = profile.onboarding_status;
@@ -211,12 +209,43 @@ const BrandDashboard = () => {
     }
   }, [profile?.onboarding_status]);
 
+  const executeDeleteCampaign = async () => {
+    if (!confirmDeleteCampaign) return;
+    const target = confirmDeleteCampaign;
+    const funds = target.funds_allocated || 0;
+    try {
+      setDeletingId(target.id);
+      await deleteCampaign(target.id);
+      setCampaigns(prev => prev.filter(c => c.id !== target.id));
+      if (funds > 0) {
+        await fetchBalance();
+        toast({
+          title: "Campaign Deleted",
+          description: `Campaign deleted and ₹${funds.toLocaleString()} refunded to your wallet.`,
+          className: "bg-emerald-600 border-emerald-500 text-white"
+        });
+      } else {
+        toast({
+          title: "Campaign Deleted",
+          description: "The campaign has been permanently removed."
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(msg);
+      toast({ title: "Delete Failed", description: msg, variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteCampaign(null);
+    }
+  };
+
   if (profileLoading && !profile) {
     return (
       <BrandLayout>
-        <div className="flex flex-col items-center justify-center py-20">
-          <Clock className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
-          <p className="text-gray-600 font-medium">Loading compliance dashboard...</p>
+        <div className="flex flex-col items-center justify-center py-20 text-slate">
+          <Loader2 className="w-8 h-8 animate-spin text-brand-blue mb-3" />
+          <p className="font-medium text-sm">Loading compliance dashboard...</p>
         </div>
       </BrandLayout>
     );
@@ -226,165 +255,193 @@ const BrandDashboard = () => {
   if (profile?.onboarding_status === "verified") {
     const isPersonalAgency = profile?.category === "Personal Agency";
 
+    const renderApprovalPill = (campaign: Campaign) => {
+      if (campaign.campaign_approval === "pending_approval") {
+        return <StatusPill tone="warning" showDot>Pending Approval</StatusPill>;
+      }
+      if (campaign.campaign_approval === "rejected") {
+        return (
+          <span title={`Rejection Reason: ${campaign.rejection_reason || "Unspecified"}`}>
+            <StatusPill tone="danger">Rejected</StatusPill>
+          </span>
+        );
+      }
+      if (campaign.is_active) {
+        return <StatusPill tone="success" showDot>Active</StatusPill>;
+      }
+      return <StatusPill tone="neutral" showDot>Inactive</StatusPill>;
+    };
+
     return (
       <BrandLayout>
         <div className="w-full space-y-6">
           {activeTab === "campaigns" && (
             <>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">Campaign Performance</h2>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage and track your creator marketing campaigns</p>
-                </div>
-                {/* <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
-                  <Link to="/brand/create" className="w-full sm:w-auto">
-                    <Button className="w-full sm:w-auto bg-indigo-650 hover:bg-indigo-700">Create Campaign</Button>
-                  </Link>
-                  <Link to="/brand/transactions" className="w-full sm:w-auto">
-                    <Button className="w-full sm:w-auto gap-2" variant="outline">
-                      <BarChart3 className="w-4 h-4" />
-                      Transaction Log
-                    </Button>
-                  </Link>
-                </div> */}
-              </div>
+              <PortalPageHeader
+                eyebrow="01 // CAMPAIGN LEDGER"
+                title="Campaign"
+                highlighted="Performance"
+                accent="brand"
+                subtitle="Manage and track your creator marketing campaigns."
+              />
               
               <WalletOverview balance={walletBalance} onRefresh={fetchBalance} />
               
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-150 overflow-hidden mt-6">
-                {error && <div className="text-red-650 text-sm p-4">{error}</div>}
+              <div className="bg-white rounded-2xl border border-black/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden mt-6">
+                {error && <div className="text-rose-600 text-sm p-4 border-b border-black/10 bg-rose-50/50">{error}</div>}
                 {loading ? (
-                  <div className="p-8 text-center text-gray-500 font-medium">Loading campaigns...</div>
+                  <div className="p-10 text-center text-slate font-medium text-sm">Loading campaigns...</div>
                 ) : campaigns.length === 0 ? (
-                  <div className="p-12 text-center text-gray-500">
-                    <Building2 className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="font-semibold text-lg text-gray-700">No campaigns created yet</p>
-                    <p className="text-gray-400 text-sm mt-1 mb-4">Launch your first marketing campaign to get started!</p>
+                  <div className="p-10 sm:p-12 text-center text-slate">
+                    <Building2 className="w-10 h-10 mx-auto text-steel mb-3" />
+                    <p className="font-display font-bold text-lg text-ink">No campaigns created yet</p>
+                    <p className="text-slate text-sm mt-1 mb-5">Launch your first marketing campaign to get started.</p>
                     <Link to="/brand/create">
-                      <Button className="bg-indigo-650 hover:bg-indigo-700">Create Campaign</Button>
+                      <Button variant="brand">Create Campaign</Button>
                     </Link>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead>
-                        <tr className="bg-gray-50/75 border-b border-gray-150">
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Campaign</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Platform</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Funds Locked</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">CPV</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Eyeballs</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Deadline</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 bg-white">
-                        {campaigns.map(campaign => (
-                          <tr key={campaign.id} className="hover:bg-slate-50/50 transition-colors duration-150">
-                            <td className="px-6 py-4 font-semibold whitespace-nowrap">
-                              {campaign.campaign_approval === "pending_approval" ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 border border-amber-200 text-amber-700 shadow-sm">
-                                  <Clock className="w-3 h-3 text-amber-500 animate-pulse" />
-                                  Pending Approval
-                                </span>
-                              ) : campaign.campaign_approval === "rejected" ? (
-                                <span 
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-50 border border-red-200 text-red-700 shadow-sm cursor-help"
-                                  title={`Rejection Reason: ${campaign.rejection_reason || "Unspecified"}`}
-                                >
-                                  <XCircle className="w-3 h-3 text-red-500" />
-                                  Rejected
-                                </span>
-                              ) : campaign.is_active ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-50 border border-green-200 text-green-700 shadow-sm">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                  Active
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gray-50 border border-gray-200 text-gray-600 shadow-sm">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                                  Inactive
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 font-semibold text-gray-900">
+                  <>
+                    {/* Mobile Cards */}
+                    <div className="divide-y divide-black/[0.06] sm:hidden">
+                      {campaigns.map(campaign => (
+                        <div key={campaign.id} className="p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
                               {campaign.campaign_approval === "approved" ? (
-                                <Link to={`/brand/dashboard/${campaign.id}`} className="hover:underline text-indigo-600 hover:text-indigo-800 transition-colors">
+                                <Link
+                                  to={`/brand/dashboard/${campaign.id}`}
+                                  className="font-display font-bold text-sm text-brand-blue hover:underline block truncate"
+                                >
                                   {campaign.name}
                                 </Link>
                               ) : (
-                                <span className="text-gray-500 cursor-not-allowed flex items-center gap-1.5 w-fit" title="Campaign is pending approval or rejected.">
-                                  <Lock className="w-3.5 h-3.5 text-gray-400" />
-                                  {campaign.name}
+                                <span className="text-sm font-semibold text-slate flex items-center gap-1.5 truncate">
+                                  <Lock className="w-3.5 h-3.5 text-steel shrink-0" />
+                                  <span className="truncate">{campaign.name}</span>
                                 </span>
                               )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1.5 text-sm text-gray-600 font-medium">
+                              <div className="flex items-center gap-2 mt-1 text-xs text-slate">
                                 {campaign.platform.toLowerCase() === "instagram" ? (
-                                  <Instagram className="w-4 h-4 text-pink-500" />
+                                  <Instagram className="w-3.5 h-3.5 text-ink" />
                                 ) : (
-                                  <Youtube className="w-4 h-4 text-red-500" />
+                                  <Youtube className="w-3.5 h-3.5 text-rose-600" />
                                 )}
                                 <span className="capitalize">{campaign.platform}</span>
+                              </div>
+                            </div>
+                            {renderApprovalPill(campaign)}
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-black/5 text-xs">
+                            <div>
+                              <span className="text-[10px] font-mono text-steel uppercase block">Locked</span>
+                              <span className="font-mono font-bold tabular-nums text-ink">
+                                ₹{(campaign?.funds_allocated || 0).toLocaleString()}
                               </span>
-                            </td>
-                            <td className="px-6 py-4 font-semibold text-gray-800 whitespace-nowrap">
-                              ₹{(campaign?.funds_allocated || 0).toLocaleString()}
-                            </td>
-                            <td className="px-6 py-4 font-medium text-gray-600 whitespace-nowrap">₹{campaign.cpv}</td>
-                            <td className="px-6 py-4 text-gray-650 whitespace-nowrap">{(campaign.total_view_count || 0).toLocaleString()}</td>
-                            <td className="px-6 py-4 text-sm text-gray-505 whitespace-nowrap">
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-mono text-steel uppercase block">CPV</span>
+                              <span className="font-mono font-semibold tabular-nums text-slate">₹{campaign.cpv}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-mono text-steel uppercase block">Eyeballs</span>
+                              <span className="font-mono font-semibold tabular-nums text-slate">
+                                {(campaign.total_view_count || 0).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-black/5 text-xs">
+                            <span className="font-mono text-steel">
                               {campaign.deadline ? new Date(campaign.deadline).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric'
                               }) : "—"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <button
-                                className="text-red-500 hover:text-red-700 text-sm font-semibold hover:underline disabled:opacity-50 transition-colors"
-                                onClick={async () => {
-                                  const funds = campaign.funds_allocated || 0;
-                                  let confirmMessage = "";
+                            </span>
+                            <button
+                              className="text-rose-600 hover:text-rose-700 font-semibold hover:underline disabled:opacity-50"
+                              onClick={() => setConfirmDeleteCampaign(campaign)}
+                              disabled={deletingId === campaign.id}
+                            >
+                              {deletingId === campaign.id ? "Deleting..." : "Delete"}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
 
-                                  if (funds > 0) {
-                                    confirmMessage = `⚠️ REFUND WARNING ⚠️\n\nThis campaign still has ₹${funds.toLocaleString()} allocated.\n\nDeleting it will:\n1. REFUND ₹${funds.toLocaleString()} to your Wallet.\n2. PERMANENTLY DELETE all campaign data.\n\nAre you sure you want to proceed?`;
-                                  } else {
-                                    confirmMessage = "Are you sure you want to delete this campaign? This action cannot be undone.";
-                                  }
-
-                                  if (!window.confirm(confirmMessage)) return;
-
-                                  try {
-                                    setDeletingId(campaign.id);
-                                    await deleteCampaign(campaign.id);
-                                    setCampaigns(prev => prev.filter(c => c.id !== campaign.id));
-                                    if (funds > 0) {
-                                      alert(`Campaign deleted and ₹${funds.toLocaleString()} refunded to your wallet.`);
-                                      window.location.reload(); 
-                                    }
-                                  } catch (err: unknown) {
-                                    if (err instanceof Error) {
-                                      setError(err.message);
-                                    } else {
-                                      setError("An unknown error occurred");
-                                    }
-                                  } finally {
-                                    setDeletingId(null);
-                                  }
-                                }}
-                                disabled={deletingId === campaign.id}
-                              >
-                                {deletingId === campaign.id ? "Deleting..." : "Delete"}
-                              </button>
-                            </td>
+                    {/* Desktop Table */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="min-w-full divide-y divide-black/10">
+                        <thead>
+                          <tr className="bg-black/[0.02] border-b border-black/10">
+                            <th className="px-6 py-4 text-left text-[10px] font-mono font-bold text-steel uppercase tracking-widest">Status</th>
+                            <th className="px-6 py-4 text-left text-[10px] font-mono font-bold text-steel uppercase tracking-widest">Campaign</th>
+                            <th className="px-6 py-4 text-left text-[10px] font-mono font-bold text-steel uppercase tracking-widest">Platform</th>
+                            <th className="px-6 py-4 text-left text-[10px] font-mono font-bold text-steel uppercase tracking-widest">Funds Locked</th>
+                            <th className="px-6 py-4 text-left text-[10px] font-mono font-bold text-steel uppercase tracking-widest">CPV</th>
+                            <th className="px-6 py-4 text-left text-[10px] font-mono font-bold text-steel uppercase tracking-widest">Total Eyeballs</th>
+                            <th className="px-6 py-4 text-left text-[10px] font-mono font-bold text-steel uppercase tracking-widest">Deadline</th>
+                            <th className="px-6 py-4 text-left text-[10px] font-mono font-bold text-steel uppercase tracking-widest">Actions</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody className="divide-y divide-black/[0.06] bg-white">
+                          {campaigns.map(campaign => (
+                            <tr key={campaign.id} className="hover:bg-black/[0.02] transition-colors duration-150">
+                              <td className="px-6 py-4 font-semibold whitespace-nowrap">
+                                {renderApprovalPill(campaign)}
+                              </td>
+                              <td className="px-6 py-4 font-semibold text-ink">
+                                {campaign.campaign_approval === "approved" ? (
+                                  <Link to={`/brand/dashboard/${campaign.id}`} className="hover:underline text-brand-blue font-semibold transition-colors duration-150">
+                                    {campaign.name}
+                                  </Link>
+                                ) : (
+                                  <span className="text-slate cursor-not-allowed flex items-center gap-1.5 w-fit" title="Campaign is pending approval or rejected.">
+                                    <Lock className="w-3.5 h-3.5 text-steel" />
+                                    {campaign.name}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1.5 text-sm text-slate font-medium">
+                                  {campaign.platform.toLowerCase() === "instagram" ? (
+                                    <Instagram className="w-4 h-4 text-ink" />
+                                  ) : (
+                                    <Youtube className="w-4 h-4 text-rose-600" />
+                                  )}
+                                  <span className="capitalize">{campaign.platform}</span>
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 font-mono font-semibold tabular-nums text-ink whitespace-nowrap">
+                                ₹{(campaign?.funds_allocated || 0).toLocaleString()}
+                              </td>
+                              <td className="px-6 py-4 font-mono font-medium tabular-nums text-slate whitespace-nowrap">₹{campaign.cpv}</td>
+                              <td className="px-6 py-4 font-mono tabular-nums text-ink whitespace-nowrap">{(campaign.total_view_count || 0).toLocaleString()}</td>
+                              <td className="px-6 py-4 font-mono text-xs text-steel whitespace-nowrap">
+                                {campaign.deadline ? new Date(campaign.deadline).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                }) : "—"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <button
+                                  className="text-rose-600 hover:text-rose-700 text-xs font-semibold hover:underline disabled:opacity-50 transition-colors duration-150 cursor-pointer"
+                                  onClick={() => setConfirmDeleteCampaign(campaign)}
+                                  disabled={deletingId === campaign.id}
+                                >
+                                  {deletingId === campaign.id ? "Deleting..." : "Delete"}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </div>
             </>
@@ -421,6 +478,23 @@ const BrandDashboard = () => {
             <TaxInvoicesTab />
           )}
         </div>
+
+        <ConfirmDialog
+          open={Boolean(confirmDeleteCampaign)}
+          onOpenChange={(open) => {
+            if (!open) setConfirmDeleteCampaign(null);
+          }}
+          title="Delete Campaign"
+          description={
+            (confirmDeleteCampaign?.funds_allocated || 0) > 0
+              ? `This campaign still has ₹${(confirmDeleteCampaign?.funds_allocated || 0).toLocaleString()} allocated. Deleting it will refund the full remaining budget to your wallet and permanently remove all campaign data.`
+              : `Are you sure you want to delete "${confirmDeleteCampaign?.name}"? This action cannot be undone.`
+          }
+          confirmLabel="Delete Campaign"
+          variant="destructive"
+          loading={deletingId !== null}
+          onConfirm={executeDeleteCampaign}
+        />
       </BrandLayout>
     );
   }

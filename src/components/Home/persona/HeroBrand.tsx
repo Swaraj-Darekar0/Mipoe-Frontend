@@ -1,15 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import gsap from "gsap";
 import { personaContent } from "./personaContent";
 import { opticalScale, type HeadlineLine } from "./heroType";
 import BrandRibbon from "./BrandRibbon";
 import { usePersona } from "./PersonaContext";
+import HeroCursorVideo from "./HeroCursorVideo";
+import SquishyHeadline from "./SquishyHeadline";
+import SlidingScribbleButton from "./SlidingScribbleButton";
 
 const content = personaContent.brand;
 
 const HEADLINE_LINES: readonly HeadlineLine[] = [
-  { text: "Your budget" },
-  { text: "shouldn't gamble." },
+  { text: "Stop burning ad spend" },
+  { text: "on zero-trust ads." },
   { text: "Buy verified reach.", highlight: true },
 ];
 
@@ -39,6 +43,8 @@ const SCENE_CLEARANCE = {
 
 const HeroBrand: React.FC = () => {
   const rootRef = useRef<HTMLElement>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const headlineRef = useRef<HTMLHeadingElement>(null);
   const {
     brandMode,
     toggleBrandMode,
@@ -48,16 +54,67 @@ const HeroBrand: React.FC = () => {
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const rootEl = rootRef.current;
+    const sceneEl = sceneRef.current;
+
     const ctx = gsap.context(() => {
       gsap.from(".hero-rise", {
-        y: 14,
+        y: 18,
         opacity: 0,
-        duration: 0.38,
+        duration: 0.45,
         ease: "power2.out",
-        stagger: 0.04,
+        stagger: 0.05,
         clearProps: "transform,opacity",
       });
+
+      // Desktop 3D cursor tilt on scene and mascot
+      if (rootEl && sceneEl && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+        const xTo = gsap.quickTo(sceneEl, "rotationY", { duration: 0.6, ease: "power3" });
+        const yTo = gsap.quickTo(sceneEl, "rotationX", { duration: 0.6, ease: "power3" });
+        const zTo = gsap.quickTo(sceneEl, "z", { duration: 0.6, ease: "power3" });
+
+        const onMouseMove = (e: MouseEvent) => {
+          const rect = rootEl.getBoundingClientRect();
+          const xRel = (e.clientX - rect.left) / rect.width - 0.5;
+          const yRel = (e.clientY - rect.top) / rect.height - 0.5;
+
+          xTo(xRel * 12);
+          yTo(-yRel * 10);
+          zTo(20);
+
+          if (headlineRef.current) {
+            const hRect = headlineRef.current.getBoundingClientRect();
+            const hCenter = hRect.left + hRect.width / 2;
+            const dist = Math.abs(e.clientX - hCenter);
+            if (dist < 320) {
+              const spread = (1 - dist / 320) * 0.02;
+              headlineRef.current.style.letterSpacing = `${-0.02 + spread}em`;
+            } else {
+              headlineRef.current.style.letterSpacing = "-0.02em";
+            }
+          }
+        };
+
+        const onMouseLeave = () => {
+          xTo(0);
+          yTo(0);
+          zTo(0);
+          if (headlineRef.current) {
+            headlineRef.current.style.letterSpacing = "-0.02em";
+          }
+        };
+
+        rootEl.addEventListener("mousemove", onMouseMove, { passive: true });
+        rootEl.addEventListener("mouseleave", onMouseLeave);
+
+        return () => {
+          rootEl.removeEventListener("mousemove", onMouseMove);
+          rootEl.removeEventListener("mouseleave", onMouseLeave);
+        };
+      }
     }, rootRef);
+
     return () => ctx.revert();
   }, []);
 
@@ -68,52 +125,41 @@ const HeroBrand: React.FC = () => {
       className="relative w-full h-[100svh] min-h-[660px] bg-canvas overflow-hidden flex flex-col pt-[var(--nav-clear)] lg:block lg:pt-0"
       style={SCENE_CLEARANCE}
     >
-      {/* Brand Hero Copy Layer */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-8 flex flex-1 flex-col items-center justify-center text-center pointer-events-none lg:absolute lg:inset-x-0 lg:top-[var(--copy-top)] lg:h-[var(--copy-zone)] lg:flex-none">
+      {/* Floating Video Cursor Follower (Desktop only: hidden lg:block to eliminate hover animations on mobile) */}
+      <div className="hidden lg:block pointer-events-none">
+        <HeroCursorVideo containerRef={rootRef} />
+      </div>
+      {/* Brand Hero Copy Layer (z-30 ensures heading text and CTA buttons sit strictly in front of video) */}
+      <div className="relative z-30 w-full max-w-7xl mx-auto px-6 md:px-8 flex flex-1 flex-col items-center justify-center text-center pointer-events-none lg:absolute lg:inset-x-0 lg:top-[var(--copy-top)] lg:h-[var(--copy-zone)] lg:flex-none">
         <div
           className="relative w-full max-w-[480px] md:max-w-[520px] lg:max-w-[600px]"
           style={{ containerType: "inline-size" }}
         >
-          <h1 className="hero-rise font-fat font-normal text-ink tracking-[-0.012em]">
-            {HEADLINE_LINES.map((line, i) => (
-              <span
-                key={i}
-                className="block leading-[0.94]"
-                style={{ fontSize: lineSize(i) }}
-              >
-                {line.highlight ? (
-                  <span className="relative inline-block">
-                    {/* Orange highlight band for Brand persona */}
-                    <span
-                      className="absolute -left-[0.42em] -right-[0.42em] top-[0.06em] bottom-[0.08em] bg-orange-500/30"
-                      aria-hidden="true"
-                    >
-                      <span className="absolute left-0 top-0 h-[0.3em] w-[0.3em] -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-500" />
-                    </span>
-                    <span className="relative">{line.text}</span>
-                  </span>
-                ) : (
-                  line.text
-                )}
-              </span>
-            ))}
-          </h1>
+          <SquishyHeadline
+            lines={HEADLINE_LINES}
+            lineSize={lineSize}
+            containerRef={rootRef}
+            highlightColor="bg-orange-500/25"
+          />
         </div>
 
         <p className="hero-rise mt-4 md:mt-3.5 font-body text-[14px] md:text-[15px] leading-[1.5] text-slate max-w-[360px]">
           {content.hero.subheadline}
         </p>
 
-        <a
+        <SlidingScribbleButton
           href={content.ctaHref}
-          className="hero-rise pointer-events-auto mt-5 md:mt-4 inline-flex items-center justify-center rounded-[10px] border-[1.5px] border-[#100d0c] bg-[#f97316] text-[#100d0c] font-body font-bold text-[14px] px-6 py-2.5 shadow-[0_4px_14px_rgba(249,115,22,0.3)] hover:bg-[#ea580c] active:scale-[0.98] transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
-        >
-          {content.hero.ctaLabel}
-        </a>
+          label={content.hero.ctaLabel}
+          accentColor="#ff5f04"
+          className="hero-rise mt-5 md:mt-4 pointer-events-auto"
+        />
       </div>
 
-      {/* Brand Ribbon Scene (Replaces Lanyard). Continuous right->left looping ribbon with interactive pill */}
-      <div className="hero-scene relative w-full shrink-0 aspect-[420/500] max-h-[46svh] lg:absolute lg:inset-0 lg:aspect-auto lg:max-h-none">
+      {/* Brand Ribbon Scene with 3D Perspective Parallax (z-20 ensures mascot character sits in front of cursor video) */}
+      <div 
+        ref={sceneRef}
+        className="hero-scene relative z-20 w-full shrink-0 aspect-[420/500] max-h-[46svh] lg:absolute lg:inset-0 lg:aspect-auto lg:max-h-none perspective-1200 transform-style-3d will-change-transform"
+      >
         <BrandRibbon
           mode={brandMode}
           onToggleMode={toggleBrandMode}

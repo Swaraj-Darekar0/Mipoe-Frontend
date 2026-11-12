@@ -13,6 +13,7 @@ export interface BrandScene {
   pill: { cx: number; cy: number; w: number; h: number; fontSize: number };
   character: { cx: number; bottom: number; width: number };
   hint: { x: number; y: number };
+  bandFrom: number;
 }
 
 /**
@@ -77,6 +78,7 @@ export const DESKTOP_BRAND_SCENE: BrandScene = {
   pill: { cx: 600, cy: 508, w: 160, h: 56, fontSize: 24 },
   character: { cx: 600, bottom: 504, width: 250 },
   hint: { x: 600, y: 440 },
+  bandFrom: 2580,
 };
 
 /**
@@ -89,23 +91,23 @@ export const COMPACT_BRAND_SCENE: BrandScene = {
     [1020, 176],
     [720, 172],
     [510, 166],
-    [394, 156],
-    [328, 134],
-    [276, 100],
-    [260, 60],
-    [274, 24],
-    [320, 10],
-    [364, 28],
-    [382, 68],
-    [382, 110],
-    [364, 146],
-    [336, 174],
-    [322, 212],
-    [324, 252],
-    [338, 292],
-    [346, 322],
-    [326, 348],
-    [288, 362],
+    [365, 156],
+    [308, 134],
+    [266, 100],
+    [250, 60],
+    [264, 24],
+    [300, 10],
+    [334, 28],
+    [340, 68],
+    [340, 110],
+    [332, 146],
+    [318, 174],
+    [310, 212],
+    [312, 252],
+    [320, 292],
+    [320, 322],
+    [304, 348],
+    [270, 362],
     [224, 370],
     [190, 372],
     [120, 371],
@@ -130,6 +132,7 @@ export const COMPACT_BRAND_SCENE: BrandScene = {
   pill: { cx: 190, cy: 371, w: 114, h: 44, fontSize: 18 },
   character: { cx: 190, bottom: 372, width: 290 },
   hint: { x: 190, y: 326 },
+  bandFrom: 980,
 };
 
 export const smoothPath = (pts: readonly Anchor[]): string => {

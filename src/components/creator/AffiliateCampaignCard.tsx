@@ -1,29 +1,35 @@
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Clock, 
-  Coins, 
-  Copy, 
-  Check, 
+import {
+  Clock,
+  Coins,
+  Copy,
+  Check,
   ArrowRight,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 import { CreatorAffiliateCampaign } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
-interface AffiliateCampaignCardProps {
-  campaign: CreatorAffiliateCampaign;
+export interface AffiliateCampaignCardProps {
+  campaign: CreatorAffiliateCampaign & {
+    product_name?: string;
+    commission_rate?: number;
+    total_pool?: number;
+  };
   onJoin: (id: number) => Promise<void>;
   joiningId: number | null;
   onCardClick: (id: number) => void;
+  image_url?: string;
 }
 
 export const AffiliateCampaignCard: React.FC<AffiliateCampaignCardProps> = ({
   campaign,
   onJoin,
   joiningId,
-  onCardClick
+  onCardClick,
+  image_url,
 }) => {
   const { toast } = useToast();
   const [imgError, setImgError] = useState(false);
@@ -31,23 +37,25 @@ export const AffiliateCampaignCard: React.FC<AffiliateCampaignCardProps> = ({
 
   const isJoined = campaign.joined;
   const isSaas = campaign.campaign_type === "saas_subscription";
-  
-  // Format dates
-  const daysLeft = Math.ceil(
-    (new Date(campaign.deadline).getTime() - new Date().getTime()) / (1000 * 3600 * 24)
+  const displayName = campaign.name || campaign.product_name || "Affiliate Campaign";
+  const coverImage = image_url || campaign.image_url;
+
+  const daysLeft = Math.max(
+    0,
+    Math.ceil((new Date(campaign.deadline).getTime() - Date.now()) / (1000 * 3600 * 24))
   );
 
   const handleCopyLink = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Avoid triggering card click
+    e.stopPropagation();
     if (!campaign.affiliate_code) return;
-    
+
     const referralUrl = `${window.location.origin}/affiliate/${campaign.affiliate_code}`;
     navigator.clipboard.writeText(referralUrl);
     setCopied(true);
     toast({
       title: "Link Copied!",
       description: "Referral URL copied to your clipboard.",
-      className: "bg-emerald-600 border-emerald-500 text-white shadow-md"
+      className: "bg-emerald-600 border-emerald-500 text-white shadow-md",
     });
     setTimeout(() => setCopied(false), 2000);
   };
@@ -57,22 +65,29 @@ export const AffiliateCampaignCard: React.FC<AffiliateCampaignCardProps> = ({
     onJoin(campaign.id);
   };
 
-  // Render commission summary label
   const renderCommissionLabel = () => {
     if (isSaas && campaign.commission_schedule) {
       const schedule = campaign.commission_schedule;
       const intervals = Object.keys(schedule);
       if (intervals.length > 0) {
-        return intervals.map(interval => {
-          const data = schedule[interval];
-          const valStr = data.type === "percentage" ? `${data.value}%` : `₹${data.value}`;
-          return `${interval.charAt(0).toUpperCase() + interval.slice(1)}: ${valStr}`;
-        }).join(" | ");
+        return intervals
+          .map((interval) => {
+            const data = schedule[interval];
+            const valStr = data.type === "percentage" ? `${data.value}%` : `₹${data.value}`;
+            return `${interval.charAt(0).toUpperCase() + interval.slice(1)}: ${valStr}`;
+          })
+          .join(" | ");
       }
     }
-    return campaign.commission_type === "percentage" 
-      ? `${campaign.commission_value}% per sale` 
-      : `₹${campaign.commission_value} flat per sale`;
+    if (campaign.commission_value !== undefined) {
+      return campaign.commission_type === "percentage"
+        ? `${campaign.commission_value}% per sale`
+        : `₹${campaign.commission_value} per order`;
+    }
+    if (campaign.commission_rate !== undefined) {
+      return `₹${campaign.commission_rate.toLocaleString("en-IN")} per sale`;
+    }
+    return "Commission per sale";
   };
 
   return (
@@ -80,12 +95,12 @@ export const AffiliateCampaignCard: React.FC<AffiliateCampaignCardProps> = ({
       onClick={() => onCardClick(campaign.id)}
       className="group bg-white rounded-2xl overflow-hidden shadow-xs hover:shadow-md border border-zinc-200/80 hover:border-orange-300 transition-all duration-200 flex flex-col w-full cursor-pointer hover:-translate-y-0.5"
     >
-      {/* Banner Cover */}
+      {/* Banner Cover matching Dashboard Affiliate Card */}
       <div className="relative w-full aspect-video bg-zinc-100 overflow-hidden">
-        {campaign.image_url && !imgError ? (
+        {coverImage && !imgError ? (
           <img
-            src={campaign.image_url}
-            alt={campaign.name}
+            src={coverImage}
+            alt={displayName}
             loading="lazy"
             onError={() => setImgError(true)}
             className="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300"
@@ -102,12 +117,12 @@ export const AffiliateCampaignCard: React.FC<AffiliateCampaignCardProps> = ({
         {/* Overlay badges */}
         <div className="absolute top-2.5 left-2.5 flex gap-1.5 flex-wrap">
           {isSaas ? (
-            <Badge className="bg-orange-50 text-orange-700 border border-orange-200/80 shadow-xs text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
-              SaaS Subscription
+            <Badge className="bg-orange-50/95 text-orange-700 border border-orange-200/80 backdrop-blur-sm shadow-xs text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
+              SaaS Affiliate
             </Badge>
           ) : (
-            <Badge className="bg-zinc-100 text-zinc-700 border border-zinc-200/80 shadow-xs text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
-              Product-Based
+            <Badge className="bg-zinc-100/95 text-zinc-700 border border-zinc-200/80 backdrop-blur-sm shadow-xs text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
+              Product Drop
             </Badge>
           )}
 
@@ -128,7 +143,7 @@ export const AffiliateCampaignCard: React.FC<AffiliateCampaignCardProps> = ({
           )}
         </div>
 
-        {/* Date / Timer badge */}
+        {/* Frosted Blur Timer Pill */}
         <div className="absolute bottom-2.5 right-2.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-zinc-200/80 text-[10px] text-zinc-700 font-bold flex items-center gap-1.5 shadow-xs">
           <Clock className="w-3.5 h-3.5 text-zinc-400" />
           <span>{daysLeft > 0 ? `${daysLeft}d left` : "Ended"}</span>
@@ -138,11 +153,15 @@ export const AffiliateCampaignCard: React.FC<AffiliateCampaignCardProps> = ({
       {/* Details Area */}
       <div className="p-4 flex flex-col flex-1 justify-between gap-3.5">
         <div className="space-y-1.5">
-          <h3 className="font-display font-bold text-zinc-900 text-base leading-snug line-clamp-1 group-hover:text-orange-600 transition-colors" title={campaign.name}>
-            {campaign.name}
+          <h3
+            className="font-display font-bold text-zinc-900 text-base leading-snug line-clamp-1 group-hover:text-orange-600 transition-colors"
+            title={displayName}
+          >
+            {displayName}
           </h3>
           <p className="text-zinc-500 text-xs line-clamp-2 leading-relaxed">
-            {campaign.description || "Refer subscribers and earn commissions on successful conversions."}
+            {campaign.description ||
+              "Share your affiliate link and earn directly for every verified customer order."}
           </p>
         </div>
 
@@ -152,8 +171,13 @@ export const AffiliateCampaignCard: React.FC<AffiliateCampaignCardProps> = ({
             <Coins className="w-4 h-4 text-orange-600" />
           </div>
           <div className="min-w-0">
-            <span className="text-[10px] text-zinc-500 font-bold block uppercase tracking-wider">Commission Structure</span>
-            <span className="font-bold text-xs text-orange-700 truncate block mt-0.5" title={renderCommissionLabel()}>
+            <span className="text-[10px] text-zinc-500 font-bold block uppercase tracking-wider">
+              Commission Rate
+            </span>
+            <span
+              className="font-bold text-xs text-orange-700 truncate block mt-0.5"
+              title={renderCommissionLabel()}
+            >
               {renderCommissionLabel()}
             </span>
           </div>
@@ -161,12 +185,12 @@ export const AffiliateCampaignCard: React.FC<AffiliateCampaignCardProps> = ({
 
         {/* Action Button Area */}
         <div className="pt-2 border-t border-zinc-100 flex gap-2">
-          {campaign.application_status === "active" ? (
+          {isJoined && campaign.affiliate_code ? (
             <Button
               onClick={handleCopyLink}
               className={`w-full font-bold text-xs h-9 rounded-xl transition ${
-                copied 
-                  ? "bg-emerald-600 hover:bg-emerald-600 text-white" 
+                copied
+                  ? "bg-emerald-600 hover:bg-emerald-600 text-white"
                   : "bg-zinc-100 hover:bg-zinc-200 text-zinc-800"
               }`}
             >
@@ -212,3 +236,5 @@ export const AffiliateCampaignCard: React.FC<AffiliateCampaignCardProps> = ({
     </div>
   );
 };
+
+export default AffiliateCampaignCard;

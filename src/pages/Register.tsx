@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AuthLayout from "@/layouts/AuthLayout";
-import { register as registerApi, syncWalletUser } from "@/lib/api";
+import { register as registerApi } from "@/lib/api";
 import { toast } from "sonner"; 
 import { supabase } from "@/lib/supabaseClient";
 import { ArrowLeft, Sparkles } from "lucide-react";
@@ -89,25 +89,6 @@ const Register = () => {
     const redirectParam = searchParams.get("redirect");
     const redirectQuery = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : "";
     navigate(`/login?role=${role}${redirectQuery}`);
-  };
-
-  const handleSandboxQuickRegister = async (targetRole: "brand" | "creator") => {
-    setLoading(true);
-    try {
-      const syncRes = await syncWalletUser({
-        auth_token: `crossmint_sandbox_did:crossmint:dev_${targetRole}_99::0x742d35Cc6634C0532925a3b844Bc454e4438f44e::dev_${targetRole}@gmail.com`,
-        role: targetRole,
-        wallet_address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-        email: `dev_${targetRole}@gmail.com`,
-        name: `Dev ${targetRole === "brand" ? "D2C Brand" : "Creator"}`,
-      });
-      toast.success(`Registered as Sandbox ${targetRole}!`);
-      navigateAfterAuth(syncRes.role, syncRes.profile_completed);
-    } catch (err: any) {
-      toast.error(err.message || "Failed sandbox registration");
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -365,30 +346,6 @@ const Register = () => {
               </button>
             </div>
           </>
-        )}
-
-        {!import.meta.env.PROD && (
-          <div className="mt-3.5 pt-3 border-t border-zinc-100 flex flex-col gap-1.5">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 text-center">
-              Dev Sandbox 1-Click Register
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleSandboxQuickRegister("creator")}
-                className="px-2.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
-              >
-                <span>⚡</span> Sandbox Creator
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSandboxQuickRegister("brand")}
-                className="px-2.5 py-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
-              >
-                <span>⚡</span> Sandbox Brand
-              </button>
-            </div>
-          </div>
         )}
 
         <p className="text-center text-sm text-zinc-500 mt-6">

@@ -5,17 +5,15 @@ import { useToast } from "@/hooks/use-toast";
 import { uploadCampaignImage } from "@/lib/api";
 import { compressImage } from "@/utils/imageCompression";
 import { ImageCropInput } from "@/components/ui/ImageCropInput";
-import { 
-  Megaphone, 
-  Calendar, 
-  Coins, 
-  UserCheck, 
-  Layers, 
-  Image as ImageIcon, 
+import {
+  Megaphone,
+  Calendar,
+  Coins,
+  UserCheck,
+  Layers,
   HelpCircle,
-  Sparkles,
   Info,
-  Globe
+  Globe,
 } from "lucide-react";
 
 interface SaasCampaignBuilderProps {
@@ -38,7 +36,6 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
   // Section 1: Campaign details
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [landingPageUrl, setLandingPageUrl] = useState(brandWebsiteUrl);
@@ -114,7 +111,7 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
           netloc = netloc.substring(4);
         }
         return netloc;
-      } catch (e) {
+      } catch {
         return "";
       }
     };
@@ -150,7 +147,7 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
     }
 
     // Build the commission schedule
-    const commissionSchedule: any = {};
+    const commissionSchedule: Record<string, { type: "percentage" | "fixed"; value: number }> = {};
     if (weeklyActive && weeklyCommValue) {
       commissionSchedule["weekly"] = {
         type: weeklyCommType,
@@ -170,7 +167,8 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
       };
     }
 
-    if (Object.keys(commissionSchedule).length === 0) {
+    const scheduleEntries = Object.values(commissionSchedule);
+    if (scheduleEntries.length === 0) {
       toast({ 
         title: "Validation Error", 
         description: "Please specify at least one commission rate for Weekly, Monthly, or Yearly billing intervals.", 
@@ -181,12 +179,12 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
 
     setUploading(true);
     try {
-      let finalImageUrl = imageUrl;
+      let finalImageUrl = "";
       if (imageFile) {
         try {
           const compressed = await compressImage(imageFile);
           finalImageUrl = await uploadCampaignImage(compressed);
-        } catch (uploadErr) {
+        } catch {
           toast({ 
             title: "Upload Error", 
             description: "Failed to compress or upload cover image.", 
@@ -204,8 +202,8 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
         landing_page_url: landingPageUrl,
         start_date: startDate,
         deadline,
-        commission_type: monthlyActive ? monthlyCommType : Object.values(commissionSchedule)[0].type, // Fallback
-        commission_value: monthlyActive ? parseFloat(monthlyCommValue) : Object.values(commissionSchedule)[0].value, // Fallback
+        commission_type: monthlyActive && monthlyCommValue ? monthlyCommType : scheduleEntries[0].type,
+        commission_value: monthlyActive && monthlyCommValue ? parseFloat(monthlyCommValue) : scheduleEntries[0].value,
         campaign_type: "saas_subscription",
         commission_schedule: commissionSchedule,
         recurring_commission: recurringCommission,
@@ -230,46 +228,49 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-150 overflow-hidden max-w-2xl w-full mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
-      
+    <div className="bg-white rounded-2xl border border-black/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden max-w-2xl w-full mx-auto">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-6 text-white relative overflow-hidden">
-        <div className="absolute right-0 bottom-0 translate-x-10 translate-y-10 opacity-10">
-          <Sparkles className="w-48 h-48" />
-        </div>
+      <div className="bg-[#fafafb] border-b border-black/[0.08] p-5 sm:p-6">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-black/10 backdrop-blur-md rounded-xl">
-            <Megaphone className="w-6 h-6 text-white" />
+          <div className="p-2.5 bg-brand-blue/10 border border-brand-blue/20 text-brand-blue rounded-xl shrink-0">
+            <Megaphone className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-xl font-bold tracking-tight">SaaS Affiliate Campaign</h3>
-            <p className="text-white/80 text-xs mt-0.5">Launch recursive, interval-based commission models for your software subscribers.</p>
+            <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight text-ink">
+              SaaS Affiliate Campaign
+            </h3>
+            <p className="text-slate text-xs mt-0.5">
+              Launch recursive, interval-based commission models for your software subscribers.
+            </p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleFormSubmit} className="p-6 space-y-8 max-h-[75vh] overflow-y-auto">
-        
+      <form onSubmit={handleFormSubmit} className="p-5 sm:p-6 space-y-7 max-h-[75vh] overflow-y-auto">
         {/* SECTION 1: General Info */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-            <Megaphone className="w-4.5 h-4.5 text-indigo-500" />
-            <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wide">1. Campaign Name & Cover</h4>
+          <div className="flex items-center gap-2 pb-2 border-b border-black/[0.08]">
+            <Megaphone className="w-4 h-4 text-brand-blue" />
+            <h4 className="font-mono text-[11px] font-bold text-steel uppercase tracking-widest">
+              1. Campaign Name & Cover
+            </h4>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Campaign Name</label>
+              <label className="block font-mono text-[11px] font-bold text-steel uppercase tracking-wider">
+                Campaign Name
+              </label>
               <Input
                 type="text"
                 placeholder="e.g. Pro Plan Affiliate Boost"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="rounded-xl border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                className="rounded-xl border-black/15 focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
               />
             </div>
-            
+
             <div className="space-y-1.5">
               <ImageCropInput
                 value={imagePreview || ""}
@@ -279,6 +280,7 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
                 }}
                 disabled={submitting || uploading}
                 aspectRatio="16:9"
+                accent="brand"
                 label="Campaign Cover Image"
                 placeholder="Upload a high-quality campaign cover image"
               />
@@ -286,7 +288,9 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Campaign Landing Page URL</label>
+            <label className="block font-mono text-[11px] font-bold text-steel uppercase tracking-wider">
+              Campaign Landing Page URL
+            </label>
             <div className="relative">
               <Input
                 type="text"
@@ -294,61 +298,75 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
                 value={landingPageUrl}
                 onChange={(e) => setLandingPageUrl(e.target.value)}
                 required
-                className="rounded-xl border-gray-200 pl-8 focus:border-indigo-500 focus:ring-indigo-500"
+                className="rounded-xl border-black/15 pl-8 focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
               />
-              <Globe className="w-4 h-4 text-gray-400 absolute left-2.5 top-3" />
+              <Globe className="w-4 h-4 text-steel absolute left-2.5 top-3" />
             </div>
             {brandWebsiteUrl && (
-              <p className="text-[10px] text-gray-400 mt-1 italic">
-                Must match or be a subdomain of your verified website: <span className="font-semibold text-indigo-600">{brandWebsiteUrl}</span>
+              <p className="text-[11px] text-steel mt-1">
+                Must match or be a subdomain of your verified website:{" "}
+                <span className="font-semibold text-brand-blue">{brandWebsiteUrl}</span>
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Campaign Description</label>
+            <label className="block font-mono text-[11px] font-bold text-steel uppercase tracking-wider">
+              Campaign Description
+            </label>
             <textarea
               placeholder="Provide information on how creators should promote your software, key messaging, and payout policies..."
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              className="w-full min-h-[80px] text-sm p-3 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+              className="w-full min-h-[80px] text-sm p-3 rounded-xl border border-black/15 bg-white text-ink placeholder:text-steel focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 transition-colors duration-150"
             />
           </div>
         </div>
 
         {/* SECTION 2: Budget & Commission Related */}
         <div className="space-y-5">
-          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-            <Coins className="w-4.5 h-4.5 text-indigo-500" />
-            <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wide">2. Commission Model & Intervals</h4>
+          <div className="flex items-center gap-2 pb-2 border-b border-black/[0.08]">
+            <Coins className="w-4 h-4 text-brand-blue" />
+            <h4 className="font-mono text-[11px] font-bold text-steel uppercase tracking-widest">
+              2. Commission Model & Intervals
+            </h4>
           </div>
 
           {/* Pricing Intervals */}
-          <div className="space-y-4">
-            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Commission Schedule Rates</label>
-            
+          <div className="space-y-3">
+            <label className="block font-mono text-[11px] font-bold text-steel uppercase tracking-wider">
+              Commission Schedule Rates
+            </label>
+
             <div className="grid grid-cols-1 gap-3">
-              
               {/* Weekly Interval */}
-              <div className={`p-4 rounded-xl border transition ${weeklyActive ? 'bg-indigo-50/40 border-indigo-200' : 'bg-gray-50/50 border-gray-150'}`}>
-                <div className="flex items-center justify-between">
+              <div
+                className={`p-3.5 sm:p-4 rounded-xl border transition-colors duration-150 ${
+                  weeklyActive
+                    ? "bg-brand-blue/[0.05] border-brand-blue/35"
+                    : "bg-black/[0.02] border-black/10"
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       id="weeklyActive"
                       checked={weeklyActive}
                       onChange={(e) => setWeeklyActive(e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                      className="w-4 h-4 accent-[#2b5ce6] border-black/20 rounded focus:ring-brand-blue cursor-pointer"
                     />
-                    <label htmlFor="weeklyActive" className="text-xs font-bold text-gray-700 cursor-pointer">Weekly Subscriptions</label>
+                    <label htmlFor="weeklyActive" className="text-xs font-bold text-ink cursor-pointer">
+                      Weekly Subscriptions
+                    </label>
                   </div>
-                  
+
                   {weeklyActive && (
-                    <div className="flex items-center gap-2 animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
                       <select
-                        className="h-8 px-2 rounded-lg border border-gray-200 bg-white text-xs"
+                        className="h-8 px-2 rounded-lg border border-black/15 bg-white text-xs text-ink focus:outline-none focus:border-brand-blue"
                         value={weeklyCommType}
-                        onChange={(e) => setWeeklyCommType(e.target.value as any)}
+                        onChange={(e) => setWeeklyCommType(e.target.value as "percentage" | "fixed")}
                       >
                         <option value="percentage">Percentage (%)</option>
                         <option value="fixed">Fixed Flat (₹)</option>
@@ -358,7 +376,7 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
                         placeholder="Rate"
                         value={weeklyCommValue}
                         onChange={(e) => setWeeklyCommValue(e.target.value)}
-                        className="w-20 h-8 text-xs rounded-lg"
+                        className="w-24 h-8 text-xs font-mono tabular-nums rounded-lg border-black/15"
                         required={weeklyActive}
                       />
                     </div>
@@ -367,25 +385,33 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
               </div>
 
               {/* Monthly Interval */}
-              <div className={`p-4 rounded-xl border transition ${monthlyActive ? 'bg-indigo-50/40 border-indigo-200' : 'bg-gray-50/50 border-gray-150'}`}>
-                <div className="flex items-center justify-between">
+              <div
+                className={`p-3.5 sm:p-4 rounded-xl border transition-colors duration-150 ${
+                  monthlyActive
+                    ? "bg-brand-blue/[0.05] border-brand-blue/35"
+                    : "bg-black/[0.02] border-black/10"
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       id="monthlyActive"
                       checked={monthlyActive}
                       onChange={(e) => setMonthlyActive(e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                      className="w-4 h-4 accent-[#2b5ce6] border-black/20 rounded focus:ring-brand-blue cursor-pointer"
                     />
-                    <label htmlFor="monthlyActive" className="text-xs font-bold text-gray-700 cursor-pointer">Monthly Subscriptions</label>
+                    <label htmlFor="monthlyActive" className="text-xs font-bold text-ink cursor-pointer">
+                      Monthly Subscriptions
+                    </label>
                   </div>
-                  
+
                   {monthlyActive && (
-                    <div className="flex items-center gap-2 animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
                       <select
-                        className="h-8 px-2 rounded-lg border border-gray-200 bg-white text-xs"
+                        className="h-8 px-2 rounded-lg border border-black/15 bg-white text-xs text-ink focus:outline-none focus:border-brand-blue"
                         value={monthlyCommType}
-                        onChange={(e) => setMonthlyCommType(e.target.value as any)}
+                        onChange={(e) => setMonthlyCommType(e.target.value as "percentage" | "fixed")}
                       >
                         <option value="percentage">Percentage (%)</option>
                         <option value="fixed">Fixed Flat (₹)</option>
@@ -395,7 +421,7 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
                         placeholder="Rate"
                         value={monthlyCommValue}
                         onChange={(e) => setMonthlyCommValue(e.target.value)}
-                        className="w-20 h-8 text-xs rounded-lg"
+                        className="w-24 h-8 text-xs font-mono tabular-nums rounded-lg border-black/15"
                         required={monthlyActive}
                       />
                     </div>
@@ -404,25 +430,33 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
               </div>
 
               {/* Yearly Interval */}
-              <div className={`p-4 rounded-xl border transition ${yearlyActive ? 'bg-indigo-50/40 border-indigo-200' : 'bg-gray-50/50 border-gray-150'}`}>
-                <div className="flex items-center justify-between">
+              <div
+                className={`p-3.5 sm:p-4 rounded-xl border transition-colors duration-150 ${
+                  yearlyActive
+                    ? "bg-brand-blue/[0.05] border-brand-blue/35"
+                    : "bg-black/[0.02] border-black/10"
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       id="yearlyActive"
                       checked={yearlyActive}
                       onChange={(e) => setYearlyActive(e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                      className="w-4 h-4 accent-[#2b5ce6] border-black/20 rounded focus:ring-brand-blue cursor-pointer"
                     />
-                    <label htmlFor="yearlyActive" className="text-xs font-bold text-gray-700 cursor-pointer">Yearly Subscriptions</label>
+                    <label htmlFor="yearlyActive" className="text-xs font-bold text-ink cursor-pointer">
+                      Yearly Subscriptions
+                    </label>
                   </div>
-                  
+
                   {yearlyActive && (
-                    <div className="flex items-center gap-2 animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
                       <select
-                        className="h-8 px-2 rounded-lg border border-gray-200 bg-white text-xs"
+                        className="h-8 px-2 rounded-lg border border-black/15 bg-white text-xs text-ink focus:outline-none focus:border-brand-blue"
                         value={yearlyCommType}
-                        onChange={(e) => setYearlyCommType(e.target.value as any)}
+                        onChange={(e) => setYearlyCommType(e.target.value as "percentage" | "fixed")}
                       >
                         <option value="percentage">Percentage (%)</option>
                         <option value="fixed">Fixed Flat (₹)</option>
@@ -432,48 +466,58 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
                         placeholder="Rate"
                         value={yearlyCommValue}
                         onChange={(e) => setYearlyCommValue(e.target.value)}
-                        className="w-20 h-8 text-xs rounded-lg"
+                        className="w-24 h-8 text-xs font-mono tabular-nums rounded-lg border-black/15"
                         required={yearlyActive}
                       />
                     </div>
                   )}
                 </div>
               </div>
-
             </div>
           </div>
 
           {/* Recurring Commission Setup */}
-          <div className="bg-gray-50 p-4 border border-gray-150 rounded-xl space-y-4">
+          <div className="bg-black/[0.02] p-4 border border-black/[0.08] rounded-xl space-y-4">
             <div className="flex items-start gap-3">
               <input
                 type="checkbox"
                 id="recurringCommission"
                 checked={recurringCommission}
                 onChange={(e) => setRecurringCommission(e.target.checked)}
-                className="w-4 h-4 mt-0.5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                className="w-4 h-4 mt-0.5 accent-[#2b5ce6] border-black/20 rounded focus:ring-brand-blue cursor-pointer"
               />
               <div className="flex-1">
-                <label htmlFor="recurringCommission" className="text-xs font-bold text-gray-700 block cursor-pointer">Recurring Commissions</label>
-                <span className="text-[10px] text-gray-400 mt-0.5 block">Enable this if you want creators to receive commission on subscription renewals, rather than just the initial sign-up transaction.</span>
+                <label htmlFor="recurringCommission" className="text-xs font-bold text-ink block cursor-pointer">
+                  Recurring Commissions
+                </label>
+                <span className="text-[11px] text-steel mt-0.5 block">
+                  Enable this if you want creators to receive commission on subscription renewals, rather than just the initial sign-up transaction.
+                </span>
               </div>
             </div>
 
             {recurringCommission && (
-              <div className="pl-7 space-y-2 border-l-2 border-indigo-200 animate-in slide-in-from-left-2 duration-250">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-600">Stop payouts after</span>
+              <div className="pl-5 sm:pl-7 space-y-2 border-l-2 border-brand-blue/35">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-slate">Stop payouts after</span>
                   <Input
                     type="number"
                     placeholder="e.g. 12"
                     value={recurringLimit}
                     onChange={(e) => setRecurringLimit(e.target.value)}
-                    className="w-20 h-8 text-xs rounded-lg"
+                    className="w-20 h-8 text-xs font-mono tabular-nums rounded-lg border-black/15"
                   />
-                  <span className="text-xs text-gray-600">renewals</span>
-                  <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-help" title="Leave empty for unlimited lifetime commission payouts." />
+                  <span className="text-xs text-slate">renewals</span>
+                  <span
+                    title="Leave empty for unlimited lifetime commission payouts."
+                    className="inline-flex cursor-help"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-steel" />
+                  </span>
                 </div>
-                <p className="text-[9px] text-gray-400 italic">Example: Set to 12 if you only want to pay commission for the subscriber's first year.</p>
+                <p className="text-[11px] text-steel">
+                  Example: Set to 12 if you only want to pay commission for the subscriber's first year.
+                </p>
               </div>
             )}
           </div>
@@ -481,27 +525,33 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
 
         {/* SECTION 3: Campaign Criteria */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-            <UserCheck className="w-4.5 h-4.5 text-indigo-500" />
-            <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wide">3. Creator Application Criteria</h4>
+          <div className="flex items-center gap-2 pb-2 border-b border-black/[0.08]">
+            <UserCheck className="w-4 h-4 text-brand-blue" />
+            <h4 className="font-mono text-[11px] font-bold text-steel uppercase tracking-widest">
+              3. Creator Application Criteria
+            </h4>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Minimum Follower Count</label>
+              <label className="block font-mono text-[11px] font-bold text-steel uppercase tracking-wider">
+                Minimum Follower Count
+              </label>
               <Input
                 type="number"
                 placeholder="e.g. 5000"
                 value={minFollowers}
                 onChange={(e) => setMinFollowers(e.target.value)}
-                className="rounded-xl border-gray-200"
+                className="rounded-xl border-black/15 font-mono tabular-nums focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Platform Focus</label>
+              <label className="block font-mono text-[11px] font-bold text-steel uppercase tracking-wider">
+                Platform Focus
+              </label>
               <select
-                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                className="w-full h-10 px-3 rounded-xl border border-black/15 bg-white text-sm text-ink focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 transition-colors duration-150"
                 value={platformFocus}
                 onChange={(e) => setPlatformFocus(e.target.value)}
               >
@@ -516,65 +566,76 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
 
         {/* SECTION 4: Schedule & Associated Plans */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-            <Layers className="w-4.5 h-4.5 text-indigo-500" />
-            <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wide">4. Schedule & Associated SaaS Plans</h4>
+          <div className="flex items-center gap-2 pb-2 border-b border-black/[0.08]">
+            <Layers className="w-4 h-4 text-brand-blue" />
+            <h4 className="font-mono text-[11px] font-bold text-steel uppercase tracking-widest">
+              4. Schedule & Associated SaaS Plans
+            </h4>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Start Date</label>
+              <label className="block font-mono text-[11px] font-bold text-steel uppercase tracking-wider">
+                Start Date
+              </label>
               <div className="relative">
                 <Input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   required
-                  className="rounded-xl border-gray-200 pl-8"
+                  className="rounded-xl border-black/15 pl-8 font-mono focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
                 />
-                <Calendar className="w-4 h-4 text-gray-400 absolute left-2.5 top-3" />
+                <Calendar className="w-4 h-4 text-steel absolute left-2.5 top-3" />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">End Date (Deadline)</label>
+              <label className="block font-mono text-[11px] font-bold text-steel uppercase tracking-wider">
+                End Date (Deadline)
+              </label>
               <div className="relative">
                 <Input
                   type="date"
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
                   required
-                  className="rounded-xl border-gray-200 pl-8"
+                  className="rounded-xl border-black/15 pl-8 font-mono focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
                 />
-                <Calendar className="w-4 h-4 text-gray-400 absolute left-2.5 top-3" />
+                <Calendar className="w-4 h-4 text-steel absolute left-2.5 top-3" />
               </div>
             </div>
           </div>
 
           {/* Product Picker */}
           <div className="space-y-2">
-            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+            <label className="font-mono text-[11px] font-bold text-steel uppercase tracking-wider flex items-center gap-1.5">
               Select Associated Subscription Plans
-              <Info className="w-3 h-3 text-gray-400" title="Only conversions corresponding to these plans will map to this campaign." />
+              <span
+                title="Only conversions corresponding to these plans will map to this campaign."
+                className="inline-flex cursor-help"
+              >
+                <Info className="w-3.5 h-3.5 text-steel" />
+              </span>
             </label>
             {products.length === 0 ? (
-              <p className="text-xs text-gray-405 italic bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200">
+              <p className="text-xs text-steel bg-black/[0.02] p-3 rounded-lg border border-dashed border-black/15">
                 Optional: No specific subscription plans mapped. The campaign will track and apply commission rates to all subscription events received from your verified domain.
               </p>
             ) : (
-              <div className="border border-gray-200 rounded-xl p-3 max-h-[150px] overflow-y-auto space-y-2 bg-gray-50/50">
-                {products.map(p => (
-                  <div 
+              <div className="border border-black/10 rounded-xl p-3 max-h-[150px] overflow-y-auto space-y-2 bg-black/[0.02]">
+                {products.map((p) => (
+                  <div
                     key={p.id}
                     onClick={() => toggleProductSelect(p.id)}
-                    className={`flex items-center justify-between p-2 rounded-lg cursor-pointer border transition text-xs ${
+                    className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer border transition-colors duration-150 text-xs ${
                       selectedProductIds.includes(p.id)
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-900 font-semibold"
-                        : "bg-white border-gray-100 hover:bg-gray-50"
+                        ? "bg-brand-blue/10 border-brand-blue/35 text-ink font-semibold"
+                        : "bg-white border-black/10 text-ink hover:bg-black/[0.02]"
                     }`}
                   >
-                    <span>{p.name}</span>
-                    <span className="font-bold">₹{p.price}</span>
+                    <span className="truncate pr-2">{p.name}</span>
+                    <span className="font-mono font-bold tabular-nums shrink-0">₹{p.price}</span>
                   </div>
                 ))}
               </div>
@@ -583,20 +644,21 @@ export const SaasCampaignBuilder: React.FC<SaasCampaignBuilderProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex gap-2 justify-end pt-3 border-t border-gray-100">
-          <Button 
+        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-4 border-t border-black/[0.08]">
+          <Button
             type="button"
             variant="outline"
             onClick={onCancel}
             disabled={submitting || uploading}
-            className="rounded-xl"
+            className="w-full sm:w-auto text-xs"
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             type="submit"
+            variant="brand"
             disabled={submitting || uploading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl"
+            className="w-full sm:w-auto text-xs"
           >
             {uploading ? "Uploading Cover..." : submitting ? "Launching..." : "Launch SaaS Campaign"}
           </Button>

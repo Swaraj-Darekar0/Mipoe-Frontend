@@ -156,6 +156,22 @@ export function buildCapsuleCenterline(
     pts.push({ x: xs[k], y: ys[k] });
   }
 
+  // Reading direction & SVG textPath upright orientation:
+  // In SVG <textPath>, glyphs stand perpendicular to the tangent vector (dx, dy).
+  // If dx < 0 (moving leftwards in screen coordinates), SVG renders glyphs upside-down.
+  // To ensure text and thumbnail icons are ALWAYS upright and readable:
+  // 1. Maintain left-to-right reading order (dx >= 0) across all horizontal and diagonal slopes.
+  // 2. For vertical segments (|dx| <= 0.5), maintain top-to-bottom reading order (dy > 0).
+  const pStart = pts[0];
+  const pEnd = pts[pts.length - 1];
+  const dx = pEnd.x - pStart.x;
+  const dy = pEnd.y - pStart.y;
+  const shouldReverse = dx < -0.5 || (Math.abs(dx) <= 0.5 && dy < 0);
+  if (shouldReverse) {
+    pts.reverse();
+  }
+
+
   let d = `M ${r1(pts[0].x)} ${r1(pts[0].y)}`;
   for (let i = 1; i < pts.length; i++) {
     d += ` L ${r1(pts[i].x)} ${r1(pts[i].y)}`;

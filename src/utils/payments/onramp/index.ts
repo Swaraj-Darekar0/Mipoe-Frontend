@@ -7,18 +7,22 @@ export interface OnrampWidgetParams {
   network?: string; // "base"
   paymentMethod?: number; // 1 = Instant UPI
   redirectUrl?: string;
+  sandbox?: boolean;
+  widgetUrl?: string;
   onSuccess?: (event: any) => void;
   onClose?: () => void;
 }
 
-export const loadOnrampScript = (): Promise<boolean> => {
+export const loadOnrampScript = (sandbox = false): Promise<boolean> => {
   return new Promise((resolve) => {
     if (document.getElementById("onramp-web-sdk")) {
       resolve(true);
       return;
     }
     const script = document.createElement("script");
-    script.src = "https://onramp.money/main/assets/js/onramp-sdk.js";
+    script.src = sandbox
+      ? "https://test.onramp.money/onramp/main/assets/js/onramp-sdk.js"
+      : "https://onramp.money/main/assets/js/onramp-sdk.js";
     script.id = "onramp-web-sdk";
     script.onload = () => resolve(true);
     script.onerror = () => resolve(false);
@@ -27,23 +31,44 @@ export const loadOnrampScript = (): Promise<boolean> => {
 };
 
 export const openOnrampWidget = (params: OnrampWidgetParams) => {
-  const baseUrl = "https://onramp.money/main/buy";
+  const isSandbox =
+    params.sandbox ??
+    (import.meta.env.VITE_ONRAMP_ENV === "sandbox" ||
+      import.meta.env.VITE_ONRAMP_SANDBOX === "true" ||
+      !import.meta.env.PROD ||
+      !params.appId ||
+      params.appId === "2695737" ||
+      params.appId === "mipoe_sandbox_app");
 
-  const searchParams = new URLSearchParams({
-    appId: params.appId || "mipoe_sandbox_app",
-    walletAddress: params.walletAddress,
-    fiatType: String(params.fiatType ?? 1),
-    fiatAmount: String(params.fiatAmount),
-    coinCode: params.coinCode || "usdc",
-    network: params.network || "base",
-    paymentMethod: String(params.paymentMethod ?? 1),
-  });
+  const defaultBaseUrl = isSandbox
+    ? "https://test.onramp.money/onramp/main/buy"
+    : "https://onramp.money/main/buy";
 
-  if (params.redirectUrl) {
-    searchParams.set("redirectUrl", params.redirectUrl);
+  const baseUrl = import.meta.env.VITE_ONRAMP_WIDGET_URL || defaultBaseUrl;
+
+  let widgetUrl = params.widgetUrl;
+
+  if (!widgetUrl) {
+    const searchParams = new URLSearchParams({
+      appId: params.appId || "2695737",
+      walletAddress: params.walletAddress,
+      fiatType: String(params.fiatType ?? 1),
+      fiatAmount: String(params.fiatAmount),
+      coinCode: params.coinCode || "usdc",
+      network: params.network || "base",
+      paymentMethod: String(params.paymentMethod ?? 1),
+    });
+
+    if (isSandbox) {
+      searchParams.set("sandbox", "true");
+    }
+
+    if (params.redirectUrl) {
+      searchParams.set("redirectUrl", params.redirectUrl);
+    }
+
+    widgetUrl = `${baseUrl}?${searchParams.toString()}`;
   }
-
-  const widgetUrl = `${baseUrl}?${searchParams.toString()}`;
 
   // If window.onrampWebSDK is available, instantiate modal
   const sdk = (window as any).onrampWebSDK;
@@ -70,7 +95,12 @@ export const openOnrampWidget = (params: OnrampWidgetParams) => {
 
   // Monitor message events from onramp iframe/popup
   const messageListener = (event: MessageEvent) => {
-    if (event.origin && (event.origin.includes("onramp.money") || event.origin.includes("testnet.onramp.money"))) {
+    if (
+      event.origin &&
+      (event.origin.includes("onramp.money") ||
+        event.origin.includes("test.onramp.money") ||
+        event.origin.includes("testnet.onramp.money"))
+    ) {
       if (event.data?.type === "ONRAMP_SUCCESS" || event.data?.event === "SUCCESS") {
         if (params.onSuccess) params.onSuccess(event.data);
       }

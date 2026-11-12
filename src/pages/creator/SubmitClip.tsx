@@ -17,9 +17,11 @@ const SubmitClip = () => {
 
   return (
     <CreatorLayout>
-      <div className="flex flex-col items-center justify-center h-72 gap-3">
-        <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
-        <p className="text-xs text-zinc-500 font-medium">Redirecting to campaign view...</p>
+      <div className="flex flex-col items-center justify-center h-72 gap-3 rounded-2xl bg-white border border-black/10 p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <Loader2 className="h-6 w-6 animate-spin text-lava" />
+        <p className="font-mono text-xs font-bold uppercase tracking-wider text-slate">
+          Redirecting to campaign view...
+        </p>
       </div>
     </CreatorLayout>
   );

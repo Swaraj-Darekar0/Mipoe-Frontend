@@ -1,49 +1,68 @@
 import React, { useEffect, useMemo, useState } from "react";
 import CreatorLayout from "@/layouts/CreatorLayout";
 import GuestLockedView from "@/components/creator/GuestLockedView";
-import { fetchCreatorCampaigns, Campaign, SubmittedClipData, AcceptedClipData, deleteClip, getUserId } from "@/lib/api";
+import {
+  fetchCreatorCampaigns,
+  Campaign,
+  SubmittedClipData,
+  AcceptedClipData,
+  deleteClip,
+  getUserId,
+} from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  ConfirmDialog,
+  PortalPageHeader,
+  StatusPill,
+  StatusTone,
+} from "@/components/ui/PortalPrimitives";
 import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
-  CheckCircle,
-  Clock,
   Filter,
   Link as LinkIcon,
   Loader2,
   Trash2,
-  XCircle,
-  Send
+  Send,
+  AlertCircle,
 } from "lucide-react";
 
-type Clip = (SubmittedClipData | AcceptedClipData) & { campaignName: string; isAccepted?: boolean };
+type Clip = (SubmittedClipData | AcceptedClipData) & {
+  campaignName: string;
+  isAccepted?: boolean;
+};
 type ApprovalFilter = "all" | "approved" | "not_approved";
 type ViewSort = "high_to_low" | "low_to_high";
 
 const isApprovedClip = (clip: Clip) => !!clip.isAccepted;
 const getViewCount = (clip: Clip) => clip.view_count ?? 0;
 
-const getClipStatusInfo = (clip: Clip) => {
+const getClipStatusInfo = (clip: Clip): { label: string; tone: StatusTone } => {
   if (isApprovedClip(clip)) {
-    return { label: "Accepted", color: "bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold", icon: <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> };
+    return { label: "Accepted", tone: "success" };
   }
   if ("is_deleted_by_admin" in clip && clip.is_deleted_by_admin) {
-    return { label: "Rejected", color: "bg-rose-50 text-rose-700 border-rose-200 font-semibold", icon: <XCircle className="h-3.5 w-3.5 text-rose-600" /> };
+    return { label: "Rejected", tone: "danger" };
   }
-  return { label: "In Review", color: "bg-amber-50 text-amber-700 border-amber-200 font-semibold", icon: <Clock className="h-3.5 w-3.5 text-amber-600" /> };
+  return { label: "In Review", tone: "warning" };
 };
 
 const SubmissionsPage = () => {
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDeleteClipId, setPendingDeleteClipId] = useState<number | null>(null);
   const [deletingClipId, setDeletingClipId] = useState<number | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [approvalFilter, setApprovalFilter] = useState<ApprovalFilter>("all");
   const [viewSort, setViewSort] = useState<ViewSort>("high_to_low");
   const { toast } = useToast();
@@ -88,7 +107,7 @@ const SubmissionsPage = () => {
       toast({
         title: "Error",
         description: err.message || "Failed to load submissions.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -124,29 +143,28 @@ const SubmissionsPage = () => {
   }, [approvalFilter, clips, viewSort]);
 
   const handleDeleteConfirmation = (clipId: number) => {
-    setDeletingClipId(clipId);
-    setIsDeleteDialogOpen(true);
+    setPendingDeleteClipId(clipId);
   };
 
   const handleDeleteClip = async () => {
-    if (deletingClipId === null) return;
+    if (pendingDeleteClipId === null) return;
+    const targetId = pendingDeleteClipId;
     try {
-      setLoading(true);
-      await deleteClip(deletingClipId);
+      setDeletingClipId(targetId);
+      await deleteClip(targetId);
       toast({
         title: "Clip Deleted",
-        description: "Your clip has been successfully deleted."
+        description: "Your clip has been successfully deleted.",
       });
+      setPendingDeleteClipId(null);
       await loadClips();
     } catch (err: any) {
       toast({
         title: "Deletion Failed",
         description: err.message || "Failed to delete clip.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
-      setLoading(false);
-      setIsDeleteDialogOpen(false);
       setDeletingClipId(null);
     }
   };
@@ -159,7 +177,7 @@ const SubmissionsPage = () => {
           subtitle="Real-Time View Tracking & Milestone Payouts"
           description="Sign in to submit your UGC clips, track verified reel view counts, and claim automatic milestone earnings."
           returnUrl="/creator/submissions"
-          icon={<Send className="w-8 h-8 text-orange-500" />}
+          icon={<Send className="w-8 h-8 text-lava" />}
         />
       </CreatorLayout>
     );
@@ -168,8 +186,11 @@ const SubmissionsPage = () => {
   if (loading) {
     return (
       <CreatorLayout>
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col h-64 items-center justify-center gap-3">
+          <Loader2 className="h-7 w-7 animate-spin text-lava" />
+          <p className="font-mono text-xs font-bold uppercase tracking-wider text-steel">
+            Loading clip submissions...
+          </p>
         </div>
       </CreatorLayout>
     );
@@ -178,51 +199,71 @@ const SubmissionsPage = () => {
   if (error) {
     return (
       <CreatorLayout>
-        <div className="p-4 text-center text-red-500">{error}</div>
+        <div className="rounded-2xl border border-rose-500/25 bg-rose-50 p-6 text-center max-w-lg mx-auto mt-8 space-y-3">
+          <AlertCircle className="h-7 w-7 text-rose-700 mx-auto" />
+          <p className="text-sm font-medium text-rose-800">{error}</p>
+          <Button variant="outline" size="sm" onClick={loadClips}>
+            Retry
+          </Button>
+        </div>
       </CreatorLayout>
     );
   }
 
   return (
     <CreatorLayout>
-      <div className="space-y-8">
-        <header>
-          <h1 className="font-display text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight">Your Submissions</h1>
-          <p className="mt-1.5 text-zinc-500 text-sm">Track the status, views, and review outcomes of all your submitted clips.</p>
-        </header>
+      <div className="space-y-6">
+        <PortalPageHeader
+          eyebrow="01 // SUBMISSIONS"
+          title="Your"
+          highlighted="Submissions"
+          accent="creator"
+          subtitle="Track the status, verified views, and review outcomes of all your submitted clips."
+        />
 
-        <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-xs">
-          <div className="flex flex-col gap-3 border-b border-zinc-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between bg-zinc-50/50">
-            <div>
-              <p className="text-sm font-semibold text-zinc-900">Submission Queue</p>
-              <p className="text-xs text-zinc-500">Accepted clips are pinned first, then ranked by view count.</p>
+        <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <div className="flex flex-col gap-3 border-b border-black/8 px-4 sm:px-6 py-4 sm:flex-row sm:items-center sm:justify-between bg-black/[0.02]">
+            <div className="min-w-0">
+              <p className="font-display text-base font-bold text-ink">Submission Queue</p>
+              <p className="text-xs text-slate mt-0.5">
+                Accepted clips are pinned first, then ranked by view count.
+              </p>
             </div>
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 self-start rounded-xl border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 shadow-xs">
-                  <Filter className="mr-2 h-3.5 w-3.5 text-zinc-500" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 self-start sm:self-auto font-mono text-[11px] font-bold uppercase tracking-wider"
+                >
+                  <Filter className="mr-1.5 h-3.5 w-3.5 text-slate" />
                   Filter
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-[320px] rounded-2xl border-zinc-200 bg-white p-5 text-zinc-900 shadow-xl">
+              <PopoverContent
+                align="end"
+                className="w-[calc(100vw-2rem)] sm:w-[320px] rounded-2xl border border-black/10 bg-white p-5 text-ink shadow-[0_16px_40px_rgba(0,0,0,0.12)]"
+              >
                 <div className="space-y-4">
                   <div>
-                    <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">Approval</p>
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-steel">
+                      Approval
+                    </p>
                     <div className="mt-2.5 flex flex-wrap gap-2">
                       {[
                         { value: "all", label: "All" },
                         { value: "approved", label: "Approved" },
-                        { value: "not_approved", label: "Not Approved" }
+                        { value: "not_approved", label: "Not Approved" },
                       ].map((option) => (
                         <button
                           key={option.value}
                           type="button"
                           onClick={() => setApprovalFilter(option.value as ApprovalFilter)}
-                          className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+                          className={`rounded-lg border px-3 py-1.5 text-xs font-mono font-bold transition-colors duration-150 cursor-pointer ${
                             approvalFilter === option.value
-                              ? "border-orange-300 bg-orange-50 text-orange-700 shadow-xs font-bold"
-                              : "border-zinc-200 bg-zinc-50/60 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100/80"
+                              ? "border-lava/40 bg-lava/10 text-lava"
+                              : "border-black/10 bg-black/[0.03] text-charcoal hover:border-black/25 hover:bg-black/[0.05]"
                           }`}
                         >
                           {option.label}
@@ -231,16 +272,18 @@ const SubmissionsPage = () => {
                     </div>
                   </div>
 
-                  <div className="border-t border-zinc-100 pt-3">
-                    <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">View Count</p>
+                  <div className="border-t border-black/8 pt-3.5">
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-steel">
+                      View Count
+                    </p>
                     <div className="mt-2.5 flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => setViewSort("high_to_low")}
-                        className={`inline-flex items-center rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+                        className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-mono font-bold transition-colors duration-150 cursor-pointer ${
                           viewSort === "high_to_low"
-                            ? "border-orange-300 bg-orange-50 text-orange-700 shadow-xs font-bold"
-                            : "border-zinc-200 bg-zinc-50/60 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100/80"
+                            ? "border-lava/40 bg-lava/10 text-lava"
+                            : "border-black/10 bg-black/[0.03] text-charcoal hover:border-black/25 hover:bg-black/[0.05]"
                         }`}
                       >
                         <ArrowDownWideNarrow className="mr-1.5 h-3.5 w-3.5" />
@@ -249,10 +292,10 @@ const SubmissionsPage = () => {
                       <button
                         type="button"
                         onClick={() => setViewSort("low_to_high")}
-                        className={`inline-flex items-center rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+                        className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-mono font-bold transition-colors duration-150 cursor-pointer ${
                           viewSort === "low_to_high"
-                            ? "border-orange-300 bg-orange-50 text-orange-700 shadow-xs font-bold"
-                            : "border-zinc-200 bg-zinc-50/60 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100/80"
+                            ? "border-lava/40 bg-lava/10 text-lava"
+                            : "border-black/10 bg-black/[0.03] text-charcoal hover:border-black/25 hover:bg-black/[0.05]"
                         }`}
                       >
                         <ArrowUpNarrowWide className="mr-1.5 h-3.5 w-3.5" />
@@ -266,44 +309,69 @@ const SubmissionsPage = () => {
           </div>
 
           {visibleClips.length === 0 ? (
-            <div className="p-12 text-center text-zinc-400 text-sm">No clips match the current filters.</div>
+            <div className="p-12 text-center">
+              <Send className="h-7 w-7 text-steel mx-auto mb-2" />
+              <p className="font-display text-sm font-bold text-ink">No clips match the current filters</p>
+              <p className="text-xs text-slate mt-1">Adjust your approval or sort criteria to inspect submissions.</p>
+            </div>
           ) : (
             <>
               <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-zinc-100 bg-zinc-50/50 hover:bg-zinc-50/50">
-                      <TableHead className="font-semibold text-xs text-zinc-500 uppercase tracking-wider">Campaign</TableHead>
-                      <TableHead className="font-semibold text-xs text-zinc-500 uppercase tracking-wider">Clip ID</TableHead>
-                      <TableHead className="font-semibold text-xs text-zinc-500 uppercase tracking-wider">Clip URL</TableHead>
-                      <TableHead className="font-semibold text-xs text-zinc-500 uppercase tracking-wider">View Count</TableHead>
-                      <TableHead className="font-semibold text-xs text-zinc-500 uppercase tracking-wider">Status</TableHead>
-                      <TableHead className="text-right font-semibold text-xs text-zinc-500 uppercase tracking-wider">Actions</TableHead>
+                    <TableRow className="border-b border-black/8 bg-black/[0.02] hover:bg-black/[0.02]">
+                      <TableHead className="font-mono font-bold text-[10px] text-steel uppercase tracking-wider">
+                        Campaign
+                      </TableHead>
+                      <TableHead className="font-mono font-bold text-[10px] text-steel uppercase tracking-wider">
+                        Clip ID
+                      </TableHead>
+                      <TableHead className="font-mono font-bold text-[10px] text-steel uppercase tracking-wider">
+                        Clip URL
+                      </TableHead>
+                      <TableHead className="font-mono font-bold text-[10px] text-steel uppercase tracking-wider">
+                        View Count
+                      </TableHead>
+                      <TableHead className="font-mono font-bold text-[10px] text-steel uppercase tracking-wider">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-right font-mono font-bold text-[10px] text-steel uppercase tracking-wider">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {visibleClips.map((clip) => {
                       const statusInfo = getClipStatusInfo(clip);
                       return (
-                        <TableRow key={`${clip.campaignName}-${clip.id}`} className="border-zinc-100 hover:bg-zinc-50/60 transition-colors">
-                          <TableCell className="font-semibold text-zinc-900 text-sm">{clip.campaignName}</TableCell>
-                          <TableCell className="font-mono text-xs text-zinc-500">#{clip.id}</TableCell>
+                        <TableRow
+                          key={`${clip.campaignName}-${clip.id}`}
+                          className="border-b border-black/[0.06] hover:bg-black/[0.02] transition-colors duration-150"
+                        >
+                          <TableCell className="font-display font-semibold text-ink text-sm">
+                            {clip.campaignName}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs tabular-nums text-slate">
+                            #{clip.id}
+                          </TableCell>
                           <TableCell>
-                            <a 
-                              href={clip.clip_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 hover:text-orange-700 hover:underline"
+                            <a
+                              href={clip.clip_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-lava hover:text-lava/80 hover:underline"
                             >
                               <span>View Clip</span>
                               <LinkIcon className="h-3 w-3" />
                             </a>
                           </TableCell>
-                          <TableCell className="font-mono font-medium text-zinc-800 text-sm">{getViewCount(clip).toLocaleString()}</TableCell>
+                          <TableCell className="font-mono font-bold tabular-nums text-ink text-sm">
+                            {getViewCount(clip).toLocaleString()}
+                          </TableCell>
                           <TableCell>
-                            <Badge className={`${statusInfo.color} flex items-center gap-1.5 w-fit text-xs px-2.5 py-0.5 rounded-full shadow-none`}>
-                              {statusInfo.icon} {statusInfo.label}
-                            </Badge>
+                            <StatusPill tone={statusInfo.tone} showDot>
+                              {statusInfo.label}
+                            </StatusPill>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
@@ -311,9 +379,14 @@ const SubmissionsPage = () => {
                               size="icon"
                               onClick={() => handleDeleteConfirmation(clip.id)}
                               disabled={deletingClipId === clip.id}
-                              className="h-8 w-8 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                              className="h-8 w-8 text-steel hover:text-rose-700 hover:bg-rose-50 rounded-lg"
+                              aria-label={`Delete clip #${clip.id}`}
                             >
-                              {deletingClipId === clip.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                              {deletingClipId === clip.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -327,38 +400,62 @@ const SubmissionsPage = () => {
                 {visibleClips.map((clip) => {
                   const statusInfo = getClipStatusInfo(clip);
                   return (
-                    <div key={`${clip.campaignName}-${clip.id}`} className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-xs">
+                    <div
+                      key={`${clip.campaignName}-${clip.id}`}
+                      className="rounded-xl border border-black/10 bg-white p-4"
+                    >
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-zinc-900">{clip.campaignName}</p>
-                          <p className="font-mono text-xs text-zinc-400 mt-0.5">Clip #{clip.id}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display text-sm font-bold text-ink truncate">
+                            {clip.campaignName}
+                          </p>
+                          <p className="font-mono text-xs tabular-nums text-steel mt-0.5">
+                            Clip #{clip.id}
+                          </p>
                         </div>
-                        <Badge className={`${statusInfo.color} flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full`}>
-                          {statusInfo.icon} {statusInfo.label}
-                        </Badge>
+                        <StatusPill tone={statusInfo.tone} showDot className="shrink-0">
+                          {statusInfo.label}
+                        </StatusPill>
                       </div>
-                      <div className="mt-3 grid grid-cols-2 gap-3 text-sm border-t border-zinc-100 pt-3">
-                        <div>
-                          <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">Views</p>
-                          <p className="mt-0.5 font-mono font-bold text-zinc-900">{getViewCount(clip).toLocaleString()}</p>
+
+                      <div className="mt-3 grid grid-cols-2 gap-2.5 border-t border-black/8 pt-3">
+                        <div className="rounded-lg bg-black/[0.03] border border-black/[0.06] p-2.5 min-w-0">
+                          <p className="text-[9.5px] font-mono uppercase tracking-wider text-steel font-bold">
+                            Views
+                          </p>
+                          <p className="mt-0.5 font-mono font-bold tabular-nums text-ink text-sm truncate">
+                            {getViewCount(clip).toLocaleString()}
+                          </p>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">Link</p>
-                          <a href={clip.clip_url} target="_blank" rel="noopener noreferrer" className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-orange-600 hover:underline">
+                        <div className="rounded-lg bg-black/[0.03] border border-black/[0.06] p-2.5 min-w-0">
+                          <p className="text-[9.5px] font-mono uppercase tracking-wider text-steel font-bold">
+                            Link
+                          </p>
+                          <a
+                            href={clip.clip_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-0.5 inline-flex items-center gap-1 font-mono text-xs font-bold text-lava hover:underline"
+                          >
                             <span>Open</span>
-                            <LinkIcon className="h-3 w-3" />
+                            <LinkIcon className="h-3 w-3 shrink-0" />
                           </a>
                         </div>
                       </div>
-                      <div className="mt-4 flex justify-end border-t border-zinc-100 pt-3">
+
+                      <div className="mt-3 flex justify-end border-t border-black/8 pt-3">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteConfirmation(clip.id)}
                           disabled={deletingClipId === clip.id}
-                          className="h-8 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                          className="h-8 text-xs font-mono font-bold text-rose-700 hover:bg-rose-50"
                         >
-                          {deletingClipId === clip.id ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Trash2 className="mr-2 h-3.5 w-3.5" />}
+                          {deletingClipId === clip.id ? (
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                          )}
                           Delete
                         </Button>
                       </div>
@@ -370,22 +467,21 @@ const SubmissionsPage = () => {
           )}
         </div>
       </div>
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your clip submission.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteClip} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+      <ConfirmDialog
+        open={pendingDeleteClipId !== null}
+        onOpenChange={(open) => {
+          if (!open && deletingClipId === null) {
+            setPendingDeleteClipId(null);
+          }
+        }}
+        title="Delete Clip Submission?"
+        description="This action cannot be undone. This will permanently delete your clip submission from this campaign."
+        confirmLabel="Delete Clip"
+        variant="destructive"
+        loading={deletingClipId !== null}
+        onConfirm={handleDeleteClip}
+      />
     </CreatorLayout>
   );
 };

@@ -1,41 +1,44 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import BrandLayout from "@/layouts/BrandLayout";
 import AffiliateCampaignSidebar from "@/components/brand/AffiliateCampaignSidebar";
-import { 
-  getAffiliateCampaignDetails, 
-  getBrandConversions, 
+import {
+  getAffiliateCampaignDetails,
+  getBrandConversions,
   reviewCreatorAffiliateApplication,
   allocateAffiliateBudget,
   reclaimAffiliateBudget,
   getWalletBalance,
   getBrandProducts,
   getBrandProfile,
-  updateAffiliateCampaign
+  updateAffiliateCampaign,
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
-  ArrowLeft, 
-  Clock, 
-  Coins, 
-  Users, 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  PortalPageHeader,
+  MetricCell,
+  StatusPill,
+} from "@/components/ui/PortalPrimitives";
+import {
+  Loader2,
+  Coins,
   User,
-  TrendingUp, 
-  Layers, 
-  UserCheck, 
-  AlertCircle,
+  Layers,
+  UserCheck,
   ExternalLink,
-  ChevronRight,
-  TrendingDown,
   Info,
   Calendar,
   CheckCircle,
-  XCircle,
-  Download
 } from "lucide-react";
 
 export const BrandAffiliateCampaignAnalytics: React.FC = () => {
@@ -232,7 +235,7 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
     }
 
     // Build SaaS schedule payload
-    const commission_schedule: any = {};
+    const commission_schedule: Record<string, { type: "percentage" | "fixed"; value: number }> = {};
     if (isSaas) {
       if (weeklyActive && weeklyCommValue) {
         commission_schedule["weekly"] = {
@@ -339,12 +342,13 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
       };
 
       if (isSaas) {
+        const scheduleEntries = Object.values(commission_schedule);
         payload.landing_page_url = editLandingPageUrl;
         payload.commission_schedule = commission_schedule;
         payload.recurring_commission = editRecurringCommission;
         payload.recurring_commission_limit = editRecurringCommission && editRecurringLimit ? parseInt(editRecurringLimit) : null;
-        payload.commission_type = monthlyActive ? monthlyCommType : Object.values(commission_schedule)[0].type;
-        payload.commission_value = monthlyActive ? parseFloat(monthlyCommValue) : Object.values(commission_schedule)[0].value;
+        payload.commission_type = monthlyActive && monthlyCommValue ? monthlyCommType : scheduleEntries[0].type;
+        payload.commission_value = monthlyActive && monthlyCommValue ? parseFloat(monthlyCommValue) : scheduleEntries[0].value;
       } else {
         payload.commission_type = editCommissionType;
         payload.commission_value = parseFloat(editCommissionValue) || 0;
@@ -429,9 +433,9 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
   if (loading) {
     return (
       <BrandLayout>
-        <div className="flex flex-col items-center justify-center h-[60vh] text-gray-500">
-          <Clock className="w-8 h-8 animate-spin text-indigo-500 mb-3" />
-          <p className="font-semibold text-sm">Loading campaign stats & partners...</p>
+        <div className="flex flex-col items-center justify-center h-[60vh] text-steel">
+          <Loader2 className="w-7 h-7 animate-spin text-brand-blue mb-3" />
+          <p className="font-mono text-xs uppercase tracking-wider">Loading campaign stats & partners...</p>
         </div>
       </BrandLayout>
     );
@@ -461,134 +465,89 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
       }
     >
       <div className="space-y-6">
-        
-        {/* Back Link */}
-        <Link 
-          to="/brand/dashboard" 
-          className="inline-flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-gray-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Link>
+        <PortalPageHeader
+          eyebrow={isSaas ? "SAAS AFFILIATE PROGRAM" : "PRODUCT AFFILIATE PROGRAM"}
+          title={campaign.name}
+          afterTitle={
+            <StatusPill tone={campaign.is_active ? "success" : "neutral"}>
+              {campaign.is_active ? "Active" : "Draft"}
+            </StatusPill>
+          }
+          subtitle={campaign.description || "No description provided."}
+          accent="brand"
+        />
 
-        {/* Campaign Header Card */}
-        <div className="bg-white border border-gray-150 p-4 sm:p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] bg-indigo-50 border border-indigo-150 text-indigo-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                {isSaas ? "SaaS Subscription" : "Product Store"}
-              </span>
-              {campaign.is_active ? (
-                <span className="bg-green-50 border border-green-200 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                  Active
-                </span>
-              ) : (
-                <span className="bg-gray-50 border border-gray-200 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                  Draft
-                </span>
-              )}
-            </div>
-            
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight">
-              {campaign.name}
-            </h2>
-            <p className="text-gray-500 text-xs leading-relaxed max-w-xl">
-              {campaign.description || "No description provided."}
-            </p>
+        {/* Quick Wallet Budget Bar */}
+        <div className="bg-white border border-black/10 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+          <div className="space-y-0.5">
+            <span className="font-mono text-[10px] text-steel font-bold block uppercase tracking-widest">
+              Free Campaign Budget
+            </span>
+            <span className="font-mono font-bold text-xl text-ink tabular-nums block">
+              ₹{freeBudget.toLocaleString()}
+            </span>
           </div>
-
-          {/* Quick Wallet Budget Actions */}
-          <div className="bg-gray-50 p-4 border border-gray-150 rounded-2xl flex items-center justify-between gap-6 w-full md:w-auto shrink-0 shadow-inner">
-            <div className="space-y-0.5">
-              <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Free Campaign Budget</span>
-              <span className="font-extrabold text-lg text-gray-800 block">₹{freeBudget.toLocaleString()}</span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setBudgetAction("reclaim");
-                  setShowBudgetModal(true);
-                }}
-                disabled={freeBudget <= 0}
-                className="text-xs h-8"
-              >
-                Reclaim
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setBudgetAction("allocate");
-                  setShowBudgetModal(true);
-                }}
-                className="text-xs h-8 bg-indigo-650 hover:bg-indigo-750 text-white"
-              >
-                Add Funds
-              </Button>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setBudgetAction("reclaim");
+                setShowBudgetModal(true);
+              }}
+              disabled={freeBudget <= 0}
+              className="text-xs h-8 flex-1 sm:flex-none"
+            >
+              Reclaim
+            </Button>
+            <Button
+              size="sm"
+              variant="brand"
+              onClick={() => {
+                setBudgetAction("allocate");
+                setShowBudgetModal(true);
+              }}
+              className="text-xs h-8 flex-1 sm:flex-none"
+            >
+              Add Funds
+            </Button>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="shadow-sm border-gray-150 rounded-2xl bg-white">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-2.5 bg-indigo-50 rounded-xl">
-                <Coins className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Allocated Funds</span>
-                <span className="text-base font-extrabold text-gray-800 block mt-0.5">₹{campaign.funds_allocated.toLocaleString()}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm border-gray-150 rounded-2xl bg-white">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-2.5 bg-indigo-50 rounded-xl">
-                <TrendingUp className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Distributed Payouts</span>
-                <span className="text-base font-extrabold text-gray-800 block mt-0.5">₹{campaign.funds_distributed.toLocaleString()}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm border-gray-150 rounded-2xl bg-white">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-2.5 bg-indigo-50 rounded-xl">
-                <Users className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Referred Conversions</span>
-                <span className="text-base font-extrabold text-gray-800 block mt-0.5">{totalSales}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm border-gray-150 rounded-2xl bg-white">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-2.5 bg-indigo-50 rounded-xl">
-                <UserCheck className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Approved Partners</span>
-                <span className="text-base font-extrabold text-gray-800 block mt-0.5">{approvedPartners.length}</span>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <MetricCell
+            label="Allocated Funds"
+            value={`₹${campaign.funds_allocated.toLocaleString()}`}
+          />
+          <MetricCell
+            label="Distributed Payouts"
+            value={`₹${campaign.funds_distributed.toLocaleString()}`}
+          />
+          <MetricCell
+            label="Referred Conversions"
+            value={totalSales}
+            sublabel={`₹${totalCommissionPaid.toLocaleString()} paid`}
+          />
+          <MetricCell
+            label="Approved Partners"
+            value={approvedPartners.length}
+          />
         </div>
 
         {/* Tab Contents */}
         {activeTab === "overview" && (
           isEditing ? (
-            <form onSubmit={handleEditSubmit} className="bg-white border border-gray-150 rounded-2xl p-6 shadow-sm space-y-6">
-              <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+            <form
+              onSubmit={handleEditSubmit}
+              className="bg-white border border-black/10 rounded-2xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] space-y-6"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-black/[0.08]">
                 <div>
-                  <h3 className="font-bold text-gray-900 text-sm">Edit Campaign Settings</h3>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Modify campaign rules, criteria, mapping, and timelines.</p>
+                  <h3 className="font-display font-bold text-ink text-base">Edit Campaign Settings</h3>
+                  <p className="text-xs text-steel mt-0.5">
+                    Modify campaign rules, criteria, mapping, and timelines.
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -596,15 +555,16 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => setIsEditing(false)}
-                    className="text-xs h-8 rounded-xl"
+                    className="text-xs h-8"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
+                    variant="brand"
                     disabled={submittingEdit}
                     size="sm"
-                    className="text-xs h-8 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl"
+                    className="text-xs h-8"
                   >
                     {submittingEdit ? "Saving..." : "Save Changes"}
                   </Button>
@@ -613,84 +573,101 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
 
               {/* General Info */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">General Information</h4>
+                <h4 className="font-mono text-[11px] font-bold text-steel uppercase tracking-widest">
+                  General Information
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Campaign Name</label>
+                    <label className="block font-mono text-[10px] font-bold text-steel uppercase tracking-wider">
+                      Campaign Name
+                    </label>
                     <Input
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       required
-                      className="rounded-xl border-gray-200"
+                      className="rounded-xl border-black/15 focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Cover Image URL</label>
+                    <label className="block font-mono text-[10px] font-bold text-steel uppercase tracking-wider">
+                      Cover Image URL
+                    </label>
                     <Input
                       type="text"
                       placeholder="https://example.com/banner.jpg"
                       value={editImageUrl}
                       onChange={(e) => setEditImageUrl(e.target.value)}
-                      className="rounded-xl border-gray-200"
+                      className="rounded-xl border-black/15 focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
                     />
                   </div>
                 </div>
 
                 {isSaas && (
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Landing Page URL</label>
+                    <label className="block font-mono text-[10px] font-bold text-steel uppercase tracking-wider">
+                      Landing Page URL
+                    </label>
                     <Input
                       type="text"
                       value={editLandingPageUrl}
                       onChange={(e) => setEditLandingPageUrl(e.target.value)}
                       required
-                      className="rounded-xl border-gray-200"
+                      className="rounded-xl border-black/15 focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
                     />
                     {brandProfile?.website_url && (
-                      <p className="text-[9px] text-gray-400 italic">
-                        Must match or be a subdomain of your verified website: <span className="font-semibold text-indigo-650">{brandProfile.website_url}</span>
+                      <p className="text-[11px] text-steel">
+                        Must match or be a subdomain of your verified website:{" "}
+                        <span className="font-semibold text-brand-blue">{brandProfile.website_url}</span>
                       </p>
                     )}
                   </div>
                 )}
 
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Campaign Description & Guidelines</label>
+                  <label className="block font-mono text-[10px] font-bold text-steel uppercase tracking-wider">
+                    Campaign Description & Guidelines
+                  </label>
                   <textarea
                     value={editDesc}
                     onChange={(e) => setEditDesc(e.target.value)}
-                    className="w-full min-h-[100px] text-xs p-3 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition"
+                    className="w-full min-h-[100px] text-xs p-3 rounded-xl border border-black/15 bg-white text-ink placeholder:text-steel focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 transition-colors duration-150"
                   />
                 </div>
               </div>
 
               {/* Commission Rules */}
-              <div className="space-y-4 pt-4 border-t border-gray-100">
-                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Commission Rules</h4>
+              <div className="space-y-4 pt-4 border-t border-black/[0.08]">
+                <h4 className="font-mono text-[11px] font-bold text-steel uppercase tracking-widest">
+                  Commission Rules
+                </h4>
                 {isSaas ? (
                   <div className="space-y-4">
                     <div className="space-y-3">
-                      <label className="block text-[10px] font-bold text-gray-550 uppercase tracking-wider">Billing Interval Payouts</label>
-                      
+                      <label className="block font-mono text-[10px] font-bold text-slate uppercase tracking-wider">
+                        Billing Interval Payouts
+                      </label>
+
                       {/* Weekly active check */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-150 rounded-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-black/[0.02] border border-black/10 rounded-xl">
                         <div className="flex items-center gap-2">
                           <input
                             type="checkbox"
                             id="edit-weekly-active"
                             checked={weeklyActive}
                             onChange={(e) => setWeeklyActive(e.target.checked)}
-                            className="rounded border-gray-300 text-indigo-650 focus:ring-indigo-500"
+                            className="w-4 h-4 accent-[#2b5ce6] rounded border-black/20 focus:ring-brand-blue cursor-pointer"
                           />
-                          <label htmlFor="edit-weekly-active" className="text-xs font-bold text-gray-700">Weekly Plan</label>
+                          <label htmlFor="edit-weekly-active" className="text-xs font-bold text-ink cursor-pointer">
+                            Weekly Plan
+                          </label>
                         </div>
                         {weeklyActive && (
                           <div className="flex items-center gap-2">
                             <select
                               value={weeklyCommType}
                               onChange={(e: any) => setWeeklyCommType(e.target.value)}
-                              className="text-xs p-1.5 border border-gray-200 rounded-lg bg-white"
+                              className="h-8 text-xs px-2 border border-black/15 rounded-lg bg-white text-ink focus:outline-none focus:border-brand-blue"
                             >
                               <option value="percentage">Percentage (%)</option>
                               <option value="fixed">Fixed Flat (₹)</option>
@@ -701,30 +678,32 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                               value={weeklyCommValue}
                               onChange={(e) => setWeeklyCommValue(e.target.value)}
                               placeholder="Rate"
-                              className="w-24 h-8 text-xs rounded-lg border-gray-200"
+                              className="w-24 h-8 text-xs font-mono tabular-nums rounded-lg border-black/15"
                             />
                           </div>
                         )}
                       </div>
 
                       {/* Monthly active check */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-150 rounded-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-black/[0.02] border border-black/10 rounded-xl">
                         <div className="flex items-center gap-2">
                           <input
                             type="checkbox"
                             id="edit-monthly-active"
                             checked={monthlyActive}
                             onChange={(e) => setMonthlyActive(e.target.checked)}
-                            className="rounded border-gray-300 text-indigo-650 focus:ring-indigo-500"
+                            className="w-4 h-4 accent-[#2b5ce6] rounded border-black/20 focus:ring-brand-blue cursor-pointer"
                           />
-                          <label htmlFor="edit-monthly-active" className="text-xs font-bold text-gray-700">Monthly Plan</label>
+                          <label htmlFor="edit-monthly-active" className="text-xs font-bold text-ink cursor-pointer">
+                            Monthly Plan
+                          </label>
                         </div>
                         {monthlyActive && (
                           <div className="flex items-center gap-2">
                             <select
                               value={monthlyCommType}
                               onChange={(e: any) => setMonthlyCommType(e.target.value)}
-                              className="text-xs p-1.5 border border-gray-200 rounded-lg bg-white"
+                              className="h-8 text-xs px-2 border border-black/15 rounded-lg bg-white text-ink focus:outline-none focus:border-brand-blue"
                             >
                               <option value="percentage">Percentage (%)</option>
                               <option value="fixed">Fixed Flat (₹)</option>
@@ -735,30 +714,32 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                               value={monthlyCommValue}
                               onChange={(e) => setMonthlyCommValue(e.target.value)}
                               placeholder="Rate"
-                              className="w-24 h-8 text-xs rounded-lg border-gray-200"
+                              className="w-24 h-8 text-xs font-mono tabular-nums rounded-lg border-black/15"
                             />
                           </div>
                         )}
                       </div>
 
                       {/* Yearly active check */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-150 rounded-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-black/[0.02] border border-black/10 rounded-xl">
                         <div className="flex items-center gap-2">
                           <input
                             type="checkbox"
                             id="edit-yearly-active"
                             checked={yearlyActive}
                             onChange={(e) => setYearlyActive(e.target.checked)}
-                            className="rounded border-gray-300 text-indigo-650 focus:ring-indigo-500"
+                            className="w-4 h-4 accent-[#2b5ce6] rounded border-black/20 focus:ring-brand-blue cursor-pointer"
                           />
-                          <label htmlFor="edit-yearly-active" className="text-xs font-bold text-gray-700">Yearly Plan</label>
+                          <label htmlFor="edit-yearly-active" className="text-xs font-bold text-ink cursor-pointer">
+                            Yearly Plan
+                          </label>
                         </div>
                         {yearlyActive && (
                           <div className="flex items-center gap-2">
                             <select
                               value={yearlyCommType}
                               onChange={(e: any) => setYearlyCommType(e.target.value)}
-                              className="text-xs p-1.5 border border-gray-200 rounded-lg bg-white"
+                              className="h-8 text-xs px-2 border border-black/15 rounded-lg bg-white text-ink focus:outline-none focus:border-brand-blue"
                             >
                               <option value="percentage">Percentage (%)</option>
                               <option value="fixed">Fixed Flat (₹)</option>
@@ -769,36 +750,42 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                               value={yearlyCommValue}
                               onChange={(e) => setYearlyCommValue(e.target.value)}
                               placeholder="Rate"
-                              className="w-24 h-8 text-xs rounded-lg border-gray-200"
+                              className="w-24 h-8 text-xs font-mono tabular-nums rounded-lg border-black/15"
                             />
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="p-4 bg-indigo-50/30 border border-indigo-100 rounded-xl space-y-3">
+                    <div className="p-4 bg-brand-blue/[0.05] border border-brand-blue/20 rounded-xl space-y-3">
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           id="edit-recurring-comm"
                           checked={editRecurringCommission}
                           onChange={(e) => setEditRecurringCommission(e.target.checked)}
-                          className="rounded border-gray-300 text-indigo-650 focus:ring-indigo-500"
+                          className="w-4 h-4 accent-[#2b5ce6] rounded border-black/20 focus:ring-brand-blue cursor-pointer"
                         />
-                        <label htmlFor="edit-recurring-comm" className="text-xs font-bold text-gray-700">Enable Recurring Commissions</label>
+                        <label htmlFor="edit-recurring-comm" className="text-xs font-bold text-ink cursor-pointer">
+                          Enable Recurring Commissions
+                        </label>
                       </div>
-                      
+
                       {editRecurringCommission && (
                         <div className="space-y-1.5 max-w-xs pl-6">
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Payment Cap Limit (Optional)</label>
+                          <label className="block font-mono text-[10px] font-bold text-steel uppercase tracking-wider">
+                            Payment Cap Limit (Optional)
+                          </label>
                           <Input
                             type="number"
                             placeholder="Unlimited"
                             value={editRecurringLimit}
                             onChange={(e) => setEditRecurringLimit(e.target.value)}
-                            className="h-8 text-xs rounded-lg border-gray-200"
+                            className="h-8 text-xs font-mono tabular-nums rounded-lg border-black/15"
                           />
-                          <p className="text-[9px] text-gray-400">Leave blank for unlimited payouts per subscription lifetime.</p>
+                          <p className="text-[11px] text-steel">
+                            Leave blank for unlimited payouts per subscription lifetime.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -806,25 +793,29 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                 ) : (
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="space-y-1.5 flex-1">
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Commission Type</label>
+                      <label className="block font-mono text-[10px] font-bold text-steel uppercase tracking-wider">
+                        Commission Type
+                      </label>
                       <select
                         value={editCommissionType}
                         onChange={(e: any) => setEditCommissionType(e.target.value)}
-                        className="text-xs p-2 border border-gray-200 rounded-xl bg-white w-full h-10 focus:outline-none"
+                        className="text-xs px-3 border border-black/15 rounded-xl bg-white text-ink w-full h-10 focus:outline-none focus:border-brand-blue"
                       >
                         <option value="percentage">Percentage (%)</option>
                         <option value="fixed">Fixed Flat (₹)</option>
                       </select>
                     </div>
                     <div className="space-y-1.5 flex-1">
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Commission Value</label>
+                      <label className="block font-mono text-[10px] font-bold text-steel uppercase tracking-wider">
+                        Commission Value
+                      </label>
                       <Input
                         type="number"
                         step="any"
                         value={editCommissionValue}
                         onChange={(e) => setEditCommissionValue(e.target.value)}
                         required
-                        className="rounded-xl border-gray-200 h-10"
+                        className="rounded-xl border-black/15 font-mono tabular-nums h-10"
                       />
                     </div>
                   </div>
@@ -832,67 +823,89 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
               </div>
 
               {/* Requirements & Products */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-150">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-black/[0.08]">
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Target & Criteria</h4>
+                  <h4 className="font-mono text-[11px] font-bold text-steel uppercase tracking-widest">
+                    Target & Criteria
+                  </h4>
                   <div className="grid grid-cols-1 gap-3">
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Start Date</label>
+                      <label className="block font-mono text-[10px] font-bold text-steel uppercase tracking-wider">
+                        Start Date
+                      </label>
                       <Input
                         type="date"
                         value={editStartDate}
                         onChange={(e) => setEditStartDate(e.target.value)}
                         required
-                        className="rounded-xl border-gray-200"
+                        className="rounded-xl border-black/15 font-mono"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">End Date (Deadline)</label>
+                      <label className="block font-mono text-[10px] font-bold text-steel uppercase tracking-wider">
+                        End Date (Deadline)
+                      </label>
                       <Input
                         type="date"
                         value={editDeadline}
                         onChange={(e) => setEditDeadline(e.target.value)}
                         required
-                        className="rounded-xl border-gray-200"
+                        className="rounded-xl border-black/15 font-mono"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Min Follower Criteria</label>
+                      <label className="block font-mono text-[10px] font-bold text-steel uppercase tracking-wider">
+                        Min Follower Criteria
+                      </label>
                       <Input
                         type="number"
                         value={editMinFollowers}
                         onChange={(e) => setEditMinFollowers(e.target.value)}
-                        className="rounded-xl border-gray-200"
+                        className="rounded-xl border-black/15 font-mono tabular-nums"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Mapped Store Products / Plans</h4>
-                  <p className="text-[10px] text-gray-400">Select which products/plans this campaign applies to. If none are selected, all sales qualify.</p>
-                  
+                  <h4 className="font-mono text-[11px] font-bold text-steel uppercase tracking-widest">
+                    Mapped Store Products / Plans
+                  </h4>
+                  <p className="text-[11px] text-steel">
+                    Select which products/plans this campaign applies to. If none are selected, all sales qualify.
+                  </p>
+
                   {products.length === 0 ? (
-                    <div className="p-4 bg-gray-50 border border-gray-150 rounded-xl text-center text-xs text-gray-400 italic">
+                    <div className="p-4 bg-black/[0.02] border border-dashed border-black/15 rounded-xl text-center text-xs text-steel">
                       No products/plans found in your catalog. Please add products first.
                     </div>
                   ) : (
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto border border-gray-200 p-2.5 rounded-xl bg-white">
-                      {products.map(p => {
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto border border-black/10 p-2.5 rounded-xl bg-white">
+                      {products.map((p) => {
                         const isChecked = editSelectedProductIds.includes(p.id);
                         return (
-                          <div key={p.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg text-xs">
-                            <div className="flex items-center gap-2">
+                          <div
+                            key={p.id}
+                            className="flex items-center justify-between p-2 hover:bg-black/[0.02] rounded-lg text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
                               <input
                                 type="checkbox"
                                 id={`edit-prod-${p.id}`}
                                 checked={isChecked}
                                 onChange={() => toggleProductSelect(p.id)}
-                                className="rounded border-gray-300 text-indigo-650 focus:ring-indigo-500"
+                                className="w-4 h-4 accent-[#2b5ce6] rounded border-black/20 focus:ring-brand-blue cursor-pointer"
                               />
-                              <label htmlFor={`edit-prod-${p.id}`} className="font-medium text-gray-700 cursor-pointer">{p.name}</label>
+                              <label
+                                htmlFor={`edit-prod-${p.id}`}
+                                className="font-medium text-ink cursor-pointer truncate"
+                              >
+                                {p.name}
+                              </label>
                             </div>
-                            <span className="font-bold text-indigo-650">₹{p.price}</span>
+                            <span className="font-mono font-bold text-brand-blue tabular-nums shrink-0">
+                              ₹{p.price}
+                            </span>
                           </div>
                         );
                       })}
@@ -902,21 +915,22 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
               </div>
 
               {/* Form Actions Footer */}
-              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-100">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-black/[0.08]">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setIsEditing(false)}
-                  className="w-full sm:w-auto text-xs h-9 px-4 rounded-xl"
+                  className="w-full sm:w-auto text-xs h-9 px-4"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
+                  variant="brand"
                   disabled={submittingEdit}
                   size="sm"
-                  className="w-full sm:w-auto text-xs h-9 px-4 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl"
+                  className="w-full sm:w-auto text-xs h-9 px-4"
                 >
                   {submittingEdit ? "Saving Changes..." : "Save Changes"}
                 </Button>
@@ -924,21 +938,19 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
             </form>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
               {/* Left Column: Commission Rules */}
               <div className="lg:col-span-2 space-y-6">
-                
-                <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-4 shadow-sm">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                      <Coins className="w-4 h-4 text-indigo-500" />
+                <div className="bg-white border border-black/10 p-5 sm:p-6 rounded-2xl space-y-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h3 className="font-display font-bold text-ink text-sm flex items-center gap-2">
+                      <Coins className="w-4 h-4 text-brand-blue" />
                       Commission Payout Structure
                     </h3>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={startEditing}
-                      className="text-xs h-8 border-indigo-200 text-indigo-650 hover:bg-indigo-50 rounded-xl"
+                      className="text-xs h-8 text-brand-blue border-brand-blue/30 hover:bg-brand-blue/10 w-full sm:w-auto"
                     >
                       Edit Campaign Rules
                     </Button>
@@ -946,46 +958,59 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
 
                   {isSaas && campaign.commission_schedule ? (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {Object.keys(campaign.commission_schedule).map(interval => {
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                        {Object.keys(campaign.commission_schedule).map((interval) => {
                           const data = campaign.commission_schedule[interval];
                           const valStr = data.type === "percentage" ? `${data.value}%` : `₹${data.value}`;
                           return (
-                            <div key={interval} className="bg-gray-50 border border-gray-150 p-4 rounded-xl">
-                              <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">{interval} Plan</span>
-                              <span className="font-extrabold text-base text-gray-800 block mt-1">{valStr}</span>
+                            <div
+                              key={interval}
+                              className="bg-black/[0.03] border border-black/[0.06] p-4 rounded-xl"
+                            >
+                              <span className="font-mono text-[10px] text-steel font-bold block uppercase tracking-widest">
+                                {interval} Plan
+                              </span>
+                              <span className="font-mono font-bold text-lg text-ink tabular-nums block mt-1">
+                                {valStr}
+                              </span>
                             </div>
                           );
                         })}
                       </div>
 
                       {campaign.recurring_commission ? (
-                        <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl flex gap-3 text-xs leading-relaxed text-gray-650">
-                          <Info className="w-4.5 h-4.5 text-indigo-500 shrink-0 mt-0.5" />
+                        <div className="p-4 bg-brand-blue/[0.05] border border-brand-blue/20 rounded-xl flex gap-3 text-xs leading-relaxed text-slate">
+                          <Info className="w-4 h-4 text-brand-blue shrink-0 mt-0.5" />
                           <div>
-                            <span className="font-bold text-indigo-900 block">Recurring Commission Enabled</span>
+                            <span className="font-bold text-ink block">Recurring Commission Enabled</span>
                             <span className="block mt-0.5">
                               Creators receive commissions on every renewal checkout
-                              {campaign.recurring_commission_limit ? ` (capped up to ${campaign.recurring_commission_limit} payments).` : "."}
+                              {campaign.recurring_commission_limit
+                                ? ` (capped up to ${campaign.recurring_commission_limit} payments).`
+                                : "."}
                             </span>
                           </div>
                         </div>
                       ) : (
-                        <div className="p-4 bg-gray-50 border border-gray-150 rounded-xl flex gap-3 text-xs leading-relaxed text-gray-500">
-                          <Info className="w-4.5 h-4.5 text-gray-400 shrink-0 mt-0.5" />
+                        <div className="p-4 bg-black/[0.02] border border-black/[0.08] rounded-xl flex gap-3 text-xs leading-relaxed text-slate">
+                          <Info className="w-4 h-4 text-steel shrink-0 mt-0.5" />
                           <div>
-                            <span className="font-bold text-gray-700 block">One-time Commission Payout</span>
-                            <span className="block mt-0.5">Commissions are calculated and paid out only on the subscriber's initial sign-up checkout event.</span>
+                            <span className="font-bold text-ink block">One-time Commission Payout</span>
+                            <span className="block mt-0.5">
+                              Commissions are calculated and paid out only on the subscriber's initial sign-up checkout event.
+                            </span>
                           </div>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="bg-gray-50 border border-gray-150 p-4 rounded-xl text-xs">
-                      <span className="text-gray-500 font-medium">Flat rate conversion payout:</span>
-                      <span className="font-bold text-indigo-600 block text-base mt-1.5">
-                        {campaign.commission_type === "percentage" 
-                          ? `${campaign.commission_value}% per sale` 
+                    <div className="bg-black/[0.03] border border-black/[0.06] p-4 rounded-xl text-xs">
+                      <span className="font-mono text-[10px] text-steel font-bold uppercase tracking-widest block">
+                        Flat Rate Conversion Payout
+                      </span>
+                      <span className="font-mono font-bold text-brand-blue block text-lg tabular-nums mt-1.5">
+                        {campaign.commission_type === "percentage"
+                          ? `${campaign.commission_value}% per sale`
                           : `₹${campaign.commission_value} flat per sale`}
                       </span>
                     </div>
@@ -993,67 +1018,76 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                 </div>
 
                 {/* Description guidelines */}
-                <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-3 shadow-sm">
-                  <h3 className="font-bold text-gray-900 text-sm">Campaign Terms & Instructions</h3>
-                  <div className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">
+                <div className="bg-white border border-black/10 p-5 sm:p-6 rounded-2xl space-y-3 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                  <h3 className="font-display font-bold text-ink text-sm">
+                    Campaign Terms & Instructions
+                  </h3>
+                  <div className="text-xs text-slate leading-relaxed whitespace-pre-wrap">
                     {campaign.description || "No custom instructions supplied."}
                   </div>
                 </div>
-
               </div>
 
               {/* Right Column: Plans & Criteria info */}
               <div className="space-y-6">
-                
-                <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-4 shadow-sm">
-                  <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-indigo-500" />
+                <div className="bg-white border border-black/10 p-5 sm:p-6 rounded-2xl space-y-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                  <h3 className="font-display font-bold text-ink text-sm flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-brand-blue" />
                     Mapped Plans / Products
                   </h3>
 
                   <div className="space-y-2">
                     {campaign.products && campaign.products.length > 0 ? (
                       campaign.products.map((p: any) => (
-                        <div key={p.id} className="p-3 bg-gray-50 border border-gray-150 rounded-xl flex justify-between items-center text-xs">
-                          <span className="font-bold text-gray-700">{p.name}</span>
-                          <span className="font-bold text-indigo-650">₹{p.price}</span>
+                        <div
+                          key={p.id}
+                          className="p-3 bg-black/[0.02] border border-black/[0.08] rounded-xl flex justify-between items-center text-xs"
+                        >
+                          <span className="font-semibold text-ink truncate pr-2">{p.name}</span>
+                          <span className="font-mono font-bold text-brand-blue tabular-nums shrink-0">
+                            ₹{p.price}
+                          </span>
                         </div>
                       ))
                     ) : (
-                      <p className="text-xs text-gray-400 italic">No plan mapping restrictions. All sales conversion events qualify.</p>
+                      <p className="text-xs text-steel">
+                        No plan mapping restrictions. All sales conversion events qualify.
+                      </p>
                     )}
                   </div>
                 </div>
 
                 {/* Requirements & dates */}
-                <div className="bg-white border border-gray-150 p-6 rounded-2xl space-y-4 shadow-sm">
-                  <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-indigo-500" />
+                <div className="bg-white border border-black/10 p-5 sm:p-6 rounded-2xl space-y-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                  <h3 className="font-display font-bold text-ink text-sm flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-brand-blue" />
                     Timeline & Target
                   </h3>
 
                   <div className="space-y-3 text-xs">
-                    <div className="flex justify-between py-1.5 border-b border-gray-100">
-                      <span className="text-gray-400">Start Date</span>
-                      <span className="font-bold text-gray-700">{new Date(campaign.start_date).toLocaleDateString()}</span>
+                    <div className="flex justify-between py-1.5 border-b border-black/[0.06]">
+                      <span className="text-steel">Start Date</span>
+                      <span className="font-mono font-semibold text-ink tabular-nums">
+                        {new Date(campaign.start_date).toLocaleDateString()}
+                      </span>
                     </div>
-                    <div className="flex justify-between py-1.5 border-b border-gray-100">
-                      <span className="text-gray-400">End Date</span>
-                      <span className="font-bold text-gray-700">{new Date(campaign.deadline).toLocaleDateString()}</span>
+                    <div className="flex justify-between py-1.5 border-b border-black/[0.06]">
+                      <span className="text-steel">End Date</span>
+                      <span className="font-mono font-semibold text-ink tabular-nums">
+                        {new Date(campaign.deadline).toLocaleDateString()}
+                      </span>
                     </div>
-                    <div className="flex justify-between py-1.5 border-b border-gray-100">
-                      <span className="text-gray-400">Min Follower Criteria</span>
-                      <span className="font-bold text-gray-700">
-                        {campaign.creator_requirements?.min_followers 
-                          ? `${campaign.creator_requirements.min_followers.toLocaleString()}+ followers`
+                    <div className="flex justify-between py-1.5 border-b border-black/[0.06]">
+                      <span className="text-steel">Min Follower Criteria</span>
+                      <span className="font-mono font-semibold text-ink tabular-nums">
+                        {campaign.creator_requirements?.min_followers
+                          ? `${campaign.creator_requirements.min_followers.toLocaleString()}+`
                           : "None"}
                       </span>
                     </div>
                   </div>
                 </div>
-
               </div>
-
             </div>
           )
         )}
@@ -1061,180 +1095,320 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
         {/* Partners Tab */}
         {activeTab === "partners" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            
             {/* Left Side: Tables List */}
             <div className="lg:col-span-2 space-y-6">
-              
               {/* PENDING APPLICATIONS */}
-              <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4 shadow-sm">
-                <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-orange-500" />
+              <div className="bg-white border border-black/10 rounded-2xl p-5 sm:p-6 space-y-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                <h3 className="font-display font-bold text-ink text-sm flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-brand-blue" />
                   Pending Creator Applications ({pendingPartners.length})
                 </h3>
 
                 {pendingPartners.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed border-gray-250">No pending creator applications for this program.</p>
+                  <p className="text-xs text-steel bg-black/[0.02] p-4 rounded-xl border border-dashed border-black/15">
+                    No pending creator applications for this program.
+                  </p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-gray-150 text-gray-400 font-bold uppercase tracking-wider">
-                          <th className="py-3 px-4">Creator Name</th>
-                          <th className="py-3 px-4">Instagram profile</th>
-                          <th className="py-3 px-4">Followers</th>
-                          <th className="py-3 px-4">Applied Date</th>
-                          <th className="py-3 px-4 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 text-gray-700">
-                        {pendingPartners.map((partner: any) => {
-                          const isSelected = selectedPartner?.creator_id === partner.creator_id;
-                          return (
-                            <tr 
-                              key={partner.creator_id} 
-                              onClick={() => setSelectedPartner(partner)}
-                              className={`cursor-pointer transition-colors ${
-                                isSelected 
-                                  ? "bg-indigo-50/80 font-medium border-l-2 border-l-indigo-600" 
-                                  : "hover:bg-gray-50/50"
-                              }`}
-                            >
-                              <td className="py-3.5 px-4 font-bold">{partner.username}</td>
-                              <td className="py-3.5 px-4 font-bold text-indigo-600">
+                  <>
+                    {/* Mobile Cards (< md) */}
+                    <div className="md:hidden space-y-3">
+                      {pendingPartners.map((partner: any) => {
+                        const isSelected = selectedPartner?.creator_id === partner.creator_id;
+                        return (
+                          <div
+                            key={partner.creator_id}
+                            onClick={() => setSelectedPartner(partner)}
+                            className={`p-4 rounded-xl border transition-colors duration-150 space-y-3 cursor-pointer ${
+                              isSelected
+                                ? "bg-brand-blue/[0.05] border-brand-blue/35"
+                                : "bg-black/[0.02] border-black/10"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-bold text-sm text-ink truncate">{partner.username}</p>
                                 {partner.instagram_username ? (
-                                  <a 
-                                    href={`https://instagram.com/${partner.instagram_username}`} 
-                                    target="_blank" 
+                                  <a
+                                    href={`https://instagram.com/${partner.instagram_username}`}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => e.stopPropagation()}
-                                    className="inline-flex items-center gap-1 hover:underline"
+                                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-blue hover:underline mt-0.5"
                                   >
                                     @{partner.instagram_username}
-                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <ExternalLink className="w-3 h-3" />
                                   </a>
                                 ) : (
-                                  <span className="text-gray-400">Not Linked</span>
+                                  <span className="text-xs text-steel">Not Linked</span>
                                 )}
-                              </td>
-                              <td className="py-3.5 px-4 font-bold">{(partner.follower_count || 0).toLocaleString()}</td>
-                              <td className="py-3.5 px-4 text-gray-400">{new Date(partner.created_at).toLocaleDateString()}</td>
-                              <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex gap-2 justify-end">
+                              </div>
+                              <StatusPill tone="warning">Pending</StatusPill>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-steel pt-1 border-t border-black/[0.06]">
+                              <span className="font-mono tabular-nums font-semibold text-ink">
+                                {(partner.follower_count || 0).toLocaleString()} followers
+                              </span>
+                              <span className="font-mono text-[11px] tabular-nums">
+                                {new Date(partner.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleReviewCreator(partner.creator_id, "reject")}
+                                disabled={reviewingId === partner.creator_id}
+                                className="flex-1 h-8 text-xs text-rose-600 border-rose-500/25 hover:bg-rose-50 hover:text-rose-700"
+                              >
+                                Reject
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleReviewCreator(partner.creator_id, "approve")}
+                                disabled={reviewingId === partner.creator_id}
+                                className="flex-1 h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                              >
+                                Approve
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop Table (>= md) */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-black/[0.08] font-mono text-[10px] text-steel font-bold uppercase tracking-wider">
+                            <th className="py-3 px-4">Creator Name</th>
+                            <th className="py-3 px-4">Instagram Profile</th>
+                            <th className="py-3 px-4">Followers</th>
+                            <th className="py-3 px-4">Applied Date</th>
+                            <th className="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-black/[0.06] text-ink">
+                          {pendingPartners.map((partner: any) => {
+                            const isSelected = selectedPartner?.creator_id === partner.creator_id;
+                            return (
+                              <tr
+                                key={partner.creator_id}
+                                onClick={() => setSelectedPartner(partner)}
+                                className={`cursor-pointer transition-colors duration-150 ${
+                                  isSelected
+                                    ? "bg-brand-blue/[0.06] font-medium border-l-2 border-l-brand-blue"
+                                    : "hover:bg-black/[0.02]"
+                                }`}
+                              >
+                                <td className="py-3.5 px-4 font-bold">{partner.username}</td>
+                                <td className="py-3.5 px-4 font-semibold text-brand-blue">
+                                  {partner.instagram_username ? (
+                                    <a
+                                      href={`https://instagram.com/${partner.instagram_username}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1 hover:underline"
+                                    >
+                                      @{partner.instagram_username}
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </a>
+                                  ) : (
+                                    <span className="text-steel font-normal">Not Linked</span>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 font-mono font-bold tabular-nums">
+                                  {(partner.follower_count || 0).toLocaleString()}
+                                </td>
+                                <td className="py-3.5 px-4 font-mono text-steel tabular-nums">
+                                  {new Date(partner.created_at).toLocaleDateString()}
+                                </td>
+                                <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex gap-2 justify-end">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleReviewCreator(partner.creator_id, "reject")}
+                                      disabled={reviewingId === partner.creator_id}
+                                      className="h-7 px-3 text-rose-600 border-rose-500/25 hover:bg-rose-50 hover:text-rose-700"
+                                    >
+                                      Reject
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleReviewCreator(partner.creator_id, "approve")}
+                                      disabled={reviewingId === partner.creator_id}
+                                      className="h-7 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                                    >
+                                      Approve
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* APPROVED PARTNERS LIST */}
+              <div className="bg-white border border-black/10 rounded-2xl p-5 sm:p-6 space-y-4 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                <h3 className="font-display font-bold text-ink text-sm flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  Approved Program Partners ({approvedPartners.length})
+                </h3>
+
+                {approvedPartners.length === 0 ? (
+                  <p className="text-xs text-steel bg-black/[0.02] p-4 rounded-xl border border-dashed border-black/15">
+                    No approved creators on this campaign yet.
+                  </p>
+                ) : (
+                  <>
+                    {/* Mobile Cards (< md) */}
+                    <div className="md:hidden space-y-3">
+                      {approvedPartners.map((partner: any) => {
+                        const isSelected = selectedPartner?.creator_id === partner.creator_id;
+                        return (
+                          <div
+                            key={partner.creator_id}
+                            onClick={() => setSelectedPartner(partner)}
+                            className={`p-4 rounded-xl border transition-colors duration-150 space-y-3 cursor-pointer ${
+                              isSelected
+                                ? "bg-brand-blue/[0.05] border-brand-blue/35"
+                                : "bg-black/[0.02] border-black/10"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-bold text-sm text-ink truncate">{partner.username}</p>
+                                {partner.instagram_username ? (
+                                  <a
+                                    href={`https://instagram.com/${partner.instagram_username}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-blue hover:underline mt-0.5"
+                                  >
+                                    @{partner.instagram_username}
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                ) : (
+                                  <span className="text-xs text-steel">Not Linked</span>
+                                )}
+                              </div>
+                              <StatusPill tone="success">Approved</StatusPill>
+                            </div>
+                            <div className="flex items-center justify-between text-xs pt-1 border-t border-black/[0.06]">
+                              <span className="font-mono text-steel">
+                                Code: <strong className="text-ink">{partner.code || "—"}</strong>
+                              </span>
+                              <span className="font-mono tabular-nums font-semibold text-ink">
+                                {(partner.follower_count || 0).toLocaleString()} followers
+                              </span>
+                            </div>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleReviewCreator(partner.creator_id, "reject")}
+                                disabled={reviewingId === partner.creator_id}
+                                className="w-full h-8 text-xs text-rose-600 border-rose-500/25 hover:bg-rose-50 hover:text-rose-700"
+                              >
+                                Revoke Access
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop Table (>= md) */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-black/[0.08] font-mono text-[10px] text-steel font-bold uppercase tracking-wider">
+                            <th className="py-3 px-4">Creator Name</th>
+                            <th className="py-3 px-4">Instagram</th>
+                            <th className="py-3 px-4">Followers</th>
+                            <th className="py-3 px-4">Affiliate Code</th>
+                            <th className="py-3 px-4">Joined Date</th>
+                            <th className="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-black/[0.06] text-ink">
+                          {approvedPartners.map((partner: any) => {
+                            const isSelected = selectedPartner?.creator_id === partner.creator_id;
+                            return (
+                              <tr
+                                key={partner.creator_id}
+                                onClick={() => setSelectedPartner(partner)}
+                                className={`cursor-pointer transition-colors duration-150 ${
+                                  isSelected
+                                    ? "bg-brand-blue/[0.06] font-medium border-l-2 border-l-brand-blue"
+                                    : "hover:bg-black/[0.02]"
+                                }`}
+                              >
+                                <td className="py-3.5 px-4 font-bold">{partner.username}</td>
+                                <td className="py-3.5 px-4 font-semibold text-brand-blue">
+                                  {partner.instagram_username ? (
+                                    <a
+                                      href={`https://instagram.com/${partner.instagram_username}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1 hover:underline"
+                                    >
+                                      @{partner.instagram_username}
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </a>
+                                  ) : (
+                                    <span className="text-steel font-normal">Not Linked</span>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 font-mono font-bold tabular-nums">
+                                  {(partner.follower_count || 0).toLocaleString()}
+                                </td>
+                                <td className="py-3.5 px-4 font-mono text-slate">{partner.code}</td>
+                                <td className="py-3.5 px-4 font-mono text-steel tabular-nums">
+                                  {new Date(partner.created_at).toLocaleDateString()}
+                                </td>
+                                <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                                   <Button
                                     size="sm"
                                     variant="outline"
                                     onClick={() => handleReviewCreator(partner.creator_id, "reject")}
                                     disabled={reviewingId === partner.creator_id}
-                                    className="h-7 px-3 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                    className="h-7 px-3 text-rose-600 border-rose-500/25 hover:bg-rose-50 hover:text-rose-700"
                                   >
-                                    Reject
+                                    Revoke Access
                                   </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleReviewCreator(partner.creator_id, "approve")}
-                                    disabled={reviewingId === partner.creator_id}
-                                    className="h-7 px-3 bg-green-600 hover:bg-green-700 text-white font-bold"
-                                  >
-                                    Approve
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* APPROVED PARTNERS LIST */}
-              <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4 shadow-sm">
-                <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Approved Program Partners ({approvedPartners.length})
-                </h3>
-
-                {approvedPartners.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic bg-gray-50 p-4 rounded-xl border border-dashed border-gray-250">No approved creators on this campaign yet.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-gray-150 text-gray-400 font-bold uppercase tracking-wider">
-                          <th className="py-3 px-4">Creator Name</th>
-                          <th className="py-3 px-4">Instagram</th>
-                          <th className="py-3 px-4">Followers</th>
-                          <th className="py-3 px-4">Affiliate Code</th>
-                          <th className="py-3 px-4">Joined Date</th>
-                          <th className="py-3 px-4 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 text-gray-700">
-                        {approvedPartners.map((partner: any) => {
-                          const isSelected = selectedPartner?.creator_id === partner.creator_id;
-                          return (
-                            <tr 
-                              key={partner.creator_id}
-                              onClick={() => setSelectedPartner(partner)}
-                              className={`cursor-pointer transition-colors ${
-                                isSelected 
-                                  ? "bg-indigo-50/80 font-medium border-l-2 border-l-indigo-600" 
-                                  : "hover:bg-gray-50/50"
-                              }`}
-                            >
-                              <td className="py-3.5 px-4 font-bold">{partner.username}</td>
-                              <td className="py-3.5 px-4 font-bold text-indigo-600">
-                                {partner.instagram_username ? (
-                                  <a 
-                                    href={`https://instagram.com/${partner.instagram_username}`} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="inline-flex items-center gap-1 hover:underline"
-                                  >
-                                    @{partner.instagram_username}
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                  </a>
-                                ) : (
-                                  <span className="text-gray-400">Not Linked</span>
-                                )}
-                              </td>
-                              <td className="py-3.5 px-4 font-bold">{(partner.follower_count || 0).toLocaleString()}</td>
-                              <td className="py-3.5 px-4 font-mono text-gray-500">{partner.code}</td>
-                              <td className="py-3.5 px-4 text-gray-400">{new Date(partner.created_at).toLocaleDateString()}</td>
-                              <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleReviewCreator(partner.creator_id, "reject")}
-                                  disabled={reviewingId === partner.creator_id}
-                                  className="h-7 px-3 text-red-650 hover:bg-red-50 hover:text-red-700"
-                                >
-                                  Revoke Access
-                                </Button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
 
             {/* Right Side: Creator Profile Quick View Card */}
             <div className="lg:col-span-1 lg:sticky lg:top-6">
-              <div className="bg-white border border-gray-150 rounded-2xl shadow-sm overflow-hidden">
-                <div className="bg-gray-50 border-b border-gray-150 p-5 text-center flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mb-3 shadow-inner">
-                    <User className="w-8 h-8" />
+              <div className="bg-white border border-black/10 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
+                <div className="bg-[#fafafb] border-b border-black/[0.08] p-5 text-center flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-full bg-brand-blue/10 border border-brand-blue/20 text-brand-blue flex items-center justify-center mb-3">
+                    <User className="w-7 h-7" />
                   </div>
-                  <h3 className="font-extrabold text-gray-800 text-sm leading-tight">
+                  <h3 className="font-display font-bold text-ink text-sm leading-tight">
                     {selectedPartner ? selectedPartner.username : "No Selection"}
                   </h3>
-                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1 block">
+                  <span className="font-mono text-[10px] text-steel font-bold uppercase tracking-widest mt-1 block">
                     Creator Profile Quickview
                   </span>
                 </div>
@@ -1242,62 +1416,66 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                 {selectedPartner ? (
                   <div className="p-5 space-y-4 text-xs">
                     <div className="space-y-1">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Instagram Profile link</span>
+                      <span className="font-mono text-[10px] text-steel font-bold uppercase tracking-wider block">
+                        Instagram Profile Link
+                      </span>
                       {selectedPartner.instagram_username ? (
-                        <a 
+                        <a
                           href={`https://instagram.com/${selectedPartner.instagram_username}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-bold text-indigo-600 hover:underline flex items-center gap-1 bg-indigo-50/30 p-2.5 rounded-xl border border-indigo-100/50 break-all"
+                          className="font-semibold text-brand-blue hover:underline flex items-center gap-1.5 bg-brand-blue/[0.05] p-2.5 rounded-xl border border-brand-blue/20 break-all"
                         >
                           https://instagram.com/{selectedPartner.instagram_username}
                           <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                         </a>
                       ) : (
-                        <span className="text-gray-400 italic block bg-gray-50 p-2.5 rounded-xl border border-gray-150">
+                        <span className="text-steel block bg-black/[0.02] p-2.5 rounded-xl border border-black/10">
                           No Instagram profile linked
                         </span>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3.5">
-                      <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-150">
-                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Follower count</span>
-                        <span className="font-black text-gray-800 text-sm block mt-0.5">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-black/[0.03] p-3 rounded-xl border border-black/[0.06]">
+                        <span className="font-mono text-[9px] text-steel font-bold uppercase tracking-wider block">
+                          Follower Count
+                        </span>
+                        <span className="font-mono font-bold text-ink text-sm tabular-nums block mt-0.5">
                           {(selectedPartner.follower_count || 0).toLocaleString()}
                         </span>
                       </div>
-                      <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-150">
-                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Status</span>
+                      <div className="bg-black/[0.03] p-3 rounded-xl border border-black/[0.06]">
+                        <span className="font-mono text-[9px] text-steel font-bold uppercase tracking-wider block">
+                          Status
+                        </span>
                         <div className="mt-1">
                           {selectedPartner.status === "active" ? (
-                            <Badge className="bg-green-50 border-green-200 text-green-700 text-[9px] px-2 py-0.5 font-bold uppercase tracking-wider">
-                              Approved
-                            </Badge>
+                            <StatusPill tone="success">Approved</StatusPill>
                           ) : selectedPartner.status === "applied" ? (
-                            <Badge className="bg-yellow-50 border-yellow-200 text-yellow-800 text-[9px] px-2 py-0.5 font-bold uppercase tracking-wider">
-                              Pending
-                            </Badge>
+                            <StatusPill tone="warning">Pending</StatusPill>
                           ) : (
-                            <Badge className="bg-red-50 border-red-200 text-red-700 text-[9px] px-2 py-0.5 font-bold uppercase tracking-wider">
-                              Rejected
-                            </Badge>
+                            <StatusPill tone="danger">Rejected</StatusPill>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-2.5 pt-2 border-t border-gray-100">
-                      <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-gray-400 font-bold uppercase tracking-wider">Applied Date</span>
-                        <span className="font-bold text-gray-700">
+                    <div className="space-y-2.5 pt-2 border-t border-black/[0.08]">
+                      <div className="flex justify-between items-center text-[11px]">
+                        <span className="font-mono text-steel font-bold uppercase tracking-wider">
+                          Applied Date
+                        </span>
+                        <span className="font-mono font-semibold text-ink tabular-nums">
                           {new Date(selectedPartner.created_at).toLocaleDateString()}
                         </span>
                       </div>
                       {selectedPartner.code && (
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-gray-400 font-bold uppercase tracking-wider">Affiliate Code</span>
-                          <span className="font-mono font-bold text-gray-650 bg-gray-50 px-2 py-0.5 rounded border border-gray-150">
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="font-mono text-steel font-bold uppercase tracking-wider">
+                            Affiliate Code
+                          </span>
+                          <span className="font-mono font-bold text-ink bg-black/[0.03] px-2 py-0.5 rounded border border-black/10">
                             {selectedPartner.code}
                           </span>
                         </div>
@@ -1305,13 +1483,13 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                     </div>
 
                     {/* Action Panel in Preview */}
-                    <div className="pt-4 border-t border-gray-100 space-y-2">
+                    <div className="pt-4 border-t border-black/[0.08] space-y-2">
                       {selectedPartner.status === "applied" && (
                         <>
                           <Button
                             onClick={() => handleReviewCreator(selectedPartner.creator_id, "approve")}
                             disabled={reviewingId === selectedPartner.creator_id}
-                            className="w-full bg-green-600 hover:bg-green-750 text-white font-bold text-xs h-9 rounded-xl shadow-sm"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-9"
                           >
                             Approve Creator
                           </Button>
@@ -1319,7 +1497,7 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                             variant="outline"
                             onClick={() => handleReviewCreator(selectedPartner.creator_id, "reject")}
                             disabled={reviewingId === selectedPartner.creator_id}
-                            className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 font-bold text-xs h-9 rounded-xl"
+                            className="w-full text-rose-600 border-rose-500/25 hover:bg-rose-50 hover:text-rose-700 font-semibold text-xs h-9"
                           >
                             Reject Application
                           </Button>
@@ -1330,7 +1508,7 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                           variant="outline"
                           onClick={() => handleReviewCreator(selectedPartner.creator_id, "reject")}
                           disabled={reviewingId === selectedPartner.creator_id}
-                          className="w-full text-red-650 border-red-200 hover:bg-red-50 hover:text-red-700 font-bold text-xs h-9 rounded-xl"
+                          className="w-full text-rose-600 border-rose-500/25 hover:bg-rose-50 hover:text-rose-700 font-semibold text-xs h-9"
                         >
                           Revoke Access
                         </Button>
@@ -1339,7 +1517,7 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                         <Button
                           onClick={() => handleReviewCreator(selectedPartner.creator_id, "approve")}
                           disabled={reviewingId === selectedPartner.creator_id}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-xs h-9 rounded-xl"
+                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-9"
                         >
                           Re-Approve Creator
                         </Button>
@@ -1347,123 +1525,70 @@ export const BrandAffiliateCampaignAnalytics: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-8 text-center text-gray-400 italic text-xs">
-                    Select a creator from the left list to review their profile details.
+                  <div className="p-8 text-center text-steel text-xs">
+                    Select a creator from the list to review their profile details.
                   </div>
                 )}
               </div>
             </div>
-
           </div>
         )}
-
-        {/* Conversions Tab */}
-        {activeTab === "conversions" && (
-          <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4 shadow-sm">
-            <h3 className="font-bold text-gray-900 text-sm">Referred Conversions Log List ({conversions.length})</h3>
-
-            {conversions.length === 0 ? (
-              <div className="py-12 border border-dashed border-gray-200 rounded-xl text-center text-gray-400 max-w-md mx-auto">
-                <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                <p className="font-bold text-xs">No conversions recorded yet</p>
-                <p className="text-[10px] text-gray-400 mt-1">Conversions will appear here once customers buy plans/products via creator reference links.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-gray-150 text-gray-400 font-bold uppercase tracking-wider">
-                      <th className="py-3 px-4">Order ID / Subscription</th>
-                      <th className="py-3 px-4">Partner</th>
-                      <th className="py-3 px-4">Plan/Product</th>
-                      <th className="py-3 px-4">Order Amount</th>
-                      <th className="py-3 px-4">Commission Paid</th>
-                      <th className="py-3 px-4">Timestamp</th>
-                      <th className="py-3 px-4">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 text-gray-700">
-                    {conversions.map((conv) => (
-                      <tr key={conv.id} className="hover:bg-gray-50/50">
-                        <td className="py-3 px-4 font-mono text-gray-500">{conv.order_id}</td>
-                        <td className="py-3 px-4 font-bold">{conv.creator_name || "Direct Referral"}</td>
-                        <td className="py-3 px-4">{conv.product_name || "General Conversion"}</td>
-                        <td className="py-3 px-4 font-bold">₹{conv.order_amount}</td>
-                        <td className="py-3 px-4 font-extrabold text-indigo-650">₹{conv.commission_amount}</td>
-                        <td className="py-3 px-4 text-gray-400">{new Date(conv.created_at || conv.timestamp).toLocaleString()}</td>
-                        <td className="py-3 px-4">
-                          {conv.status === "completed" ? (
-                            <Badge className="bg-green-50 border-green-200 text-green-700 text-[9px] px-2 py-0.5 font-bold uppercase">
-                              Settled
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-zinc-100 text-zinc-650 text-[9px] px-2 py-0.5 font-bold">
-                              {conv.status}
-                            </Badge>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
       </div>
 
       {/* BUDGET ALLOCATION / RECLAIM MODAL */}
-      {showBudgetModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-150 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
-              <Coins className="w-5 h-5 text-indigo-650" />
+      <Dialog open={showBudgetModal} onOpenChange={setShowBudgetModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Coins className="w-5 h-5 text-brand-blue" />
               {budgetAction === "allocate" ? "Add Campaign Funds" : "Reclaim Campaign Funds"}
-            </h3>
-            
-            <p className="text-xs text-gray-550 leading-relaxed mb-4">
-              {budgetAction === "allocate" 
+            </DialogTitle>
+            <DialogDescription>
+              {budgetAction === "allocate"
                 ? `Allocate budget to fund creator payouts. Your available wallet balance is ₹${walletBalance.toLocaleString()}.`
-                : `Reclaim unspent pre-allocated funds from this campaign back to your wallet balance.`}
-            </p>
+                : "Reclaim unspent pre-allocated funds from this campaign back to your wallet balance."}
+            </DialogDescription>
+          </DialogHeader>
 
-            <form onSubmit={handleBudgetSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Amount (INR)</label>
-                <Input
-                  type="number"
-                  placeholder="e.g. 5000"
-                  value={budgetAmount}
-                  onChange={(e) => setBudgetAmount(e.target.value)}
-                  required
-                  className="rounded-xl"
-                />
-              </div>
+          <form onSubmit={handleBudgetSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="block font-mono text-[11px] font-bold text-steel uppercase tracking-wider">
+                Amount (INR)
+              </label>
+              <Input
+                type="number"
+                placeholder="e.g. 5000"
+                value={budgetAmount}
+                onChange={(e) => setBudgetAmount(e.target.value)}
+                required
+                className="rounded-xl border-black/15 font-mono tabular-nums focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
+              />
+            </div>
 
-              <div className="flex gap-2 justify-end pt-3">
-                <Button 
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowBudgetModal(false)}
-                  disabled={submittingBudget}
-                  className="rounded-xl"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
-                  disabled={submittingBudget}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl"
-                >
-                  {submittingBudget ? "Processing..." : budgetAction === "allocate" ? "Add Funds" : "Reclaim"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowBudgetModal(false)}
+                disabled={submittingBudget}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="brand"
+                disabled={submittingBudget}
+              >
+                {submittingBudget
+                  ? "Processing..."
+                  : budgetAction === "allocate"
+                  ? "Add Funds"
+                  : "Reclaim"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </BrandLayout>
   );
 };

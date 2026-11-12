@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Instagram, Youtube, ImageOff, Clock, Eye, Wallet } from "lucide-react";
 
-interface CampaignCardProps {
+export interface CampaignCardProps {
   id: number;
   name: string;
   platform: string;
@@ -18,14 +18,14 @@ interface CampaignCardProps {
   hideStatusActions?: boolean;
   image_url?: string;
   funds_distributed?: number;
-  campaign_type?: 'influencer' | 'clipping';
+  campaign_type?: "influencer" | "clipping";
   follower_range?: string;
   is_deadline_ended?: boolean;
   earned?: number;
+  onClick?: () => void;
 }
 
-const CampaignCard: React.FC<CampaignCardProps> = ({
-  id,
+export const CampaignCard: React.FC<CampaignCardProps> = ({
   name,
   platform,
   budget,
@@ -35,32 +35,47 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   submitted = false,
   hideStatusActions = false,
   image_url,
-  campaign_category,
   funds_distributed = 0,
-  campaign_type = 'influencer',
+  campaign_type = "influencer",
   follower_range,
   is_deadline_ended = false,
   earned,
+  onClick,
 }) => {
   const [imgError, setImgError] = useState(false);
 
   const views = total_view_count;
   const totalBudget = budget;
   const amountDistributed = funds_distributed;
-  
-  const payoutPercent = totalBudget > 0 ? Math.min(Math.round((amountDistributed / totalBudget) * 100), 100) : 0;
+
+  const payoutPercent =
+    totalBudget > 0 ? Math.min(Math.round((amountDistributed / totalBudget) * 100), 100) : 0;
+
+  const ratePer1K = cpv >= 10 ? Math.round(cpv) : Math.round(cpv * 1000);
 
   const formatNumber = (num: number) => {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+    if (num >= 1000) return (num / 1000).toFixed(1) + "K";
     return num.toString();
   };
 
   return (
-    <div
-      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md border border-zinc-200/80 hover:border-orange-300 transition-all flex flex-col w-full"
+    <article
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && onClick) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={`View deal for ${name}`}
+      className={`group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md border border-zinc-200/80 hover:border-orange-300 transition-all flex flex-col w-full ${
+        onClick ? "cursor-pointer" : ""
+      }`}
     >
-      {/* Visual Header */}
+      {/* Visual Header matching Dashboard Card with frosted blur badges */}
       <div className="relative w-full aspect-video bg-zinc-100 overflow-hidden">
         {image_url && !imgError ? (
           <img
@@ -80,7 +95,13 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
           </div>
         )}
 
-        {/* Platform Badge */}
+        {/* Subtle bottom depth scrim */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/20 via-black/5 to-transparent pointer-events-none"
+          aria-hidden="true"
+        />
+
+        {/* Circular Frosted Blur Platform Badge */}
         <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-xs border border-zinc-200/80">
           {platform === "Instagram" ? (
             <Instagram size={15} className="text-pink-600" />
@@ -91,20 +112,20 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
           )}
         </div>
 
-        {/* Status & Type Badges */}
+        {/* Left Status & Category Frosted Blur Badges */}
         <div className="absolute top-2.5 left-2.5 flex gap-1.5 flex-wrap">
           {is_deadline_ended && (
-            <Badge className="bg-zinc-800 text-zinc-100 border-none shadow-xs text-[10px] px-2 py-0.5 font-bold">
+            <Badge className="bg-zinc-800/90 text-zinc-100 border-none shadow-xs backdrop-blur-sm text-[10px] px-2 py-0.5 font-bold">
               Deadline Ended
             </Badge>
           )}
           {!hideStatusActions && submitted && (
-            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-xs backdrop-blur-sm text-[10px] px-2 py-0.5 font-bold">
+            <Badge className="bg-emerald-500/95 hover:bg-emerald-600 text-white border-none shadow-xs backdrop-blur-sm text-[10px] px-2 py-0.5 font-bold">
               Applied
             </Badge>
           )}
-          {campaign_type === 'influencer' && follower_range && (
-            <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200/80 shadow-xs backdrop-blur-sm text-[10px] px-2 py-0.5 font-bold">
+          {campaign_type === "influencer" && follower_range && (
+            <Badge className="bg-purple-100/90 text-purple-700 hover:bg-purple-200 border-purple-200/80 shadow-xs backdrop-blur-sm text-[10px] px-2 py-0.5 font-bold">
               {follower_range}
             </Badge>
           )}
@@ -113,13 +134,19 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
 
       {/* Content Details */}
       <div className="p-4 flex flex-col gap-3">
-        {/* Title & Price */}
+        {/* Title & Payout Rate Pill */}
         <div className="flex justify-between items-start gap-2">
-          <h3 className="font-display font-bold text-zinc-900 text-base leading-snug line-clamp-1 group-hover:text-orange-600 transition-colors" title={name}>
+          <h3
+            className="font-display font-bold text-zinc-900 text-base leading-snug line-clamp-1 group-hover:text-orange-600 transition-colors"
+            title={name}
+          >
             {name}
           </h3>
-          <Badge variant="secondary" className="bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-200/80 whitespace-nowrap font-mono font-bold text-xs">
-            ₹{cpv} / 1K
+          <Badge
+            variant="secondary"
+            className="bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-200/80 whitespace-nowrap font-mono font-bold text-xs shrink-0"
+          >
+            ₹{ratePer1K} / 1K
           </Badge>
         </div>
 
@@ -137,31 +164,27 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
             <span className="text-orange-600">{payoutPercent}%</span>
           </div>
           <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-500 rounded-full"
               style={{ width: `${payoutPercent}%` }}
             />
           </div>
         </div>
-            
+
         {/* Logistics Grid */}
         <div className="grid grid-cols-3 gap-2 pt-2.5 mt-0.5 border-t border-zinc-100">
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] text-zinc-400 uppercase font-mono font-semibold flex items-center gap-1">
               <Wallet size={10} className="text-orange-500" /> Budget
             </span>
-            <span className="text-xs font-bold text-zinc-800">
-              ₹{formatNumber(budget)}
-            </span>
+            <span className="text-xs font-bold text-zinc-800">₹{formatNumber(budget)}</span>
           </div>
 
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] text-zinc-400 uppercase font-mono font-semibold flex items-center gap-1">
               <Eye size={10} className="text-purple-500" /> Views
             </span>
-            <span className="text-xs font-bold text-zinc-800">
-              {formatNumber(views)}
-            </span>
+            <span className="text-xs font-bold text-zinc-800">{formatNumber(views)}</span>
           </div>
 
           <div className="flex flex-col gap-0.5">
@@ -169,13 +192,13 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
               <Clock size={10} className="text-pink-500" /> Ends
             </span>
             <span className="text-xs font-bold text-zinc-800 truncate">
-              {new Date(deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              {new Date(deadline).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
             </span>
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 };
 
-export default CampaignCard;
+export default CampaignCard;

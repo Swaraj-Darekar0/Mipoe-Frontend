@@ -1,8 +1,12 @@
 import React, { useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import gsap from "gsap";
 import { personaContent } from "./personaContent";
 import CreatorRibbon from "./CreatorRibbon";
 import { opticalScale, type HeadlineLine } from "./heroType";
+import CursorStickerTrail from "./CursorStickerTrail";
+import SquishyHeadline from "./SquishyHeadline";
+import SlidingScribbleButton from "./SlidingScribbleButton";
 
 
 const content = personaContent.creator;
@@ -127,21 +131,74 @@ const SCENE_CLEARANCE = {
 
 const HeroCreator: React.FC = () => {
   const rootRef = useRef<HTMLElement>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const headlineRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    
+    const rootEl = rootRef.current;
+    const sceneEl = sceneRef.current;
+
     // Fast, crisp entrance for typography and CTA without blocking hero artwork.
-    // Scoped + reverted so switching persona can't leave orphaned tweens behind.
     const ctx = gsap.context(() => {
       gsap.from(".hero-rise", {
-        y: 14,
+        y: 18,
         opacity: 0,
-        duration: 0.38,
+        duration: 0.45,
         ease: "power2.out",
-        stagger: 0.04,
+        stagger: 0.05,
         clearProps: "transform,opacity",
       });
+
+      // Desktop 3D cursor tilt on scene and mascot
+      if (rootEl && sceneEl && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+        const xTo = gsap.quickTo(sceneEl, "rotationY", { duration: 0.6, ease: "power3" });
+        const yTo = gsap.quickTo(sceneEl, "rotationX", { duration: 0.6, ease: "power3" });
+        const zTo = gsap.quickTo(sceneEl, "z", { duration: 0.6, ease: "power3" });
+
+        const onMouseMove = (e: MouseEvent) => {
+          const rect = rootEl.getBoundingClientRect();
+          const xRel = (e.clientX - rect.left) / rect.width - 0.5; // -0.5 to 0.5
+          const yRel = (e.clientY - rect.top) / rect.height - 0.5; // -0.5 to 0.5
+
+          xTo(xRel * 12); // -6deg to +6deg
+          yTo(-yRel * 10);
+          zTo(20);
+
+          // Subtle headline proximity tracking
+          if (headlineRef.current) {
+            const hRect = headlineRef.current.getBoundingClientRect();
+            const hCenter = hRect.left + hRect.width / 2;
+            const dist = Math.abs(e.clientX - hCenter);
+            if (dist < 320) {
+              const spread = (1 - dist / 320) * 0.02;
+              headlineRef.current.style.letterSpacing = `${-0.02 + spread}em`;
+            } else {
+              headlineRef.current.style.letterSpacing = "-0.02em";
+            }
+          }
+        };
+
+        const onMouseLeave = () => {
+          xTo(0);
+          yTo(0);
+          zTo(0);
+          if (headlineRef.current) {
+            headlineRef.current.style.letterSpacing = "-0.02em";
+          }
+        };
+
+        rootEl.addEventListener("mousemove", onMouseMove, { passive: true });
+        rootEl.addEventListener("mouseleave", onMouseLeave);
+
+        return () => {
+          rootEl.removeEventListener("mousemove", onMouseMove);
+          rootEl.removeEventListener("mouseleave", onMouseLeave);
+        };
+      }
     }, rootRef);
+
     return () => ctx.revert();
   }, []);
 
@@ -169,6 +226,8 @@ const HeroCreator: React.FC = () => {
       className="relative w-full h-[100svh] min-h-[660px] bg-canvas overflow-hidden flex flex-col pt-[var(--nav-clear)] lg:block lg:pt-0"
       style={SCENE_CLEARANCE}
     >
+      {/* Refined Volume Cursor Sticker Trail */}
+      <CursorStickerTrail containerRef={rootRef} spacing={85} />
 
 
       {/* Copy first in the DOM so the sub-lg column stacks copy-then-scene.
@@ -197,73 +256,31 @@ const HeroCreator: React.FC = () => {
           className="relative w-full max-w-[520px] md:max-w-[560px] lg:max-w-[700px]"
           style={{ containerType: "inline-size" }}
         >
-          {/* `font-normal` is load-bearing, not a default: Abril Fatface ships a
-              single weight, so any bold here is the browser smearing the face
-              synthetically. It is already as fat as it gets. */}
-          <h1 className="hero-rise font-fat font-normal text-ink tracking-[-0.012em]">
-            {HEADLINE_LINES.map((line, i) => (
-              // Leading BELOW 1. The reference sets its lines close enough that
-              // descenders graze the line below, which is what fuses them into
-              // one mass. Fat faces need this — at normal leading the huge stems
-              // drift apart and the block falls back into being three sentences.
-              <span
-                key={i}
-                className="block leading-[0.94]"
-                style={{ fontSize: lineSize(i) }}
-              >
-                {line.highlight ? (
-                  <span className="relative inline-block">
-                    {/* The band is an absolute layer rather than padding, and
-                        that is the fix for it. In the reference the block runs
-                        well past the words on both sides; expressed as padding
-                        that overhang lands in layout, so the line measures wider
-                        and has to size itself DOWN to fit — the emphasised line
-                        came out smaller than its neighbours, the opposite of the
-                        intent. As a layer it bleeds past the measure for free
-                        and the type keeps its size. */}
-                    <span
-                      className="absolute -left-[0.42em] -right-[0.42em] top-[0.06em] bottom-[0.08em] bg-creator-pink/45"
-                      aria-hidden="true"
-                    >
-                      {/* Selection-handle dot at the leading corner. Solid, not
-                          tinted — in the reference it reads as a control on the
-                          band, so it has to be denser than the band itself. */}
-                      <span className="absolute left-0 top-0 h-[0.3em] w-[0.3em] -translate-x-1/2 -translate-y-1/2 rounded-full bg-creator-pink" />
-                    </span>
-                    <span className="relative">{line.text}</span>
-                  </span>
-                ) : (
-                  line.text
-                )}
-              </span>
-            ))}
-          </h1>
-
+          <SquishyHeadline
+            lines={HEADLINE_LINES}
+            lineSize={lineSize}
+            containerRef={rootRef}
+            highlightColor="bg-creator-pink/30"
+          />
         </div>
 
         <p className="hero-rise mt-5 md:mt-4 font-body text-[14px] md:text-[15px] leading-[1.55] text-slate max-w-[360px]">
           {content.hero.subheadline}
         </p>
 
-        <a
+        <SlidingScribbleButton
           href={content.ctaHref}
-          className="hero-rise pointer-events-auto mt-6 md:mt-5 inline-flex items-center justify-center rounded-[10px] border-[1.5px] border-[#241638] bg-[#caa6ec] text-ink-deep font-body font-medium text-[14px] px-5 py-2.5 hover:bg-[#bd93e7] active:scale-[0.98] transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
-        >
-          {content.hero.ctaLabel}
-        </a>
-
-        {/* `content.hero.ctaFootnote` is deliberately NOT rendered. A small
-            tagline under the CTA is a fifth text element in a hero that already
-            carries headline, subhead and CTA, and it was spending ~30px of
-            vertical room at exactly the point where the copy meets the
-            character. The value it carried is already in the subheadline. Left
-            in personaContent so other personas can still use it. */}
+          label={content.hero.ctaLabel}
+          accentColor="#ff77cd"
+          className="hero-rise mt-6 md:mt-5"
+        />
       </div>
 
-      {/* `aspect` gives the scene its natural height; `max-h` stops it eating
-          the copy's room on a short phone, where it letterboxes horizontally
-          instead. Both are dropped on md+, where it goes full-bleed. */}
-      <div className="hero-scene relative w-full shrink-0 aspect-[420/500] max-h-[46svh] lg:absolute lg:inset-0 lg:aspect-auto lg:max-h-none">
+      {/* 3D Perspective Parallax Scene */}
+      <div 
+        ref={sceneRef}
+        className="hero-scene relative w-full shrink-0 aspect-[420/500] max-h-[46svh] lg:absolute lg:inset-0 lg:aspect-auto lg:max-h-none perspective-1200 transform-style-3d will-change-transform"
+      >
         <CreatorRibbon />
       </div>
     </section>

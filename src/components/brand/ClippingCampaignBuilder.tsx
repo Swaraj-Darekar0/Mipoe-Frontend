@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageCropInput } from "@/components/ui/ImageCropInput";
+import { StatusPill } from "@/components/ui/PortalPrimitives";
 import { useToast } from "@/hooks/use-toast";
 import { createCampaign, uploadCampaignImage, getBrandProfile } from "@/lib/api";
 import { compressImage } from "@/utils/imageCompression";
@@ -285,25 +286,27 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-zinc-200/80 shadow-xs overflow-hidden">
+    <div className="w-full bg-white rounded-2xl border border-black/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
       {/* Header Banner */}
-      <div className="px-5 py-5 sm:px-6 sm:py-6 border-b border-zinc-100 bg-gradient-to-r from-purple-50/70 via-indigo-50/40 to-blue-50/30">
+      <div className="px-5 py-5 sm:px-6 border-b border-black/[0.08] bg-[#fafafb]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 border border-purple-200/80 shadow-xs">
+            <div className="size-10 rounded-xl bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0 border border-brand-blue/20">
               <Scissors className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900">
+                <h2 className="font-display text-lg sm:text-xl font-bold tracking-tight text-ink">
                   Launch Clipping Campaign
                 </h2>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                  <Video className="w-3 h-3" />
-                  Clipping & Short-Form
-                </span>
+                <StatusPill tone="brand">
+                  <span className="inline-flex items-center gap-1">
+                    <Video className="w-3 h-3" />
+                    Clipping & Short-Form
+                  </span>
+                </StatusPill>
               </div>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-slate mt-0.5">
                 Incentivize video editors to extract high-engagement vertical reels and shorts from your long-form footage.
               </p>
             </div>
@@ -315,7 +318,7 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
       <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-6">
         {/* Cover Image Upload (16:9) */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600">
+          <label className="block font-mono text-[11px] font-bold uppercase tracking-widest text-steel">
             Campaign Cover Banner (16:9)
           </label>
           <ImageCropInput
@@ -325,24 +328,25 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
               setImageFile(file);
             }}
             aspectRatio="16:9"
+            accent="brand"
             label=""
             placeholder="Upload 16:9 campaign cover image for video editors"
             disabled={loading}
           />
-          <p className="text-[11px] text-zinc-400">
+          <p className="text-[11px] text-steel">
             Recommended ratio 16:9 (1280×720px). Supports JPG, PNG, or WebP up to 5MB.
           </p>
         </div>
 
         {/* Section 1: Campaign Details */}
-        <div className="space-y-4 pt-2 border-t border-zinc-100">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+        <div className="space-y-4 pt-4 border-t border-black/[0.08]">
+          <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-steel">
             1. Campaign Details
           </h3>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-zinc-700">
-              Campaign Name <span className="text-purple-600">*</span>
+            <label className="block text-xs font-semibold text-ink">
+              Campaign Name <span className="text-brand-blue">*</span>
             </label>
             <Input
               type="text"
@@ -350,19 +354,19 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Founders Podcast Episode #24 Viral Clips"
               required
-              className="rounded-xl border-zinc-200 text-sm focus:border-purple-500 focus:ring-purple-500"
+              className="rounded-xl border-black/15 text-sm focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-zinc-700">
+              <label className="block text-xs font-semibold text-ink">
                 Content Category
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-zinc-200 bg-white text-sm text-zinc-800 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
+                className="w-full h-10 px-3 rounded-xl border border-black/15 bg-white text-sm text-ink focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 transition-colors duration-150"
               >
                 {getAvailableCampaignCategories().map((cat) => (
                   <option key={cat.value} value={cat.value}>
@@ -373,32 +377,32 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-zinc-700">
-                Target Platform <span className="text-purple-600">*</span>
+              <label className="block text-xs font-semibold text-ink">
+                Target Platform <span className="text-brand-blue">*</span>
               </label>
               <div className="grid grid-cols-2 gap-2 h-10">
                 <button
                   type="button"
                   onClick={() => setPlatform("Instagram")}
-                  className={`flex items-center justify-center gap-1.5 px-3 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 px-3 rounded-xl border text-xs font-semibold transition-colors duration-150 cursor-pointer ${
                     platform === "Instagram"
-                      ? "bg-purple-50 border-purple-300 text-purple-700 shadow-xs"
-                      : "bg-zinc-50/70 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
+                      ? "bg-brand-blue/10 border-brand-blue text-brand-blue"
+                      : "bg-black/[0.02] border-black/10 text-slate hover:bg-black/[0.04]"
                   }`}
                 >
-                  <Instagram className="w-3.5 h-3.5 text-pink-600" />
+                  <Instagram className="w-3.5 h-3.5" />
                   Instagram
                 </button>
                 <button
                   type="button"
                   onClick={() => setPlatform("YouTube")}
-                  className={`flex items-center justify-center gap-1.5 px-3 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 px-3 rounded-xl border text-xs font-semibold transition-colors duration-150 cursor-pointer ${
                     platform === "YouTube"
-                      ? "bg-red-50 border-red-300 text-red-700 shadow-xs"
-                      : "bg-zinc-50/70 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
+                      ? "bg-brand-blue/10 border-brand-blue text-brand-blue"
+                      : "bg-black/[0.02] border-black/10 text-slate hover:bg-black/[0.04]"
                   }`}
                 >
-                  <Youtube className="w-3.5 h-3.5 text-red-600" />
+                  <Youtube className="w-3.5 h-3.5" />
                   YouTube
                 </button>
               </div>
@@ -406,7 +410,7 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-zinc-700">
+            <label className="block text-xs font-semibold text-ink">
               Campaign Description / Context
             </label>
             <textarea
@@ -414,20 +418,20 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Explain the footage themes, highlighted speakers, high-energy moments, and hook recommendations..."
               rows={3}
-              className="w-full text-sm p-3 rounded-xl border border-zinc-200 bg-white text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
+              className="w-full text-sm p-3 rounded-xl border border-black/15 bg-white text-ink placeholder:text-steel focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 transition-colors duration-150"
             />
           </div>
         </div>
 
         {/* Section 2: Source Asset & Performance Benchmarks */}
-        <div className="space-y-4 pt-2 border-t border-zinc-100">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+        <div className="space-y-4 pt-4 border-t border-black/[0.08]">
+          <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-steel">
             2. Source Video & Payout Benchmarks
           </h3>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-zinc-700">
-              Long-form Source Video Link / Cloud Drive URL <span className="text-purple-600">*</span>
+            <label className="block text-xs font-semibold text-ink">
+              Long-form Source Video Link / Cloud Drive URL <span className="text-brand-blue">*</span>
             </label>
             <div className="relative">
               <Input
@@ -436,23 +440,23 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
                 onChange={(e) => setSourceVideoLink(e.target.value)}
                 placeholder="https://youtube.com/watch?v=... or Google Drive / Dropbox link"
                 required
-                className="rounded-xl border-zinc-200 pl-9 text-sm focus:border-purple-500 focus:ring-purple-500"
+                className="rounded-xl border-black/15 pl-9 text-sm focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
               />
-              <Link2 className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+              <Link2 className="w-4 h-4 text-steel absolute left-3 top-3" />
             </div>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-steel">
               Editors will download footage from this source link to cut short-form clips. Ensure public/view permissions are enabled.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold text-zinc-700">
+              <div className="flex items-center justify-between gap-2">
+                <label className="block text-xs font-semibold text-ink">
                   View Threshold (Payout Benchmark)
                 </label>
-                <span className="text-[11px] font-medium text-purple-600">
-                  Multiples of 1,000 views
+                <span className="font-mono text-[11px] font-semibold text-brand-blue">
+                  Multiples of 1,000
                 </span>
               </div>
               <div className="relative">
@@ -464,21 +468,21 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
                   onChange={handleViewThresholdChange}
                   onBlur={handleViewThresholdBlur}
                   placeholder="e.g. 1000"
-                  className="rounded-xl border-zinc-200 pl-9 text-sm focus:border-purple-500 focus:ring-purple-500"
+                  className="rounded-xl border-black/15 pl-9 font-mono tabular-nums text-sm focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
                 />
-                <TrendingUp className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+                <TrendingUp className="w-4 h-4 text-steel absolute left-3 top-3" />
               </div>
-              <p className="text-[11px] text-zinc-400">
+              <p className="text-[11px] text-steel">
                 Minimum views a clip must hit before payout is unlocked (min 1,000 views).
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold text-zinc-700">
+              <div className="flex items-center justify-between gap-2">
+                <label className="block text-xs font-semibold text-ink">
                   CPV per 1,000 Views (₹)
                 </label>
-                <span className="text-[11px] font-medium text-purple-600">
+                <span className="font-mono text-[11px] font-semibold text-brand-blue">
                   Multiples of ₹100
                 </span>
               </div>
@@ -491,11 +495,11 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
                   onChange={handleCpvChange}
                   onBlur={handleCpvBlur}
                   placeholder="e.g. 100"
-                  className="rounded-xl border-zinc-200 pl-9 text-sm focus:border-purple-500 focus:ring-purple-500"
+                  className="rounded-xl border-black/15 pl-9 font-mono tabular-nums text-sm focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
                 />
-                <Coins className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+                <Coins className="w-4 h-4 text-steel absolute left-3 top-3" />
               </div>
-              <p className="text-[11px] text-zinc-400">
+              <p className="text-[11px] text-steel">
                 Rate paid to editors per 1,000 verified views achieved.
               </p>
             </div>
@@ -503,20 +507,20 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
         </div>
 
         {/* Section 3: Custom Clipping Instructions & Rules */}
-        <div className="space-y-4 pt-2 border-t border-zinc-100">
+        <div className="space-y-4 pt-4 border-t border-black/[0.08]">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+            <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-steel">
               3. Clipping Instructions & Rules
             </h3>
-            <span className="text-[11px] text-zinc-400">
+            <span className="font-mono text-[11px] text-steel tabular-nums">
               {rules.length} rule{rules.length !== 1 ? "s" : ""}
             </span>
           </div>
 
-          <div className="bg-zinc-50/70 p-4 rounded-xl border border-zinc-200/70 space-y-2.5">
+          <div className="bg-black/[0.02] p-4 rounded-xl border border-black/[0.08] space-y-2.5">
             {rules.map((rule, index) => (
               <div key={index} className="flex items-center gap-2">
-                <span className="text-xs font-bold text-zinc-400 w-5 shrink-0 text-center">
+                <span className="font-mono text-xs font-bold text-steel w-5 shrink-0 text-center tabular-nums">
                   {index + 1}.
                 </span>
                 <input
@@ -524,13 +528,13 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
                   value={rule}
                   onChange={(e) => handleUpdateRule(index, e.target.value)}
                   placeholder={`Rule #${index + 1}...`}
-                  className="flex-1 border border-zinc-200 rounded-lg px-3 py-1.5 text-xs sm:text-sm bg-white text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
+                  className="flex-1 border border-black/15 rounded-lg px-3 py-1.5 text-xs sm:text-sm bg-white text-ink placeholder:text-steel focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 transition-colors duration-150"
                 />
                 {rules.length > 1 && (
                   <button
                     type="button"
                     onClick={() => handleRemoveRule(index)}
-                    className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                    className="p-1.5 text-steel hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors duration-150 cursor-pointer"
                     title="Remove rule"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -542,7 +546,7 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
             <button
               type="button"
               onClick={handleAddRule}
-              className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-purple-600 hover:text-purple-700 hover:bg-purple-50 px-3 py-1.5 rounded-lg transition cursor-pointer"
+              className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-blue/10 px-3 py-1.5 rounded-lg transition-colors duration-150 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               Add Rule
@@ -551,14 +555,14 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
         </div>
 
         {/* Section 4: Schedule & Advanced Rules */}
-        <div className="space-y-4 pt-2 border-t border-zinc-100">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+        <div className="space-y-4 pt-4 border-t border-black/[0.08]">
+          <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-steel">
             4. Schedule & Advanced Rules
           </h3>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-zinc-700">
-              Campaign Deadline <span className="text-purple-600">*</span>
+            <label className="block text-xs font-semibold text-ink">
+              Campaign Deadline <span className="text-brand-blue">*</span>
             </label>
             <div className="relative">
               <Input
@@ -567,37 +571,37 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
                 required
-                className="rounded-xl border-zinc-200 pl-9 text-sm focus:border-purple-500 focus:ring-purple-500"
+                className="rounded-xl border-black/15 pl-9 font-mono text-sm focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
               />
-              <Calendar className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+              <Calendar className="w-4 h-4 text-steel absolute left-3 top-3" />
             </div>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-steel">
               Deadline date after which clip submissions will close.
             </p>
           </div>
 
           {/* Optional Advanced Accordion */}
-          <div className="border border-zinc-200/80 rounded-xl overflow-hidden">
+          <div className="border border-black/10 rounded-xl overflow-hidden">
             <button
               type="button"
               onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-              className="w-full flex items-center justify-between p-3.5 text-left text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition cursor-pointer"
+              className="w-full flex items-center justify-between p-3.5 text-left text-xs font-semibold text-ink hover:bg-black/[0.02] transition-colors duration-150 cursor-pointer"
             >
               <span className="flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-purple-500" />
+                <FileText className="w-3.5 h-3.5 text-brand-blue" />
                 Advanced Tags & Audio Rules (Optional)
               </span>
               {isAdvancedOpen ? (
-                <ChevronUp className="w-4 h-4 text-zinc-400" />
+                <ChevronUp className="w-4 h-4 text-steel" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-zinc-400" />
+                <ChevronDown className="w-4 h-4 text-steel" />
               )}
             </button>
 
             {isAdvancedOpen && (
-              <div className="p-4 bg-zinc-50/50 border-t border-zinc-200/80 space-y-3">
+              <div className="p-4 bg-[#fafafb] border-t border-black/[0.08] space-y-3">
                 <div className="space-y-1">
-                  <label className="block text-[11px] font-semibold text-zinc-600">
+                  <label className="block text-[11px] font-semibold text-slate">
                     Mandatory Hashtags
                   </label>
                   <Input
@@ -605,11 +609,11 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
                     value={hashtag}
                     onChange={(e) => setHashtag(e.target.value)}
                     placeholder="#ClippingCampaign #ViralPodcast #Highlight"
-                    className="rounded-lg border-zinc-200 text-xs bg-white focus:border-purple-500"
+                    className="rounded-lg border-black/15 text-xs bg-white focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-[11px] font-semibold text-zinc-600">
+                  <label className="block text-[11px] font-semibold text-slate">
                     Audio / Track Directives
                   </label>
                   <Input
@@ -617,7 +621,7 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
                     value={audio}
                     onChange={(e) => setAudio(e.target.value)}
                     placeholder="e.g. Original speaker audio or trending background music"
-                    className="rounded-lg border-zinc-200 text-xs bg-white focus:border-purple-500"
+                    className="rounded-lg border-black/15 text-xs bg-white focus-visible:border-brand-blue focus-visible:ring-brand-blue/20"
                   />
                 </div>
               </div>
@@ -627,34 +631,35 @@ export const ClippingCampaignBuilder: React.FC<ClippingCampaignBuilderProps> = (
 
         {/* Alerts */}
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-2.5 text-xs text-rose-700">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-500/25 flex items-center gap-2.5 text-xs text-rose-700">
             <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2.5 text-xs text-emerald-700">
+          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-500/25 flex items-center gap-2.5 text-xs text-emerald-700">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{success}</span>
           </div>
         )}
 
         {/* Footer Actions */}
-        <div className="pt-4 border-t border-zinc-100 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3">
+        <div className="pt-4 border-t border-black/[0.08] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel ? onCancel : () => navigate("/brand/dashboard")}
             disabled={loading}
-            className="w-full sm:w-auto rounded-xl border-zinc-200 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+            className="w-full sm:w-auto text-xs"
           >
             Cancel
           </Button>
           <Button
             type="submit"
+            variant="brand"
             disabled={loading}
-            className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-semibold shadow-xs transition active:scale-[0.98]"
+            className="w-full sm:w-auto text-xs"
           >
             {loading ? "Launching Campaign..." : "Launch Clipping Campaign"}
           </Button>

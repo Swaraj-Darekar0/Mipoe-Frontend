@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap');
 
 /* The separators here MUST be bare `&`. This URL previously carried `&amp;`,
    which Google answers with a 200 and a stylesheet containing ONLY the first
    family — `amp;family=...` is an unknown parameter and is dropped silently.
    Space Mono and IBM Plex Mono were never actually loading. */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
 /* Abril Fatface — the hero display face. Single weight by design; it is a fat
    didone and has no other cut, so never ask it for a bold. */
 @import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap');
@@ -134,6 +134,66 @@
   .dg-scroll-lock {
     overflow: hidden;
   }
+
+  .line-mask {
+    overflow: clip;
+    display: block;
+  }
+
+  .perspective-1200 {
+    perspective: 1200px;
+  }
+
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+
+  .button-093 {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    padding: 0.65em 1.25em;
+    border-radius: 9999px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.25s ease, box-shadow 0.3s ease;
+  }
+
+  .button-093:hover {
+    transform: scale(1.02);
+  }
+
+  .button-093:active {
+    transform: scale(0.98);
+  }
+
+  .button-093__dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .button-093__dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.4s ease;
+  }
+
+  .button-093:hover .button-093__dot:nth-child(1) {
+    transform: translateY(-2px);
+  }
+
+  .button-093:hover .button-093__dot:nth-child(2) {
+    transform: translateY(2px);
+    transition-delay: 0.05s;
+  }
+
+  .button-093:hover .button-093__dot:nth-child(3) {
+    transform: translateY(-2px);
+    transition-delay: 0.1s;
+  }
 }
 
 
@@ -146,6 +206,7 @@
      dead-ended and a missing webfont fell through to the browser default. */
   --font-display: "Space Grotesk", sans-serif;
   --font-body: "Inter", sans-serif;
+  --font-mono: "Space Mono", "IBM Plex Mono", monospace;
   /* Serif faces fall back to serif — a display serif landing on Arial is worse
      than it landing on Georgia. */
   --font-HomeDisplay: "Playfair Display", Georgia, serif;
@@ -195,23 +256,24 @@
   --color-dusty-grey: #878787;
   --color-snow: #fbfbfb;
 
-  /* Persona section design system (sellr rebrand) — Notion-inspired tokens.
-     Scoped to the new persona-toggling sections only; kept out of the
-     existing radius/typography scale so shadcn primitives elsewhere are unaffected. */
-  --color-canvas: #ffffff;
-  --color-surface: #f6f5f4;
-  --color-surface-soft: #fafaf9;
-  --color-hairline: #e5e3df;
-  --color-hairline-soft: #ede9e4;
-  --color-hairline-strong: #c8c4be;
+  /* Elevated Swiss Monochrome System — Pure White Foundation + Obsidian Contrast */
+  --color-canvas: #fafafb; /* Crisp studio paper white (prevents harsh eye fatigue, elevates pure white cards) */
+  --color-surface: #ffffff; /* Pure optic white surface */
+  --color-surface-soft: #f4f4f6;
+  --color-hairline: rgba(18, 19, 22, 0.08); /* Modern, crisp translucent border */
+  --color-hairline-soft: rgba(18, 19, 22, 0.04);
+  --color-hairline-strong: rgba(18, 19, 22, 0.16);
 
-  --color-ink: #1a1a1a;
-  --color-ink-deep: #000000;
-  --color-charcoal: #37352f;
-  --color-slate: #5d5b54;
-  --color-steel: #787671;
-  --color-stone: #a4a097;
-  --color-muted-notion: #bbb8b1;
+  --color-ink: #0e0e11; /* Deep obsidian black (19.8:1 contrast, razor-sharp edge) */
+  --color-ink-deep: #050507;
+  --color-charcoal: #222227;
+  --color-slate: #52525c; /* Refined zinc graphite */
+  --color-steel: #71717a;
+  --color-stone: #a1a1aa;
+  --color-muted-notion: #d4d4d8;
+
+  --color-cobalt: #0038ff; /* Electric Cobalt Blue */
+  --color-lava: #ff5500; /* Dynamic Flame */
 
   --color-brand-navy: #0a1530;
   --color-brand-navy-deep: #070f24;

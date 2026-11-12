@@ -3,9 +3,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import BrandLayout from "@/layouts/BrandLayout";
 import { UgcCampaignBuilder } from "@/components/brand/UgcCampaignBuilder";
 import { ClippingCampaignBuilder } from "@/components/brand/ClippingCampaignBuilder";
+import { PortalPageHeader } from "@/components/ui/PortalPrimitives";
+import { Button } from "@/components/ui/button";
 import { getBrandProfile } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 
 const CreateCampaign: React.FC = () => {
   const navigate = useNavigate();
@@ -59,12 +61,39 @@ const CreateCampaign: React.FC = () => {
 
   return (
     <BrandLayout>
-      <div className="w-full max-w-4xl mx-auto py-2 sm:py-4">
+      <div className="w-full max-w-4xl mx-auto py-2 sm:py-4 space-y-6">
+        <PortalPageHeader
+          eyebrow="CAMPAIGN STUDIO"
+          title={isClipping ? "Clipping" : "Influencer UGC"}
+          highlighted="Studio"
+          subtitle={
+            isClipping
+              ? "Configure source footage, view benchmarks, and CPV payouts for short-form editors."
+              : "Set creator tiers, content briefs, and verified view payouts for UGC reels."
+          }
+          accent="brand"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate("/brand/dashboard")}
+              className="w-full sm:w-auto gap-1.5"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          }
+        />
+
         {checkingCompliance ? (
-          <div className="flex flex-col items-center justify-center min-h-[360px] bg-white rounded-2xl border border-zinc-200/80 shadow-xs p-8 text-center">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-3" />
-            <p className="text-sm font-semibold text-zinc-700">Verifying brand authorization...</p>
-            <p className="text-xs text-zinc-400 mt-1">Preparing campaign studio workspace</p>
+          <div className="flex flex-col items-center justify-center min-h-[340px] bg-white rounded-2xl border border-black/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] p-8 text-center">
+            <Loader2 className="w-7 h-7 text-brand-blue animate-spin mb-3" />
+            <p className="font-display text-sm font-semibold text-ink">
+              Verifying brand authorization...
+            </p>
+            <p className="font-mono text-xs text-steel mt-1">
+              Preparing campaign studio workspace
+            </p>
           </div>
         ) : isClipping ? (
           <ClippingCampaignBuilder

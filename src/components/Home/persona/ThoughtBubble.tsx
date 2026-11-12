@@ -31,11 +31,11 @@ import gsap from "gsap";
  */
 export const DEFAULT_COMMENTS = [
   "drop the link",
-  "don't gatekeep",
+  "open to all creators",
   "link. now.",
   "where's the link",
   "send it na",
-  "stop gatekeeping",
+  "instant payouts",
   "spill. link.",
   "okay but link",
   "kaha se liya",

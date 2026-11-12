@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -30,15 +29,15 @@ import { Label } from "@/components/ui/label";
 import BrandLayout from "@/layouts/BrandLayout";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowDownRight, ArrowUpRight, Download, MoreVertical, Wallet, TrendingUp, DollarSign, Clock, ArrowLeft, ShieldCheck, Building2, QrCode } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Download, MoreVertical, Wallet, DollarSign, Loader2, ArrowLeft, ShieldCheck, Building2, QrCode } from "lucide-react";
 import { getTransactions, getUserId, getRole, getBrandRefundableSummary, brandWithdrawFunds, BrandRefundableSummary } from "@/lib/api";
+import { PortalPageHeader, MetricCell, StatusPill } from "@/components/ui/PortalPrimitives";
 
-// 1. UPDATE INTERFACE TO MATCH API.TS (String IDs)
 interface Transaction {
-  id: number; // Transaction ID is still a number (Serial)
+  id: number;
   user_type: string;
-  user_id: string; // 👈 CHANGED to string (UUID)
-  campaign_id?: number; // 👈 KEEP as number (Campaign ID is Serial)
+  user_id: string;
+  campaign_id?: number;
   amount: number;
   type: string;
   status: string;
@@ -87,19 +86,13 @@ const BrandTransactions = () => {
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-
-      // Verify user is authenticated as brand
       if (!userId || role !== "brand") {
-        console.warn("Auth check failed:", { userId, role });
         navigate("/login");
         return;
       }
 
-      // 3. Call API with string ID
-      // @ts-ignore (Temporary ignore if api.ts hasn't updated types yet)
+      // @ts-ignore
       const response = await getTransactions('brand', userId);
-      
-      // Map database flat fields, status, and campaign_funding type to the frontend interface structure
       const processed = (response.transactions || []).map((t: any) => {
         const rawStatus = (t.status || "").toLowerCase();
         const mappedStatus = (rawStatus === "completed" || rawStatus === "success" || rawStatus === "paid")
@@ -131,7 +124,6 @@ const BrandTransactions = () => {
     if (userId) {
       fetchTransactions();
     } else {
-      console.warn("No user ID found, redirecting to login");
       navigate("/login");
     }
   }, [userId, role]);
@@ -239,12 +231,10 @@ const BrandTransactions = () => {
       filtered = filtered.filter((t) => t.status === statusFilter);
     }
 
-    // 4. Fix Campaign Filter Logic
     if (campaignFilter !== "all") {
       if (campaignFilter === "null-campaign") {
         filtered = filtered.filter(isDeletedCampaignTransaction);
       } else {
-        // Parse the filter value to Int because campaign_id is a number
         filtered = filtered.filter((t) => t.campaign_id === parseInt(campaignFilter) && t.campaign);
       }
     }
@@ -273,7 +263,6 @@ const BrandTransactions = () => {
     pending: campaignFilteredTxns.filter((t) => t.status === "pending").length,
   };
 
-  // 5. Fix Campaign Options Reduce
   const campaignOptions = transactions.reduce((acc, t) => {
     if (t.campaign_id && t.campaign && !acc.some(c => c.id === t.campaign_id)) {
       acc.push({ id: t.campaign_id, name: t.campaign.name });
@@ -286,17 +275,17 @@ const BrandTransactions = () => {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "allocation":
-        return <ArrowDownRight className="w-4 h-4" />;
+        return <ArrowDownRight className="w-4 h-4 text-brand-blue" />;
       case "distribution":
-        return <ArrowUpRight className="w-4 h-4" />;
+        return <ArrowUpRight className="w-4 h-4 text-emerald-700" />;
       case "refund":
-        return <ArrowDownRight className="w-4 h-4" />;
+        return <ArrowDownRight className="w-4 h-4 text-amber-700" />;
       case "deposit":
-        return <ArrowDownRight className="w-4 h-4" />;
+        return <ArrowDownRight className="w-4 h-4 text-brand-blue" />;
       case "withdrawal":
-        return <ArrowUpRight className="w-4 h-4" />;
+        return <ArrowUpRight className="w-4 h-4 text-rose-700" />;
       default:
-        return <DollarSign className="w-4 h-4" />;
+        return <DollarSign className="w-4 h-4 text-steel" />;
     }
   };
 
@@ -304,40 +293,36 @@ const BrandTransactions = () => {
     const s = (status || "").toLowerCase();
     switch (s) {
       case "success":
-        return <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium px-2.5 py-0.5 rounded-full shadow-sm">Success</Badge>;
+        return <StatusPill tone="success" showDot>Success</StatusPill>;
       case "pending":
-        return <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200/50 hover:bg-amber-100 font-medium px-2.5 py-0.5 rounded-full">Pending</Badge>;
+        return <StatusPill tone="warning" showDot>Pending</StatusPill>;
       case "failed":
-        return <Badge variant="destructive" className="bg-rose-500 hover:bg-rose-600 text-white font-medium px-2.5 py-0.5 rounded-full shadow-sm">Failed</Badge>;
+        return <StatusPill tone="danger">Failed</StatusPill>;
       case "cancelled":
-        return <Badge variant="outline" className="text-gray-500 border-gray-300 font-medium px-2.5 py-0.5 rounded-full">Cancelled</Badge>;
+        return <StatusPill tone="neutral">Cancelled</StatusPill>;
       default:
-        return <Badge className="font-medium px-2.5 py-0.5 rounded-full">{status}</Badge>;
+        return <StatusPill tone="neutral">{status}</StatusPill>;
     }
   };
 
   const getTypeBadge = (type: string) => {
-    const colors: Record<string, string> = {
-      allocation: "bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50",
-      distribution: "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50",
-      refund: "bg-orange-50 text-orange-700 border-orange-200/60 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/50",
-      deposit: "bg-purple-50 text-purple-700 border-purple-200/60 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800/50",
-      withdrawal: "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800/50",
-      reclaim: "bg-red-50 text-red-700 border-red-200/60 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/50",
+    const toneMap: Record<string, "brand" | "success" | "creator" | "danger" | "warning" | "neutral"> = {
+      allocation: "brand",
+      distribution: "success",
+      refund: "creator",
+      deposit: "brand",
+      withdrawal: "danger",
+      reclaim: "warning",
     };
-    const colorClass = colors[type] || "bg-gray-50 text-gray-700 border-gray-200";
-    return (
-      <Badge className={`${colorClass} border font-semibold px-2.5 py-0.5 rounded-md`}>
-        {type === "campaign_funding" ? "Allocation" : type.charAt(0).toUpperCase() + type.slice(1)}
-      </Badge>
-    );
+    const label = type === "campaign_funding" ? "Allocation" : type.charAt(0).toUpperCase() + type.slice(1);
+    return <StatusPill tone={toneMap[type] || "neutral"}>{label}</StatusPill>;
   };
 
-  const getColumnsForType = (type: string, navigate: ReturnType<typeof useNavigate>): Column[] => {
+  const getColumnsForType = (type: string, navigateFn: ReturnType<typeof useNavigate>): Column[] => {
     const commonColumns: Column[] = [
       {
         header: "Date",
-        accessor: (t) => new Date(t.created_at).toLocaleDateString("en-IN"),
+        accessor: (t) => <span className="font-mono text-xs text-slate">{new Date(t.created_at).toLocaleDateString("en-IN")}</span>,
       },
       {
         header: "Type",
@@ -350,11 +335,11 @@ const BrandTransactions = () => {
       },
       {
         header: "Amount",
-        accessor: (t) =>
-          `₹${t.amount.toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`,
+        accessor: (t) => (
+          <span className="font-mono font-bold tabular-nums text-ink">
+            ₹{t.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        ),
       },
       {
         header: "Status",
@@ -362,7 +347,7 @@ const BrandTransactions = () => {
       },
       {
         header: "Description",
-        accessor: (t) => t.description || '-',
+        accessor: (t) => <span className="text-slate text-xs">{t.description || '-'}</span>,
       },
     ];
   
@@ -373,12 +358,13 @@ const BrandTransactions = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/brand/dashboard/${t.campaign_id}`)}
+            onClick={() => navigateFn(`/brand/dashboard/${t.campaign_id}`)}
+            className="text-brand-blue hover:bg-brand-blue/5 font-semibold"
           >
             {t.campaign.name}
           </Button>
         ) : (
-          <span className="text-gray-500 font-medium">
+          <span className="text-steel font-medium text-xs">
             {["allocation", "refund", "distribution"].includes(t.type) || t.campaign_id
               ? "N/A (Deleted Campaign)"
               : "-"}
@@ -388,19 +374,19 @@ const BrandTransactions = () => {
   
     const creatorColumn: Column = {
       header: "Creator",
-      accessor: (t) => t.creator?.username || (t.user_id ? `User` : '-'),
+      accessor: (t) => t.creator?.username || (t.user_id ? "User" : "-"),
     };
   
     const externalIdColumn: Column = {
       header: "Ext. ID",
-      accessor: (t) => t.external_txn_id ? t.external_txn_id.slice(0, 8) + '...' : '-',
+      accessor: (t) => <span className="font-mono text-xs text-steel">{t.external_txn_id ? t.external_txn_id.slice(0, 8) + "..." : "-"}</span>,
     };
 
     const actionsColumn: Column = {
       header: "Actions",
       accessor: () => (
         <Button variant="ghost" size="sm">
-          <MoreVertical className="w-4 h-4" />
+          <MoreVertical className="w-4 h-4 text-steel" />
         </Button>
       ),
     };
@@ -410,36 +396,36 @@ const BrandTransactions = () => {
       case "reclaim":
       case "withdrawal":
         return [
-          commonColumns[0], // Date
-          commonColumns[1], // Type
-          commonColumns[2], // Amount
-          commonColumns[3], // Status
-          commonColumns[4], // Description
+          commonColumns[0],
+          commonColumns[1],
+          commonColumns[2],
+          commonColumns[3],
+          commonColumns[4],
           externalIdColumn,
           actionsColumn,
         ];
       case "allocation":
       case "refund":
         return [
-          commonColumns[0], // Date
-          commonColumns[1], // Type
+          commonColumns[0],
+          commonColumns[1],
           campaignColumn,
-          commonColumns[2], // Amount
-          commonColumns[3], // Status
-          commonColumns[4], // Description
+          commonColumns[2],
+          commonColumns[3],
+          commonColumns[4],
           actionsColumn,
         ];
       case "distribution":
         return [
-          commonColumns[0], // Date
-          commonColumns[1], // Type
+          commonColumns[0],
+          commonColumns[1],
           creatorColumn,
           campaignColumn,
-          commonColumns[2], // Amount
-          commonColumns[3], // Status
+          commonColumns[2],
+          commonColumns[3],
           actionsColumn,
         ];
-      default: // Fallback for penalty, bonus, etc.
+      default:
         return [
           commonColumns[0],
           commonColumns[1],
@@ -483,97 +469,80 @@ const BrandTransactions = () => {
   return (
     <BrandLayout sidebar="none">
       <div className="space-y-8">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="space-y-1 sm:space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Transactions</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Manage and track all your campaign payments and refunds
-            </p>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={openRefundModal}
-              className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex-1 sm:flex-initial"
-            >
-              <ArrowUpRight className="w-4 h-4" />
-              Refund / Withdraw Funds
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/brand/dashboard")}
-              className="gap-2 flex-1 sm:flex-initial"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Dashboard
-            </Button>
-          </div>
-        </div>
+        <PortalPageHeader
+          eyebrow="02 // TREASURY LEDGER"
+          title="Transaction"
+          highlighted="History"
+          accent="brand"
+          subtitle="Manage and track all your campaign payments, allocations, and capital refunds."
+          action={
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <Button
+                variant="brand"
+                size="sm"
+                onClick={openRefundModal}
+                className="gap-2 flex-1 sm:flex-initial"
+              >
+                <ArrowUpRight className="w-4 h-4" />
+                Refund / Withdraw Funds
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/brand/dashboard")}
+                className="gap-2 flex-1 sm:flex-initial"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Dashboard
+              </Button>
+            </div>
+          }
+        />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Allocated</CardTitle>
-              <Wallet className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹{stats.totalAllocated.toLocaleString("en-IN")}</div>
-              <p className="text-xs text-muted-foreground">Budget allocated to campaigns</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Distributed</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹{stats.totalDistributed.toLocaleString("en-IN")}</div>
-              <p className="text-xs text-muted-foreground">Paid to creators</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Refunded</CardTitle>
-              <ArrowDownRight className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹{stats.totalRefunded.toLocaleString("en-IN")}</div>
-              <p className="text-xs text-muted-foreground">Refunds issued</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pending}</div>
-              <p className="text-xs text-muted-foreground">Pending transactions</p>
-            </CardContent>
-          </Card>
+          <MetricCell
+            label="Total Allocated"
+            value={`₹${stats.totalAllocated.toLocaleString("en-IN")}`}
+            sublabel="Budget allocated to campaigns"
+            valueClassName="text-brand-blue"
+          />
+          <MetricCell
+            label="Total Distributed"
+            value={`₹${stats.totalDistributed.toLocaleString("en-IN")}`}
+            sublabel="Paid out to creators"
+            valueClassName="text-emerald-700"
+          />
+          <MetricCell
+            label="Total Refunded"
+            value={`₹${stats.totalRefunded.toLocaleString("en-IN")}`}
+            sublabel="Capital refunds issued"
+          />
+          <MetricCell
+            label="Pending"
+            value={stats.pending}
+            sublabel="Pending settlements"
+            valueClassName="text-amber-700"
+          />
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="border-black/10 bg-white">
           <CardHeader>
-            <CardTitle>Filters</CardTitle>
+            <CardTitle className="font-display text-ink text-base">Filters</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Transaction Type</label>
+                <label className="block font-mono text-[10px] font-bold uppercase tracking-widest text-steel mb-2">
+                  Transaction Type
+                </label>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a type..." />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="deposit">Deposit</SelectItem>
                     <SelectItem value="reclaim">Reclaim</SelectItem>
                     <SelectItem value="allocation">Allocation</SelectItem>
@@ -584,7 +553,9 @@ const BrandTransactions = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Status</label>
+                <label className="block font-mono text-[10px] font-bold uppercase tracking-widest text-steel mb-2">
+                  Status
+                </label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
                     <SelectValue />
@@ -599,7 +570,9 @@ const BrandTransactions = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Campaign</label>
+                <label className="block font-mono text-[10px] font-bold uppercase tracking-widest text-steel mb-2">
+                  Campaign
+                </label>
                 <Select value={campaignFilter} onValueChange={setCampaignFilter}>
                   <SelectTrigger>
                     <SelectValue />
@@ -634,47 +607,91 @@ const BrandTransactions = () => {
         </Card>
 
         {/* Transactions Table */}
-        <Card>
+        <Card className="border-black/10 bg-white">
           <CardHeader>
-            <CardTitle>Transaction History</CardTitle>
-            <CardDescription>
+            <CardTitle className="font-display text-ink text-base">Transaction History</CardTitle>
+            <CardDescription className="text-slate text-xs">
               {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? "s" : ""} found for type: {typeFilter}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">Loading transactions...</div>
+              <div className="flex flex-col items-center justify-center py-10 text-slate gap-2">
+                <Loader2 className="w-6 h-6 animate-spin text-brand-blue" />
+                <span className="text-xs font-medium">Loading transactions...</span>
               </div>
             ) : filteredTransactions.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">No transactions found</div>
+              <div className="flex items-center justify-center py-10 text-slate text-sm">
+                No transactions found
               </div>
             ) : (
-              <div className="rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {columns.map((col) => (
-                        <TableHead key={col.header} className={col.header === "Amount" ? "text-right" : ""}>
-                          {col.header}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        {columns.map((col, index) => (
-                          <TableCell key={index} className={col.header === "Amount" ? "text-right font-medium" : ""}>
-                            {col.accessor(transaction)}
-                          </TableCell>
+              <>
+                {/* Mobile Cards */}
+                <div className="space-y-3 sm:hidden">
+                  {filteredTransactions.map((t) => (
+                    <div key={t.id} className="bg-black/[0.02] border border-black/10 rounded-xl p-4 space-y-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {getTypeIcon(t.type)}
+                          {getTypeBadge(t.type)}
+                        </div>
+                        <span className="font-mono font-bold tabular-nums text-sm text-ink shrink-0">
+                          ₹{t.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      {t.description && (
+                        <p className="text-xs text-slate break-words">{t.description}</p>
+                      )}
+                      {t.campaign?.name && (
+                        <button
+                          type="button"
+                          onClick={() => t.campaign_id && navigate(`/brand/dashboard/${t.campaign_id}`)}
+                          className="text-xs text-brand-blue font-semibold hover:underline block text-left"
+                        >
+                          {t.campaign.name}
+                        </button>
+                      )}
+                      <div className="flex items-center justify-between pt-2 border-t border-black/5">
+                        <span className="font-mono text-[11px] text-steel">
+                          {new Date(t.created_at).toLocaleDateString("en-IN")}
+                        </span>
+                        {getStatusBadge(t.status)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden sm:block rounded-xl border border-black/10 overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-black/[0.02] hover:bg-black/[0.02]">
+                        {columns.map((col) => (
+                          <TableHead
+                            key={col.header}
+                            className={`font-mono text-[10px] font-bold uppercase tracking-widest text-steel ${
+                              col.header === "Amount" ? "text-right" : ""
+                            }`}
+                          >
+                            {col.header}
+                          </TableHead>
                         ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTransactions.map((transaction) => (
+                        <TableRow key={transaction.id} className="hover:bg-black/[0.02]">
+                          {columns.map((col, index) => (
+                            <TableCell key={index} className={col.header === "Amount" ? "text-right font-medium" : ""}>
+                              {col.accessor(transaction)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -683,69 +700,65 @@ const BrandTransactions = () => {
         <Dialog open={isRefundModalOpen} onOpenChange={setIsRefundModalOpen}>
           <DialogContent className="sm:max-w-[480px]">
             <DialogHeader>
-              <div className="flex items-center justify-between pr-4">
-                <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                  <Wallet className="w-5 h-5 text-indigo-600" />
+              <div className="flex flex-wrap items-center justify-between gap-2 pr-4">
+                <DialogTitle className="font-display text-lg font-bold flex items-center gap-2 text-ink">
+                  <Wallet className="w-5 h-5 text-brand-blue" />
                   Withdraw Unspent Funds
                 </DialogTitle>
-                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-semibold">
-                  0% TDS (Capital Return)
-                </Badge>
+                <StatusPill tone="success">0% TDS (Capital Return)</StatusPill>
               </div>
-              <DialogDescription className="text-xs text-muted-foreground pt-1">
+              <DialogDescription className="text-xs text-slate pt-1">
                 Transfer unallocated funds from your brand wallet back to your verified Indian bank account or corporate UPI ID.
               </DialogDescription>
             </DialogHeader>
 
             {loadingSummary ? (
               <div className="py-8 text-center space-y-2">
-                <Clock className="w-6 h-6 animate-spin text-indigo-600 mx-auto" />
-                <p className="text-xs text-muted-foreground">Calculating locked campaign allocations...</p>
+                <Loader2 className="w-6 h-6 animate-spin text-brand-blue mx-auto" />
+                <p className="text-xs text-slate">Calculating locked campaign allocations...</p>
               </div>
             ) : (
               <div className="space-y-4 py-2">
-                {/* Balances Card */}
-                <div className="bg-zinc-50 border border-zinc-200/80 rounded-xl p-3.5 space-y-2">
+                <div className="bg-black/[0.02] border border-black/10 rounded-xl p-3.5 space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Total Wallet Balance:</span>
-                    <span className="font-semibold text-zinc-900 tabular-nums">
+                    <span className="text-slate">Total Wallet Balance:</span>
+                    <span className="font-mono font-semibold text-ink tabular-nums">
                       ₹{(refundableSummary?.wallet_balance || 0).toLocaleString("en-IN")}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground flex items-center gap-1">
+                    <span className="text-slate">
                       Locked in Active Campaigns ({refundableSummary?.active_campaign_count || 0}):
                     </span>
-                    <span className="font-semibold text-amber-600 tabular-nums">
+                    <span className="font-mono font-semibold text-amber-700 tabular-nums">
                       -₹{(refundableSummary?.active_campaign_locks || 0).toLocaleString("en-IN")}
                     </span>
                   </div>
-                  <div className="pt-2 border-t border-zinc-200 flex items-center justify-between text-sm font-bold">
-                    <span className="text-indigo-950">Max Refundable Now:</span>
-                    <span className="text-indigo-600 font-mono text-base tabular-nums">
+                  <div className="pt-2 border-t border-black/10 flex items-center justify-between text-sm font-bold">
+                    <span className="text-ink">Max Refundable Now:</span>
+                    <span className="text-brand-blue font-mono text-base tabular-nums">
                       ₹{(refundableSummary?.max_refundable_amount || 0).toLocaleString("en-IN")}
                     </span>
                   </div>
                 </div>
 
-                {/* Amount Input */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
-                    <Label htmlFor="refund-amount" className="text-xs font-semibold">
+                    <Label htmlFor="refund-amount" className="text-xs font-semibold text-ink">
                       Refund Amount (INR)
                     </Label>
                     {refundableSummary && refundableSummary.max_refundable_amount > 0 && (
                       <button
                         type="button"
                         onClick={() => setRefundAmount(refundableSummary.max_refundable_amount.toString())}
-                        className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
+                        className="text-[11px] font-mono font-semibold text-brand-blue hover:underline cursor-pointer"
                       >
                         Max (₹{refundableSummary.max_refundable_amount.toLocaleString("en-IN")})
                       </button>
                     )}
                   </div>
                   <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-zinc-400 font-bold text-base">₹</span>
+                    <span className="absolute left-3 top-2.5 text-steel font-mono font-bold text-base">₹</span>
                     <Input
                       id="refund-amount"
                       type="number"
@@ -754,22 +767,21 @@ const BrandTransactions = () => {
                       placeholder="e.g. 5000"
                       value={refundAmount}
                       onChange={(e) => setRefundAmount(e.target.value)}
-                      className="pl-8 font-semibold tabular-nums"
+                      className="pl-8 font-mono font-semibold tabular-nums"
                     />
                   </div>
                 </div>
 
-                {/* Payout Rails Tabs */}
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Disbursement Rail</Label>
+                  <Label className="text-xs font-semibold text-ink">Disbursement Rail</Label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setRefundPayoutMethod("upi")}
-                      className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer ${
                         refundPayoutMethod === "upi"
-                          ? "border-indigo-600 bg-indigo-50/50 text-indigo-700"
-                          : "border-zinc-200 hover:bg-zinc-50 text-zinc-600"
+                          ? "border-brand-blue bg-brand-blue/10 text-brand-blue"
+                          : "border-black/10 hover:bg-black/[0.02] text-slate"
                       }`}
                     >
                       <QrCode className="w-3.5 h-3.5" />
@@ -778,10 +790,10 @@ const BrandTransactions = () => {
                     <button
                       type="button"
                       onClick={() => setRefundPayoutMethod("bank")}
-                      className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer ${
                         refundPayoutMethod === "bank"
-                          ? "border-indigo-600 bg-indigo-50/50 text-indigo-700"
-                          : "border-zinc-200 hover:bg-zinc-50 text-zinc-600"
+                          ? "border-brand-blue bg-brand-blue/10 text-brand-blue"
+                          : "border-black/10 hover:bg-black/[0.02] text-slate"
                       }`}
                     >
                       <Building2 className="w-3.5 h-3.5" />
@@ -790,10 +802,9 @@ const BrandTransactions = () => {
                   </div>
                 </div>
 
-                {/* Conditional Inputs */}
                 {refundPayoutMethod === "upi" ? (
                   <div className="space-y-1.5">
-                    <Label htmlFor="refund-upi" className="text-xs font-semibold">
+                    <Label htmlFor="refund-upi" className="text-xs font-semibold text-ink">
                       Corporate / Business UPI ID
                     </Label>
                     <Input
@@ -803,14 +814,14 @@ const BrandTransactions = () => {
                       onChange={(e) => setRefundUpiId(e.target.value)}
                       className="font-mono text-xs"
                     />
-                    <p className="text-[11px] text-zinc-500">
+                    <p className="text-[11px] text-slate">
                       Funds will be instantly dispatched to this VPA via domestic banking rails.
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="refund-holder" className="text-xs font-semibold">
+                      <Label htmlFor="refund-holder" className="text-xs font-semibold text-ink">
                         Account Holder Name
                       </Label>
                       <Input
@@ -821,9 +832,9 @@ const BrandTransactions = () => {
                         className="text-xs"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div className="space-y-1.5">
-                        <Label htmlFor="refund-acc" className="text-xs font-semibold">
+                        <Label htmlFor="refund-acc" className="text-xs font-semibold text-ink">
                           Account Number
                         </Label>
                         <Input
@@ -835,7 +846,7 @@ const BrandTransactions = () => {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="refund-ifsc" className="text-xs font-semibold">
+                        <Label htmlFor="refund-ifsc" className="text-xs font-semibold text-ink">
                           IFSC Code
                         </Label>
                         <Input
@@ -850,8 +861,7 @@ const BrandTransactions = () => {
                   </div>
                 )}
 
-                {/* Legal & Tax Banner */}
-                <div className="p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-xl space-y-1">
+                <div className="p-3 bg-emerald-50 border border-emerald-500/25 rounded-xl space-y-1">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
                     <span>0% TDS Applied (TDS-Exempt Capital Return)</span>
@@ -863,7 +873,7 @@ const BrandTransactions = () => {
               </div>
             )}
 
-            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <DialogFooter className="gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -873,6 +883,7 @@ const BrandTransactions = () => {
                 Cancel
               </Button>
               <Button
+                variant="brand"
                 size="sm"
                 onClick={handleWithdrawFunds}
                 disabled={
@@ -884,7 +895,6 @@ const BrandTransactions = () => {
                   parseFloat(refundAmount) <= 0 ||
                   parseFloat(refundAmount) > refundableSummary.max_refundable_amount
                 }
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 {submittingRefund ? "Processing Refund..." : `Confirm Withdrawal (₹${parseFloat(refundAmount || "0").toLocaleString("en-IN")})`}
               </Button>

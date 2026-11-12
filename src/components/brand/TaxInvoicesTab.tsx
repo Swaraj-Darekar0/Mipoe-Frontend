@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StatusPill } from "@/components/ui/PortalPrimitives";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Building2, 
-  ReceiptText, 
-  Download, 
-  CheckCircle2, 
-  ShieldCheck, 
-  FileSpreadsheet, 
-  Sparkles,
+import {
+  Building2,
+  ReceiptText,
+  CheckCircle2,
+  ShieldCheck,
+  FileSpreadsheet,
   Info,
   Edit3,
   Copy,
   Printer,
-  X
+  X,
+  Loader2,
 } from "lucide-react";
-import { 
-  getBrandTaxInvoices, 
-  updateBrandTaxDetails, 
-  BrandTaxInfo, 
-  BrandTaxInvoice 
+import {
+  getBrandTaxInvoices,
+  updateBrandTaxDetails,
+  BrandTaxInfo,
+  BrandTaxInvoice,
 } from "@/lib/api";
 
 export const TaxInvoicesTab: React.FC = () => {
@@ -141,7 +141,6 @@ export const TaxInvoicesTab: React.FC = () => {
     toast({
       title: `${label} Copied`,
       description: text,
-      className: "bg-zinc-900 text-white",
     });
   };
 
@@ -168,19 +167,19 @@ export const TaxInvoicesTab: React.FC = () => {
       <head>
         <title>Tax Invoice - ${inv.invoice_id}</title>
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 40px; color: #111; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 40px; color: #0b0d0e; }
           .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; }
-          .title { font-size: 24px; font-weight: 800; color: #4338ca; }
+          .title { font-size: 24px; font-weight: 800; color: #2b5ce6; }
           .subtitle { font-size: 13px; color: #6b7280; margin-top: 4px; }
           .grid { display: flex; justify-content: space-between; margin-top: 24px; }
           .box { width: 48%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.5; }
           .box-title { font-weight: 700; text-transform: uppercase; font-size: 11px; color: #6b7280; margin-bottom: 8px; }
           table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 13px; }
-          th { background: #f9fafb; border: 1px solid #e5e7eb; padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: #4b5563; }
+          th { background: #fafafb; border: 1px solid #e5e7eb; padding: 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: #4b5563; }
           td { border: 1px solid #e5e7eb; padding: 10px; }
           .total-box { margin-top: 24px; margin-left: auto; width: 320px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; font-size: 13px; }
           .total-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
-          .grand-total { font-weight: 800; font-size: 16px; color: #111; border-top: 2px solid #e5e7eb; padding-top: 8px; margin-top: 8px; }
+          .grand-total { font-weight: 800; font-size: 16px; color: #0b0d0e; border-top: 2px solid #e5e7eb; padding-top: 8px; margin-top: 8px; }
           .footer { margin-top: 40px; font-size: 11px; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; }
           @media print {
             body { margin: 20px; }
@@ -190,7 +189,7 @@ export const TaxInvoicesTab: React.FC = () => {
       </head>
       <body>
         <div class="no-print" style="margin-bottom: 20px; display: flex; gap: 10px;">
-          <button onclick="window.print()" style="background: #4338ca; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+          <button onclick="window.print()" style="background: #2b5ce6; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">
             Print / Save as PDF
           </button>
           <button onclick="window.close()" style="background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
@@ -213,7 +212,7 @@ export const TaxInvoicesTab: React.FC = () => {
         <div class="grid">
           <div class="box">
             <div class="box-title">Supplier (Service Provider)</div>
-            <div style="font-weight: 700; font-size: 14px;">MIPOE MEDIA TECHNOLOGIES INDIA</div>
+            <div style="font-weight: 700; font-size: 14px;">SELLR MEDIA TECHNOLOGIES INDIA</div>
             <div>Registered Business Operator</div>
             <div>GSTIN: <strong>27AAPFU0939F1ZV</strong></div>
             <div>PAN: <strong>AAPFU0939F</strong></div>
@@ -351,15 +350,15 @@ export const TaxInvoicesTab: React.FC = () => {
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200/80 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-black/10 pb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold tracking-tight text-zinc-900">GST & Tax Invoices (ITC)</h2>
-            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-              B2B Credit Ready
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-display text-2xl font-bold tracking-tight text-ink">
+              GST & Tax Invoices (ITC)
+            </h2>
+            <StatusPill tone="success">B2B Credit Ready</StatusPill>
           </div>
-          <p className="text-zinc-500 text-xs mt-1">
+          <p className="text-slate text-xs mt-1">
             Link your company's 15-digit GSTIN to claim 100% Input Tax Credit (18% ITC) on your campaign spend and download GSTR-1 compliant invoices.
           </p>
         </div>
@@ -369,7 +368,7 @@ export const TaxInvoicesTab: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={handleExportGstr1}
-            className="flex items-center gap-2 border-zinc-200 hover:bg-zinc-50 text-xs font-semibold"
+            className="flex items-center gap-2 text-xs font-semibold shrink-0"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
             Export GSTR-1 Statement (.CSV)
@@ -380,23 +379,27 @@ export const TaxInvoicesTab: React.FC = () => {
       {/* Grid: GSTIN Setup Card / Verified View & Benefit Card */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: GST Registration Card */}
-        <div className="lg:col-span-2 bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs">
+        <div className="lg:col-span-2 bg-white border border-black/10 rounded-2xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
           {hasGstin && !isEditing ? (
             /* VERIFIED ACTIVE ENTITY VIEW */
             <div className="space-y-5">
-              <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-black/10">
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
+                  <div className="size-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-sm text-zinc-900">{taxInfo.legal_business_name || legalName}</h3>
-                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-display font-bold text-sm text-ink">
+                        {taxInfo.legal_business_name || legalName}
+                      </h3>
+                      <StatusPill tone="success" showDot>
                         GST Registered
-                      </span>
+                      </StatusPill>
                     </div>
-                    <p className="text-[11px] text-zinc-500">Official B2B tax profile active on Mipoe.</p>
+                    <p className="text-[11px] text-slate">
+                      Official B2B tax profile active on sellr.
+                    </p>
                   </div>
                 </div>
 
@@ -404,7 +407,7 @@ export const TaxInvoicesTab: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsEditing(true)}
-                  className="h-8 text-xs font-semibold gap-1.5 border-zinc-200 text-zinc-700 hover:text-zinc-900"
+                  className="h-8 text-xs font-semibold gap-1.5"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   Edit Details
@@ -412,43 +415,55 @@ export const TaxInvoicesTab: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/60 space-y-1">
-                  <span className="text-[11px] text-zinc-400 font-medium">Registered GSTIN:</span>
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-zinc-900 tracking-wider text-sm">
+                <div className="p-3.5 bg-black/[0.03] rounded-xl border border-black/[0.06] space-y-1">
+                  <span className="font-mono text-[10px] text-steel uppercase tracking-wider font-medium block">
+                    Registered GSTIN
+                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono font-bold text-ink tracking-wider text-sm break-all">
                       {taxInfo.gstin || gstin}
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleCopy(taxInfo.gstin || gstin, "GSTIN")}
-                      className="text-zinc-400 hover:text-zinc-700 p-1 rounded"
+                      aria-label="Copy GSTIN"
+                      onClick={() =>
+                        handleCopy(taxInfo.gstin || gstin, "GSTIN")
+                      }
+                      className="text-steel hover:text-ink p-1 rounded transition-colors duration-150 shrink-0"
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/60 space-y-1">
-                  <span className="text-[11px] text-zinc-400 font-medium">Auto-Extracted PAN:</span>
-                  <div className="flex items-center justify-between">
+                <div className="p-3.5 bg-black/[0.03] rounded-xl border border-black/[0.06] space-y-1">
+                  <span className="font-mono text-[10px] text-steel uppercase tracking-wider font-medium block">
+                    Auto-Extracted PAN
+                  </span>
+                  <div className="flex items-center justify-between gap-2">
                     <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-xs">
                       {taxInfo.extracted_pan || extractedPan}
                     </span>
-                    <span className="text-[11px] font-mono text-zinc-500">
-                      State Code: <strong>{taxInfo.state_code || stateCode}</strong>
+                    <span className="text-[11px] font-mono text-slate">
+                      State Code:{" "}
+                      <strong className="text-ink">
+                        {taxInfo.state_code || stateCode}
+                      </strong>
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/60 space-y-1">
-                <span className="text-[11px] text-zinc-400 font-medium">Registered Billing Address:</span>
-                <p className="text-xs text-zinc-800 leading-relaxed font-medium">
+              <div className="p-3.5 bg-black/[0.03] rounded-xl border border-black/[0.06] space-y-1">
+                <span className="font-mono text-[10px] text-steel uppercase tracking-wider font-medium block">
+                  Registered Billing Address
+                </span>
+                <p className="text-xs text-ink leading-relaxed font-medium">
                   {taxInfo.billing_address || billingAddress}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50/60 border border-emerald-200/60 rounded-xl p-3">
+              <div className="flex items-center gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
                 <span>
                   All past and future campaign budget deposits are automatically mapped to this GSTIN for your quarterly GSTR-1 filings.
@@ -458,16 +473,18 @@ export const TaxInvoicesTab: React.FC = () => {
           ) : (
             /* EDIT / REGISTRATION FORM VIEW */
             <div className="space-y-5">
-              <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
+              <div className="flex items-center justify-between pb-4 border-b border-black/10">
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center">
+                  <div className="size-10 rounded-xl bg-brand-blue/10 border border-brand-blue/20 text-brand-blue flex items-center justify-center shrink-0">
                     <Building2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-zinc-900">
-                      {hasGstin ? "Edit B2B Tax Registration" : "Link Company GSTIN"}
+                    <h3 className="font-display font-bold text-sm text-ink">
+                      {hasGstin
+                        ? "Edit B2B Tax Registration"
+                        : "Link Company GSTIN"}
                     </h3>
-                    <p className="text-[11px] text-zinc-500">
+                    <p className="text-[11px] text-slate">
                       Enter your 15-character GSTIN. Your 10-digit PAN is auto-extracted.
                     </p>
                   </div>
@@ -478,7 +495,7 @@ export const TaxInvoicesTab: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsEditing(false)}
-                    className="h-8 text-xs text-zinc-500 hover:text-zinc-800 gap-1"
+                    className="h-8 text-xs text-slate hover:text-ink gap-1"
                   >
                     <X className="w-3.5 h-3.5" />
                     Cancel
@@ -488,36 +505,50 @@ export const TaxInvoicesTab: React.FC = () => {
 
               <form onSubmit={handleSaveGst} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    GSTIN Number (15-digit alphanumeric) <span className="text-red-500">*</span>
+                  <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider mb-1.5">
+                    GSTIN Number (15-digit alphanumeric){" "}
+                    <span className="text-red-600">*</span>
                   </label>
                   <Input
                     type="text"
                     maxLength={25}
                     placeholder="e.g. 27ABCDE1234F2Z5"
                     value={gstin}
-                    onChange={(e) => setGstin(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15))}
+                    onChange={(e) =>
+                      setGstin(
+                        e.target.value
+                          .toUpperCase()
+                          .replace(/[^A-Z0-9]/g, "")
+                          .slice(0, 15)
+                      )
+                    }
                     className="font-mono text-sm tracking-wider uppercase"
                     required
                   />
-                  <p className="text-[11px] text-zinc-400 mt-1">
+                  <p className="text-[11px] text-slate mt-1">
                     Characters 3–12 represent your legal PAN. Character 14 must be 'Z'.
                   </p>
                 </div>
 
                 {extractedPan && (
-                  <div className="bg-zinc-50 border border-zinc-200/80 rounded-xl p-3 flex flex-wrap items-center gap-4 text-xs">
+                  <div className="bg-black/[0.03] border border-black/10 rounded-xl p-3 flex flex-wrap items-center gap-4 text-xs">
                     <div>
-                      <span className="text-zinc-400 font-medium text-[11px]">State Code:</span>{" "}
-                      <span className="font-mono font-bold text-zinc-800">{stateCode}</span>
+                      <span className="text-slate font-medium text-[11px]">
+                        State Code:
+                      </span>{" "}
+                      <span className="font-mono font-bold text-ink">
+                        {stateCode}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-zinc-400 font-medium text-[11px]">Auto-Extracted PAN:</span>{" "}
-                      <span className="font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      <span className="text-slate font-medium text-[11px]">
+                        Auto-Extracted PAN:
+                      </span>{" "}
+                      <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                         {extractedPan}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 text-emerald-600 font-medium ml-auto text-[11px]">
+                    <div className="flex items-center gap-1 text-emerald-700 font-medium ml-auto text-[11px]">
                       <ShieldCheck className="w-4 h-4" />
                       Format Validated
                     </div>
@@ -526,8 +557,9 @@ export const TaxInvoicesTab: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                      Legal Business Name (as on GST Certificate) <span className="text-red-500">*</span>
+                    <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider mb-1.5">
+                      Legal Business Name (as on GST Certificate){" "}
+                      <span className="text-red-600">*</span>
                     </label>
                     <Input
                       type="text"
@@ -540,8 +572,9 @@ export const TaxInvoicesTab: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                      Registered Billing Address <span className="text-red-500">*</span>
+                    <label className="block font-mono text-[10px] font-medium text-steel uppercase tracking-wider mb-1.5">
+                      Registered Billing Address{" "}
+                      <span className="text-red-600">*</span>
                     </label>
                     <Input
                       type="text"
@@ -567,10 +600,13 @@ export const TaxInvoicesTab: React.FC = () => {
                   )}
                   <Button
                     type="submit"
+                    variant="brand"
                     disabled={saving}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-5 py-2 rounded-xl shadow-xs"
+                    className="text-xs px-5"
                   >
-                    {saving ? "Saving Tax Details..." : "Save & Activate B2B Invoices"}
+                    {saving
+                      ? "Saving Tax Details..."
+                      : "Save & Activate B2B Invoices"}
                   </Button>
                 </div>
               </form>
@@ -579,128 +615,225 @@ export const TaxInvoicesTab: React.FC = () => {
         </div>
 
         {/* Right: How ITC Works Info Card */}
-        <div className="bg-gradient-to-br from-indigo-50/60 via-purple-50/40 to-white border border-indigo-200/60 rounded-2xl p-6 flex flex-col justify-between">
+        <div className="bg-[#fafafb] border border-black/10 rounded-2xl p-6 flex flex-col justify-between shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-indigo-700 font-bold text-xs uppercase tracking-wider">
-              <Sparkles className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-brand-blue font-mono font-bold text-[11px] uppercase tracking-wider">
+              <ReceiptText className="w-4 h-4" />
               Tax Benefit Breakdown
             </div>
-            <h4 className="font-bold text-zinc-900 text-base leading-snug">
+            <h4 className="font-display font-bold text-ink text-base leading-snug">
               Save 18% on your creator campaign spend via Input Tax Credit.
             </h4>
-            <p className="text-xs text-zinc-600 leading-relaxed">
+            <p className="text-xs text-slate leading-relaxed">
               When depositing INR into your campaign float via UPI or Base L2, an official B2B invoice is generated. Your company can claim the full 18% GST component against your output tax liability.
             </p>
 
-            <div className="bg-white/90 backdrop-blur-xs border border-indigo-100 rounded-xl p-3.5 space-y-2 text-xs shadow-xs">
-              <div className="flex justify-between items-center text-zinc-600">
+            <div className="bg-white border border-black/10 rounded-xl p-3.5 space-y-2 text-xs">
+              <div className="flex justify-between items-center text-slate">
                 <span>Sample Deposit:</span>
-                <span className="font-mono font-bold text-zinc-900">₹50,000</span>
+                <span className="font-mono font-bold tabular-nums text-ink">
+                  ₹50,000
+                </span>
               </div>
-              <div className="flex justify-between items-center text-zinc-600">
+              <div className="flex justify-between items-center text-slate">
                 <span>Taxable Value (Float):</span>
-                <span className="font-mono text-zinc-900">₹42,373</span>
+                <span className="font-mono tabular-nums text-ink">₹42,373</span>
               </div>
-              <div className="flex justify-between items-center text-emerald-700 font-semibold border-t border-zinc-100 pt-1.5">
+              <div className="flex justify-between items-center text-emerald-700 font-semibold border-t border-black/[0.06] pt-1.5">
                 <span>ITC You Reclaim:</span>
-                <span className="font-mono font-bold text-emerald-700">₹7,627</span>
+                <span className="font-mono font-bold tabular-nums text-emerald-700">
+                  ₹7,627
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="pt-4 mt-4 border-t border-indigo-100/80 flex items-center gap-2 text-[11px] text-zinc-500">
-            <Info className="w-3.5 h-3.5 shrink-0 text-indigo-500" />
-            <span>Invoices automatically sync to the GST portal on the 10th of every month.</span>
+          <div className="pt-4 mt-4 border-t border-black/10 flex items-center gap-2 text-[11px] text-slate">
+            <Info className="w-3.5 h-3.5 shrink-0 text-brand-blue" />
+            <span>
+              Invoices automatically sync to the GST portal on the 10th of every month.
+            </span>
           </div>
         </div>
       </div>
 
       {/* Invoices List Table */}
-      <div className="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+      <div className="bg-white border border-black/10 rounded-2xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-black/10">
           <div className="flex items-center gap-2.5">
-            <ReceiptText className="w-4 h-4 text-zinc-500" />
-            <h3 className="font-bold text-sm text-zinc-900">Completed Deposit Invoices</h3>
+            <ReceiptText className="w-4 h-4 text-steel" />
+            <h3 className="font-display font-bold text-sm text-ink">
+              Completed Deposit Invoices
+            </h3>
           </div>
-          <span className="text-xs text-zinc-500 font-medium">
-            {invoices.length} {invoices.length === 1 ? "Invoice" : "Invoices"} Available
+          <span className="font-mono text-xs text-slate font-medium tabular-nums">
+            {invoices.length} {invoices.length === 1 ? "Invoice" : "Invoices"}{" "}
+            Available
           </span>
         </div>
 
         {loading ? (
           <div className="text-center py-12 space-y-2">
-            <div className="size-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs text-zinc-500 font-medium">Loading deposit invoices...</p>
+            <Loader2 className="w-6 h-6 animate-spin text-brand-blue mx-auto" />
+            <p className="text-xs text-slate font-medium">
+              Loading deposit invoices...
+            </p>
           </div>
         ) : invoices.length === 0 ? (
           <div className="text-center py-12 space-y-2">
-            <div className="size-12 rounded-full bg-zinc-50 border border-zinc-200/80 text-zinc-400 flex items-center justify-center mx-auto">
+            <div className="size-12 rounded-full bg-black/[0.03] border border-black/10 text-steel flex items-center justify-center mx-auto">
               <ReceiptText className="w-6 h-6" />
             </div>
-            <p className="font-semibold text-xs text-zinc-800">No deposit invoices found</p>
-            <p className="text-[11px] text-zinc-500 max-w-sm mx-auto">
+            <p className="font-display font-semibold text-sm text-ink">
+              No deposit invoices found
+            </p>
+            <p className="text-xs text-slate max-w-sm mx-auto">
               Whenever you deposit funds into your brand campaign budget via UPI or Base L2, tax-compliant B2B invoices will appear here automatically.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] tracking-wider">
-                  <th className="py-2.5 px-3">Invoice #</th>
-                  <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3">Description</th>
-                  <th className="py-2.5 px-3">Gross (₹)</th>
-                  <th className="py-2.5 px-3">Taxable (₹)</th>
-                  <th className="py-2.5 px-3">GST (18%)</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-50">
-                {invoices.map((inv) => (
-                  <tr key={inv.invoice_id} className="hover:bg-zinc-50/80 transition-colors">
-                    <td className="py-3 px-3 font-mono font-bold text-indigo-600">{inv.invoice_id}</td>
-                    <td className="py-3 px-3 text-zinc-600">
-                      {inv.date ? new Date(inv.date).toLocaleDateString("en-IN") : "Recent"}
-                    </td>
-                    <td className="py-3 px-3 text-zinc-700 font-medium">
-                      <div>{inv.description}</div>
-                      {inv.external_txn_id && (
-                        <div className="font-mono text-[10px] text-zinc-400">{inv.external_txn_id}</div>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 font-mono font-bold text-zinc-900">
-                      ₹{inv.gross_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 px-3 font-mono text-zinc-600">
-                      ₹{inv.taxable_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 px-3 font-mono text-emerald-600 font-semibold">
-                      ₹{inv.gst_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        {inv.status}
+          <>
+            {/* Mobile Invoice Cards */}
+            <div className="md:hidden divide-y divide-black/[0.06] border border-black/10 rounded-xl">
+              {invoices.map((inv) => (
+                <div key={inv.invoice_id} className="p-4 space-y-3 text-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono font-bold text-brand-blue block">
+                        {inv.invoice_id}
                       </span>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDownloadInvoice(inv)}
-                        className="h-7 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-semibold gap-1"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                        Print / PDF
-                      </Button>
-                    </td>
+                      <span className="font-mono text-[11px] text-slate">
+                        {inv.date
+                          ? new Date(inv.date).toLocaleDateString("en-IN")
+                          : "Recent"}
+                      </span>
+                    </div>
+                    <StatusPill tone="success">{inv.status}</StatusPill>
+                  </div>
+                  <p className="text-ink font-medium">{inv.description}</p>
+                  <div className="grid grid-cols-3 gap-2 bg-black/[0.03] border border-black/[0.06] rounded-lg p-2.5">
+                    <div>
+                      <span className="font-mono text-[9px] text-steel uppercase block">
+                        Gross
+                      </span>
+                      <span className="font-mono font-bold tabular-nums text-ink">
+                        ₹
+                        {inv.gross_amount.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-mono text-[9px] text-steel uppercase block">
+                        Taxable
+                      </span>
+                      <span className="font-mono tabular-nums text-slate">
+                        ₹
+                        {inv.taxable_amount.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-mono text-[9px] text-steel uppercase block">
+                        GST
+                      </span>
+                      <span className="font-mono font-semibold tabular-nums text-emerald-700">
+                        ₹
+                        {inv.gst_amount.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadInvoice(inv)}
+                    className="w-full text-xs text-brand-blue gap-1.5"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Print / PDF
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Invoice Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-black/10 font-mono text-steel uppercase text-[10px] tracking-wider">
+                    <th className="py-2.5 px-3">Invoice #</th>
+                    <th className="py-2.5 px-3">Date</th>
+                    <th className="py-2.5 px-3">Description</th>
+                    <th className="py-2.5 px-3">Gross (₹)</th>
+                    <th className="py-2.5 px-3">Taxable (₹)</th>
+                    <th className="py-2.5 px-3">GST (18%)</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-black/[0.06]">
+                  {invoices.map((inv) => (
+                    <tr
+                      key={inv.invoice_id}
+                      className="hover:bg-black/[0.02] transition-colors duration-150"
+                    >
+                      <td className="py-3 px-3 font-mono font-bold text-brand-blue">
+                        {inv.invoice_id}
+                      </td>
+                      <td className="py-3 px-3 font-mono text-slate">
+                        {inv.date
+                          ? new Date(inv.date).toLocaleDateString("en-IN")
+                          : "Recent"}
+                      </td>
+                      <td className="py-3 px-3 text-ink font-medium">
+                        <div>{inv.description}</div>
+                        {inv.external_txn_id && (
+                          <div className="font-mono text-[10px] text-steel">
+                            {inv.external_txn_id}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 font-mono font-bold tabular-nums text-ink">
+                        ₹
+                        {inv.gross_amount.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="py-3 px-3 font-mono tabular-nums text-slate">
+                        ₹
+                        {inv.taxable_amount.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="py-3 px-3 font-mono tabular-nums text-emerald-700 font-semibold">
+                        ₹
+                        {inv.gst_amount.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="py-3 px-3">
+                        <StatusPill tone="success">{inv.status}</StatusPill>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadInvoice(inv)}
+                          className="h-7 text-xs text-brand-blue hover:bg-brand-blue/10 font-semibold gap-1"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          Print / PDF
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

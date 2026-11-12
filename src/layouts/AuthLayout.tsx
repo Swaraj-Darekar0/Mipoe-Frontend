@@ -1,14 +1,9 @@
-
 import React, { useRef, useEffect } from "react";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
   isSuccessVideoPlaying?: boolean;
   onVideoEnded?: () => void;
-  avatarState?: string;
-  formBehaviorState?: any;
-  targetElementRect?: DOMRect | null;
-  lookTarget?: { x: number; y: number } | null;
 }
 
 const AuthLayout = ({
@@ -45,19 +40,19 @@ const AuthLayout = ({
       return () => clearTimeout(mobileTimer);
     }
 
+    let autoAdvanceTimer: ReturnType<typeof setTimeout> | undefined;
     if (video) {
       video.currentTime = 0;
       video.muted = true;
       video.play().catch((err) => {
         console.warn("Video autoplay prevented or interrupted:", err);
         // Fallback: transition smoothly if media autoplay is blocked by browser
-        const autoAdvanceTimer = setTimeout(() => {
+        autoAdvanceTimer = setTimeout(() => {
           if (!hasTriggeredEnded.current) {
             hasTriggeredEnded.current = true;
             onVideoEnded?.();
           }
         }, 1200);
-        return () => clearTimeout(autoAdvanceTimer);
       });
     }
 
@@ -71,6 +66,7 @@ const AuthLayout = ({
 
     return () => {
       clearTimeout(fallbackTimer);
+      if (autoAdvanceTimer) clearTimeout(autoAdvanceTimer);
       if (video) {
         video.pause();
       }
@@ -86,10 +82,10 @@ const AuthLayout = ({
   };
 
   return (
-    <div className="min-h-screen w-full bg-white text-zinc-900 flex">
+    <div className="min-h-screen w-full bg-canvas text-ink flex overflow-x-hidden">
       {/* Left Panel - Hidden on mobile & portrait tablets (< 1024px); strictly aspect-ratio preserved on desktop without cropping */}
       <div
-        className="hidden lg:flex lg:h-screen lg:aspect-[9/16] shrink-0 relative bg-black select-none overflow-hidden sticky top-0 items-center justify-center"
+        className="hidden lg:flex lg:h-screen lg:aspect-[9/16] shrink-0 relative bg-surface-soft border-r border-black/10 select-none overflow-hidden sticky top-0 items-center justify-center"
         style={{ aspectRatio: "9/16" }}
       >
         <video
@@ -104,13 +100,13 @@ const AuthLayout = ({
         />
       </div>
 
-      {/* Right Panel - Clean, responsive, high-taste plain white form area */}
+      {/* Right Panel - Light Paper Canvas architectural form container */}
       <div
-        className={`flex-1 min-w-0 flex flex-col items-center justify-center px-4 py-8 sm:px-8 md:px-12 lg:px-16 overflow-y-auto min-h-screen bg-white transition-opacity duration-300 ${
+        className={`flex-1 min-w-0 flex flex-col items-center justify-center px-4 py-8 sm:px-8 md:px-12 lg:px-16 overflow-y-auto min-h-screen bg-canvas transition-opacity duration-150 ${
           isSuccessVideoPlaying ? "pointer-events-none select-none opacity-90" : ""
         }`}
       >
-        <div className="w-full max-w-[420px] mx-auto">
+        <div className="w-full max-w-[440px] mx-auto">
           {children}
         </div>
       </div>

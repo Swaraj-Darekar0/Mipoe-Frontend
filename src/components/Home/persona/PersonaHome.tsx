@@ -7,6 +7,8 @@ import PersonaNavbar from "./PersonaNavbar";
 import HeroCreator from "./HeroCreator";
 import HeroBrand from "./HeroBrand";
 import SignalingCarousel from "./SignalingCarousel";
+import FeaturedStackingReels from "./FeaturedStackingReels";
+import ServicesPillars from "./ServicesPillars";
 import EarningsCalculator from "./EarningsCalculator";
 import FAQAccordion from "./FAQAccordion";
 import { personaContent } from "./personaContent";
@@ -41,6 +43,8 @@ const PersonaBody: React.FC = () => {
       >
         {persona === "creator" ? <HeroCreator /> : <HeroBrand />}
         <SignalingCarousel persona={persona} label={content.carouselLabel} intro={content.carouselIntro} steps={content.steps} />
+        <FeaturedStackingReels />
+        <ServicesPillars />
         <EarningsCalculator persona={persona} />
         <FAQAccordion persona={persona} />
       </motion.div>

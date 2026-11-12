@@ -4,9 +4,9 @@ import CampaignCard from "@/components/creator/CampaignCard";
 import { fetchAllCampaigns, Campaign, getUserId, checkAuthStatus } from "@/lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Card, Skeleton } from "@heroui/react";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, Loader2 } from "lucide-react";
 import { CategoryFilter } from "@/components/ui/CategoryFilter";
+import { PortalPageHeader } from "@/components/ui/PortalPrimitives";
 import MarketplaceExplorer from "./MarketplaceExplorer";
 
 const CampaignsPage = () => {
@@ -99,43 +99,55 @@ const CampaignsPage = () => {
 
   return (
     <CreatorLayout>
-      <div className="space-y-8">
-        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold text-zinc-900 tracking-tight">
-              {campaignType === "influencer"
-                ? "Influencer Campaigns"
-                : campaignType === "clipping"
-                ? "Clipping Campaigns"
-                : "Campaign Marketplace"}
-            </h1>
-            <p className="text-zinc-500 text-sm mt-1">
-              {campaignType === "influencer"
-                ? "Collaborate with brands on customized content creation."
-                : campaignType === "clipping"
-                ? "Clip long form videos and earn based on performance views."
-                : "Discover new campaigns and start earning today."}
-            </p>
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 h-10 px-4 rounded-xl border font-semibold text-xs transition-all duration-300 active:scale-95 cursor-pointer shrink-0 w-fit ${
-              showFilters 
-                ? "bg-orange-500 text-white border-orange-500 shadow-xs" 
-                : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300"
-            }`}
-          >
-            <SlidersHorizontal size={14} />
-            <span>Filters</span>
-            {selectedCategory !== "all" && (
-              <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${
-                showFilters ? "bg-white text-orange-600" : "bg-orange-500 text-white"
-              }`}>
-                1
-              </span>
-            )}
-          </button>
-        </header>
+      <div className="space-y-6">
+        <PortalPageHeader
+          eyebrow={
+            campaignType === "influencer"
+              ? "01 // INFLUENCER BRIEFS"
+              : campaignType === "clipping"
+              ? "01 // CLIPPING BRIEFS"
+              : "01 // LIVE MARKETPLACE"
+          }
+          title={
+            campaignType === "influencer"
+              ? "Influencer"
+              : campaignType === "clipping"
+              ? "Clipping"
+              : "Active"
+          }
+          highlighted="Campaigns"
+          accent="creator"
+          subtitle={
+            campaignType === "influencer"
+              ? "Shoot authentic vertical reels for verified Indian brands with budget locked upfront."
+              : campaignType === "clipping"
+              ? "Clip founder podcasts and drops, then get paid per 1,000 verified views."
+              : "Pick an open brand deal with upfront escrow and direct UPI payouts."
+          }
+          action={
+            <button
+              type="button"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 h-10 px-4 rounded-xl border font-medium text-xs transition-colors duration-150 cursor-pointer shrink-0 ${
+                showFilters
+                  ? "bg-ink text-white border-ink"
+                  : "bg-white border-black/15 text-ink hover:bg-black/[0.03] hover:border-black/25"
+              }`}
+            >
+              <SlidersHorizontal size={14} />
+              <span>Filters</span>
+              {selectedCategory !== "all" && (
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded-full font-mono text-[9px] font-bold ${
+                    showFilters ? "bg-lava text-white" : "bg-lava text-white"
+                  }`}
+                >
+                  1
+                </span>
+              )}
+            </button>
+          }
+        />
 
         {/* Modular Category Filter Panel */}
         <CategoryFilter
@@ -144,26 +156,22 @@ const CampaignsPage = () => {
           onSelectCategory={setSelectedCategory}
           isOpen={showFilters}
           theme="light"
+          accent="creator"
         />
 
         {loading ? (
-          <Card className="w-[200px] space-y-5 p-4 bg-white border border-zinc-200" radius="lg">
-            <Skeleton className="rounded-lg">
-              <div className="h-24 rounded-lg bg-zinc-200" />
-            </Skeleton>
-            <div className="space-y-3">
-              <Skeleton className="w-3/5 rounded-lg">
-                <div className="h-3 w-3/5 rounded-lg bg-zinc-100" />
-              </Skeleton>
-              <Skeleton className="w-4/5 rounded-lg">
-                <div className="h-3 w-4/5 rounded-lg bg-zinc-100" />
-              </Skeleton>
-            </div>
-          </Card>
+          <div className="flex flex-col items-center justify-center h-64 rounded-2xl border border-black/10 bg-white gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-lava" />
+            <p className="font-mono text-xs uppercase tracking-wider text-slate">
+              Loading Open Briefs...
+            </p>
+          </div>
         ) : error ? (
-          <div className="text-center text-rose-600 font-medium py-8 bg-rose-50 rounded-2xl border border-rose-200">{error}</div>
+          <div className="text-center text-rose-700 font-medium py-6 px-4 bg-rose-50 rounded-2xl border border-rose-500/25 text-sm">
+            {error}
+          </div>
         ) : filteredCampaigns.length === 0 ? (
-          <div className="text-center py-20 text-zinc-500 font-medium bg-white rounded-2xl border border-zinc-200/80">
+          <div className="text-center py-20 text-slate font-medium bg-white rounded-2xl border border-black/10">
             No campaigns found matching the selected category.
           </div>
         ) : (

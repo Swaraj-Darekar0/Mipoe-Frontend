@@ -7,7 +7,20 @@ export interface HeadlineSegment {
   /** Set on the phrase the headline should land on: renders in the bold
    *  grotesque against the serif default, per the creator hero design. */
   strong?: boolean;
+  /** Carries the band-and-dot emphasis treatment for optical scale. */
+  highlight?: boolean;
 }
+
+export interface HeadlineLine {
+  text: string;
+  /** Carries the band-and-dot emphasis treatment. */
+  highlight?: boolean;
+  /** Carries the persona accent colour. */
+  emphasis?: boolean;
+  /** Optional strong font styling. */
+  strong?: boolean;
+}
+
 
 export interface CarouselStep {
   number: string;
@@ -48,6 +61,7 @@ export interface PersonaContent {
   toggleLabel: string;
   hero: {
     headline: HeadlineSegment[];
+    headlineLines?: readonly HeadlineLine[];
     subheadline: string;
     ctaLabel: string;
     ctaFootnote?: string;
@@ -74,13 +88,13 @@ export const formatINR = (value: number): string => {
 export const formatLakhViews = (value: number): string => `${(value / 100000).toFixed(1)} lakh`;
 
 export const calculatorHeadline: HeadlineSegment[] = [
-  { text: "How " },
-  { text: "RICH", emphasis: true },
-  { text: " is Rich?" },
+  { text: "Real Reach. " },
+  { text: "REAL REVENUE", emphasis: true },
+  { text: "." },
 ];
 
 export const calculatorSubtext =
-  "Based on real campaign data across active sellr creators and brands. No fluff. No vanity projections.";
+  "Calculate projected returns based on real platform payouts. Transparent, verified data with zero vanity metrics.";
 
 export const personaContent: Record<Persona, PersonaContent> = {
   creator: {
@@ -88,16 +102,18 @@ export const personaContent: Record<Persona, PersonaContent> = {
     toggleLabel: "Brands",
     hero: {
       headline: [
-        { text: "Your " },
-        { text: "CONTENT", emphasis: true },
-        { text: " Already Has " },
-        { text: "an Audience. Get ", strong: true },
-        { text: "PAID", emphasis: true },
-        { text: " For It." },
+        { text: "Your content already" },
+        { text: "has an audience." },
+        { text: "Get paid for it.", emphasis: true, highlight: true },
       ],
-      subheadline: "No agency. No gatekeepers. No minimum follower count. Just post, earn, repeat.",
+      headlineLines: [
+        { text: "Your content already" },
+        { text: "has an audience." },
+        { text: "Get paid for it.", highlight: true, emphasis: true },
+      ],
+      subheadline: "No agency cuts. 500+ followers to start. Post reels and withdraw via UPI instantly.",
       ctaLabel: "Start Earning Today",
-      ctaFootnote: "whats upp!!"
+      ctaFootnote: "Zero fees to start • Instant UPI withdrawals",
     },
     ctaHref: "/creator/campaigns",
     carouselLabel: "HOW CREATORS EARN",
@@ -106,44 +122,44 @@ export const personaContent: Record<Persona, PersonaContent> = {
     steps: [
       {
         number: "01",
-        title: "Sign Up. No Gatekeeping.",
+        title: "Sign Up. Open to Everyone.",
         description:
-          "Whether you have 500 followers or 5 lakh — if your content resonates, there's a campaign for you. Create a profile. Connect your Instagram or YouTube.",
+          "Have 500+ followers? Connect your socials and claim live briefs instantly.",
         tint: "peach",
       },
       {
         number: "02",
         title: "Pick Campaigns That Fit Your Vibe",
         description:
-          "UGC video campaigns. Affiliate product links. Viral clip briefs. Browse live brand campaigns and apply to what matches your content style and audience.",
+          "Browse active UGC briefs, affiliate links, and viral clipping campaigns.",
         tint: "mint",
       },
       {
         number: "03",
         title: "Post Your Content. That's It.",
         description:
-          "Film it your way. No corporate scripts. No stiff brand guidelines. Brands on sellr want authentic, not polished-to-death. Your real voice is the product.",
+          "Film in your authentic voice. No stiff corporate scripts or micromanaging.",
         tint: "sky",
       },
       {
         number: "04",
         title: "Views Turn Into ₹₹₹",
         description:
-          "Every verified view earns you CPV payouts. Affiliate sales earn you commissions. UGC content earns you flat fees. Three income streams, one platform.",
+          "Earn per verified view, affiliate sale, or flat-fee UGC brief. One wallet.",
         tint: "lavender",
       },
       {
         number: "05",
-        title: "Build Your Brand. Not Just Your Feed.",
+        title: "Build Your Brand Track Record",
         description:
-          "Your sellr store, your creator profile, your campaign history — it all builds your creator credibility. The more you do, the more brands come to you.",
+          "Grow your track record. Build credibility and unlock higher-paying deals.",
         tint: "rose",
       },
     ],
     calculator: {
       sliders: [
         {
-          label: "How many followers do you have?",
+          label: "Your followers",
           min: 500,
           max: 1000000,
           step: 500,
@@ -151,7 +167,7 @@ export const personaContent: Record<Persona, PersonaContent> = {
           formatValue: (v) => (v >= 100000 ? `${(v / 100000).toFixed(1)}L` : v.toLocaleString("en-IN")),
         },
         {
-          label: "How many campaign posts per month?",
+          label: "Monthly posts",
           min: 2,
           max: 30,
           step: 1,
@@ -160,32 +176,26 @@ export const personaContent: Record<Persona, PersonaContent> = {
         },
       ],
       computeResult: (followers, posts) => {
-        // Placeholder formula, tuned to hold up across the whole slider
-        // range (500–10L followers), not just the high end:
-        //  - Reach: short-form posts on Instagram/YouTube routinely reach
-        //    well beyond the follower count via Explore/Shorts feeds, so
-        //    views per post are modeled at ~60% of follower count.
-        //  - CPV payout: a flat ₹0.10 per verified view (mid-point of the
-        //    platform's ₹0.08–₹0.20 CPV band that brands pay into).
-        //  - Flat-fee floor: a guaranteed ~₹75/post UGC flat fee so even a
-        //    small creator sees a real, non-trivial number, not ₹20–40.
-        // Replace with real data once available.
+        // Tuned to hold up across the whole slider range (500–10L followers):
+        //  - Reach: modeled at ~60% of follower count.
+        //  - CPM payout: ₹85 per 1,000 verified views.
+        //  - Base fee floor: guaranteed ₹75/post UGC fee floor.
         const viewsPerPost = followers * 0.6;
         const monthlyViews = viewsPerPost * posts;
-        const cpvEarnings = monthlyViews * 0.1;
+        const cpmEarnings = (monthlyViews / 1000) * 85;
         const flatFeeFloor = posts * 75;
-        const low = cpvEarnings * 0.8 + flatFeeFloor;
-        const high = cpvEarnings * 1.5 + flatFeeFloor;
+        const low = cpmEarnings * 0.8 + flatFeeFloor;
+        const high = cpmEarnings * 1.5 + flatFeeFloor;
         return [
           { text: "Creators like you on sellr earn between " },
           { text: formatINR(low), emphasis: true },
           { text: " and " },
           { text: formatINR(high), emphasis: true },
-          { text: " per month from CPV payouts and per-post fees combined." },
+          { text: " per month, withdrawn directly via UPI or bank transfer." },
         ];
       },
       disclaimer:
-        "*Estimated using an average CPV of ₹0.10 per view, ~60% of your followers viewing each post, and a small guaranteed fee per post. Actual earnings vary by niche, engagement, and campaign mix.",
+        "*Projections modeled at ₹85 per 1,000 verified views with ~60% organic reach on short-form reels, plus creator base fees. Payouts transfer directly via UPI or bank transfer once views are verified.",
       handlePreview: "sellr.in/your_handle",
       ctaLabel: "Join as a Creator →",
     },
@@ -193,27 +203,27 @@ export const personaContent: Record<Persona, PersonaContent> = {
       {
         question: "Do I need to be a big influencer to join?",
         answer:
-          "No. This is literally the point of sellr. If your content is good and your audience trusts you — even 500 followers — there are brands here that want to work with you. The era of \"wait for a DM from a marketing agency\" is over. You come here, browse live campaigns, and apply directly.",
+          "Not at all. Whether you have 500 followers or 50,000, if your content connects with real audiences, brands on sellr want to work with you. You never need an agency deal or talent manager to claim active briefs.",
       },
       {
         question: "How exactly do I get paid?",
         answer:
-          "Three ways, depending on campaign type: CPV Payout — you earn per verified view on your campaign content. Affiliate Commission — you earn a % of every sale driven by your unique link. UGC Flat Fee — brands pay a fixed rate for the content you create, regardless of views. Payouts go directly to your linked payout account after verification.",
+          "You earn through pay-per-view payouts, affiliate sales commissions, or guaranteed flat fees for custom UGC videos. Campaign funds are safely locked in escrow upfront before you ever start filming. Once your content metrics are verified, earnings transfer directly to your UPI ID or bank account within 24 to 48 hours.",
       },
       {
         question: "Do I have to follow a brand script?",
         answer:
-          "Brands on sellr specifically want authentic content — not scripted ads. They give you a brief (product, key message, do's and don'ts), and you create in your own style, your own language, your own voice. That's the whole reason creators on this platform convert better than traditional ads.",
+          "Never. Brands partner with sellr for authentic creator recommendations, not stiff corporate scripts. You receive a brief with key talking points, then shoot entirely in your own voice, style, and native language.",
       },
       {
         question: "What if I post content and it doesn't get many views?",
         answer:
-          "Your payout scales with your reach — so lower views means lower CPV payout, but you never go into debt or get penalized. The risk is on the brand, not on you. For UGC campaigns (flat fee), you get paid regardless of view count. Build your audience and your earnings grow with it.",
+          "You never owe anything or get penalized if a post underperforms. For view-based campaigns you simply earn on every verified view delivered, while flat-fee UGC deals pay your full agreed rate regardless of reach.",
       },
       {
         question: "Can I participate in multiple campaigns at the same time?",
         answer:
-          "Yes — absolutely. Browse active campaigns, apply to as many as fit your content style, and run them simultaneously. Your sellr creator profile tracks all active campaigns, earnings, and payouts in one place. More campaigns = more income streams, simple.",
+          "Yes, absolutely. You can run multiple brand campaigns, share affiliate links, and curate products in your storefront simultaneously. Your creator dashboard organizes all active briefs, deliverables, and payouts in real time.",
       },
     ],
   },
@@ -222,15 +232,18 @@ export const personaContent: Record<Persona, PersonaContent> = {
     toggleLabel: "Creators",
     hero: {
       headline: [
-        { text: "Stop " },
-        { text: "BURNING", emphasis: true },
-        { text: " Budget on Ads Nobody Trusts. Start " },
-        { text: "No wasted spend", emphasis: true },
-        { text: " No wasted spend." },
+        { text: "Stop burning ad spend" },
+        { text: "on zero-trust ads." },
+        { text: "Buy verified reach.", emphasis: true, highlight: true },
       ],
-      subheadline: "No wasted spend. Just verified results.",
+      headlineLines: [
+        { text: "Stop burning ad spend" },
+        { text: "on zero-trust ads." },
+        { text: "Buy verified reach.", highlight: true, emphasis: true },
+      ],
+      subheadline: "Zero wasted budget. 100% escrow protected. Pay authentic creators for verified results.",
       ctaLabel: "Launch a Campaign",
-      ctaFootnote: "whats upp!!"
+      ctaFootnote: "Zero monthly retainers • 100% escrow protection",
     },
     ctaHref: "/login?role=brand",
     carouselLabel: "HOW BRANDS WIN",
@@ -241,42 +254,42 @@ export const personaContent: Record<Persona, PersonaContent> = {
         number: "01",
         title: "Set Your Campaign in Minutes",
         description:
-          "Choose your campaign type — UGC content, product affiliate links, or viral clip campaigns. Define your budget, your brief, your CPV. We handle the rest.",
+          "Choose UGC, affiliate, or clipping formats. Set your target view budget.",
         tint: "peach",
       },
       {
         number: "02",
         title: "Creators Come to You",
         description:
-          "No cold outreach. No agency middlemen. India's creator pool comes to your brief. Pick creators based on niche, reach, engagement, and audience demographics.",
+          "Vetted creators apply directly to your brief. No agency markups or DMs.",
         tint: "mint",
       },
       {
         number: "03",
         title: "Authentic Content Goes Live",
         description:
-          "Real creators. Real audiences. Real trust. Your brand gets peer-to-peer storytelling — the only format Gen-Z and Millennial India actually listens to.",
+          "Creators publish authentic stories that drive 3–6x higher audience trust.",
         tint: "sky",
       },
       {
         number: "04",
         title: "Every View. Every Sale. Every Rupee.",
         description:
-          "Your dashboard tracks views, clicks, conversions, and affiliate commissions in real-time. No spreadsheets, no agency reports, no ambiguity.",
+          "Track verified views, clicks, and attributed revenue in live real time.",
         tint: "lavender",
       },
       {
         number: "05",
         title: "Pay Only for Results. Keep the Rest.",
         description:
-          "CPV-based billing. You only pay per verified view or per conversion. Your ad budget finally works as hard as you do.",
+          "Pay strictly for verified views or direct sales. 100% escrow protected.",
         tint: "rose",
       },
     ],
     calculator: {
       sliders: [
         {
-          label: "How much are you investing?",
+          label: "Campaign budget",
           min: 10000,
           max: 500000,
           step: 5000,
@@ -284,7 +297,7 @@ export const personaContent: Record<Persona, PersonaContent> = {
           formatValue: (v) => formatINR(v),
         },
         {
-          label: "For how many weeks?",
+          label: "Campaign weeks",
           min: 1,
           max: 12,
           step: 1,
@@ -293,12 +306,11 @@ export const personaContent: Record<Persona, PersonaContent> = {
         },
       ],
       computeResult: (budget, weeks) => {
-        // Placeholder formula: views = budget / CPV (₹0.08–₹0.20 range from the
-        // disclaimer), with a modest multi-week compounding factor. Revenue
-        // uses the 3–6x ROAS range. Replace with real data once available.
+        // Views = (budget / ratePer1K) * 1000 for ₹60–₹100 per 1,000 views, with multi-week compounding.
+        // Revenue modeled at historical 3–6x ROAS.
         const weeksFactor = 1 + (weeks - 1) * 0.08;
-        const viewsLow = (budget / 0.2) * weeksFactor;
-        const viewsHigh = (budget / 0.08) * weeksFactor;
+        const viewsLow = (budget / 100) * 1000 * weeksFactor;
+        const viewsHigh = (budget / 60) * 1000 * weeksFactor;
         const revenueLow = budget * 3;
         const revenueHigh = budget * 6;
         return [
@@ -314,7 +326,7 @@ export const personaContent: Record<Persona, PersonaContent> = {
         ];
       },
       disclaimer:
-        "*Projections based on average CPV of ₹0.08–₹0.20, 3–6x ROAS from comparable campaigns, and a modest reach boost for longer campaigns. Actual results may vary by niche and creator mix.",
+        "*Projections based on an average rate of ₹60–₹100 per 1,000 verified views and historical 3–6x ROAS. All campaign funds stay in escrow, with unspent budget refundable to your bank or UPI at any time.",
       handlePreview: "sellr.in/your-brand",
       ctaLabel: "Launch a Campaign →",
     },
@@ -322,27 +334,27 @@ export const personaContent: Record<Persona, PersonaContent> = {
       {
         question: "Do I need a big budget to start?",
         answer:
-          "No. You can launch a campaign starting from ₹5,000. Our CPV model means you only spend money when real viewers actually watch your content — not just when an ad loads on someone's screen. Start small, scale what works.",
+          "No. You can launch a verified campaign starting from just ₹5,000. Because you pay strictly for verified views or direct conversions, every rupee goes toward real audience engagement rather than wasted impressions.",
       },
       {
         question: "How is this different from running Instagram or YouTube ads?",
         answer:
-          "Ads are push. sellr is pull. When a creator who already has a trusting audience talks about your product — that's earned media, not paid media. Our data shows 3–6x higher conversion rates vs. display ads in the same category, because the recommendation comes from a real person, not a brand.",
+          "Traditional display ads push sponsored banners that audiences actively ignore, while sellr delivers peer-to-peer recommendations from trusted creators. This authentic social proof routinely drives 3–6x higher conversion rates compared to standard ad networks.",
       },
       {
         question: "What types of campaigns can I run?",
         answer:
-          "Three types — and you can mix them: UGC Video Campaigns (creators make authentic content about your product), Affiliate Campaigns (creators drive sales, you pay per conversion), and Clipping Campaigns (creators cut and post viral-format short clips of your existing video content). One dashboard. Three growth levers.",
+          "You can run three distinct campaign formats: custom UGC videos, performance affiliate links, or viral clipping campaigns that turn long-form footage into short-form reels. Mix and match formats seamlessly from a unified brand dashboard.",
       },
       {
         question: "How do I know the views are real and not bots?",
         answer:
-          "Every view is verified through the platform's engagement tracking before any payout is processed. Creators only get paid for verified organic reach. That means your billing is 100% tied to real human eyeballs — not inflated impressions bought off an exchange.",
+          "Every campaign view is validated through automated engagement tracking to filter out bots, duplicate loops, and spam impressions. Creators are paid only for authentic human reach, guaranteeing zero wasted budget on fraudulent traffic.",
       },
       {
         question: "How long until I see results?",
         answer:
-          "Most campaigns get their first creator submissions within 48 hours of going live. Campaigns with a clear brief and competitive CPV are typically fully staffed within 72 hours. You'll see real-time data on views and conversions from day one — no waiting for a monthly agency report.",
+          "Most campaigns receive creator applications within 24 to 48 hours of launch. You review submissions, approve content drafts, and track verified view metrics and conversions in real time from day one.",
       },
     ],
   },

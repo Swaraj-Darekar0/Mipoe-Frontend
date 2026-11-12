@@ -28,8 +28,8 @@ const BrandLayout: React.FC<BrandLayoutProps> = ({
   // 1. None Context: full-width canvas with no sidebar or mobile header
   if (sidebar === "none") {
     return (
-      <div className="min-h-screen bg-gray-50/50 selection:bg-indigo-100 selection:text-indigo-900">
-        <main className={`w-full ${fullWidth ? "" : "max-w-7xl mx-auto"} p-3 sm:p-6 lg:p-8`}>
+      <div className="min-h-screen bg-canvas text-ink selection:bg-brand-blue/15 selection:text-ink overflow-x-hidden">
+        <main className={`w-full ${fullWidth ? "" : "max-w-7xl mx-auto"} p-3 sm:p-4 md:p-5`}>
           {children}
         </main>
       </div>
@@ -40,7 +40,7 @@ const BrandLayout: React.FC<BrandLayoutProps> = ({
   const isCustomSidebar = typeof sidebar !== "string" && React.isValidElement(sidebar);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 flex flex-col md:flex-row selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-canvas text-ink flex flex-col md:flex-row selection:bg-brand-blue/15 selection:text-ink overflow-x-hidden">
       {/* Desktop Sidebar */}
       {isCustomSidebar ? (
         sidebar
@@ -49,7 +49,7 @@ const BrandLayout: React.FC<BrandLayoutProps> = ({
       )}
 
       {/* Mobile Top Bar */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between h-16 px-4 bg-white border-b border-zinc-200/80">
+      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between h-14 px-4 bg-white/95 backdrop-blur-md border-b border-black/10">
         {/* Top Left: Toggle button (hamburger / mobile drawer trigger) */}
         <div className="w-10 flex items-center justify-start shrink-0">
           {mobileSidebar ? (
@@ -60,12 +60,12 @@ const BrandLayout: React.FC<BrandLayoutProps> = ({
                 <button
                   type="button"
                   aria-label="Open Navigation Menu"
-                  className="p-2 -ml-2 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="p-2 -ml-2 rounded-lg text-charcoal hover:text-ink hover:bg-black/[0.04] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                 >
                   <Menu className="w-5 h-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-5 w-72 bg-white flex flex-col h-full overflow-hidden">
+              <SheetContent side="left" className="p-5 w-72 bg-white border-r border-black/10 flex flex-col h-full overflow-hidden">
                 <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                 {isCustomSidebar && React.isValidElement(sidebar) ? (
                   React.cloneElement(sidebar as React.ReactElement<any>, {
@@ -80,24 +80,24 @@ const BrandLayout: React.FC<BrandLayoutProps> = ({
           )}
         </div>
 
-        {/* Center / Middle: SELLR. logo with Brand badge, centered horizontally */}
+        {/* Center / Middle: sellr. logo with Brand badge, centered horizontally */}
         <div className="flex items-center justify-center">
-          <Link to="/brand/dashboard" className="flex items-center gap-2.5">
-            <h1 className="font-display text-xl font-bold tracking-tight text-zinc-900">
-              SELLR<span className="text-indigo-600">.</span>
+          <Link to="/brand/dashboard" className="flex items-center gap-2">
+            <h1 className="font-display text-xl font-bold tracking-tight text-ink">
+              sellr<span className="text-brand-blue">.</span>
             </h1>
-            <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+            <span className="bg-brand-blue/10 text-brand-blue border border-brand-blue/25 font-mono text-[9.5px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
               Brand
             </span>
           </Link>
         </div>
 
-        {/* Top Right: Empty placeholder spacer (w-10 or size-10) or Back Button for Custom Context */}
+        {/* Top Right: Empty placeholder spacer or Back Button for Custom Context */}
         <div className="w-10 flex items-center justify-end shrink-0">
           {isCustomSidebar ? (
             <Link
               to="/brand/dashboard"
-              className="p-2 -mr-2 rounded-lg text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 transition-colors"
+              className="p-2 -mr-2 rounded-lg text-slate hover:text-ink hover:bg-black/[0.04] transition-colors"
               title="Back to Dashboard"
               aria-label="Back to Dashboard"
             >
@@ -108,8 +108,10 @@ const BrandLayout: React.FC<BrandLayoutProps> = ({
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full md:ml-64 min-w-0 min-h-screen bg-gray-50/50 p-3 sm:p-4 md:p-6 lg:p-8">
-        {children}
+      <main className="flex-1 w-full md:ml-64 min-w-0 min-h-screen bg-canvas p-3 sm:p-4 md:p-5">
+        <div className={fullWidth ? "w-full" : "max-w-7xl mx-auto"}>
+          {children}
+        </div>
       </main>
     </div>
   );

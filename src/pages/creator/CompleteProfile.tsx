@@ -3,6 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Stepper, { Step } from "@/components/ui/Stepper";
 import {
   fetchCreatorProfile,
@@ -24,10 +32,8 @@ import {
   Loader2,
   Lock,
   ArrowRight,
-  ChevronLeft,
   ChevronRight,
   CreditCard,
-  Building,
   CheckCircle2,
   Copy,
   ExternalLink,
@@ -210,12 +216,12 @@ const CompleteProfile = () => {
     try {
       await updateCreatorProfile({
         nickname: profile.nickname || profile.username || "Creator",
-        bio: profile.bio || "Creator at Mipoe",
+        bio: profile.bio || "Creator at sellr",
         phone: profile.phone || "9999999999",
       });
       toast({
         title: "Onboarding Completed",
-        description: "Welcome to Mipoe! Your creator hub is activated."
+        description: "Welcome to sellr! Your creator hub is activated."
       });
       navigate("/creator/dashboard");
     } catch (err: any) {
@@ -234,49 +240,52 @@ const CompleteProfile = () => {
     <>
       <Stepper
         layout="split"
-        isDarkTheme={true}
+        accent="creator"
         activeStep={activeStep}
         onStepChange={(step) => setActiveStep(step)}
         stepLabels={["Personal Details", "Social Verification", "Smart Account Ready"]}
         onboardingTitle="Creator Onboarding"
+        sidebarBrandSubtitle="Creator Studio"
         hideFooter={true}
         disableStepIndicators={false}
         sidebarHeader={
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-900/60 border border-indigo-500/30 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-indigo-400" />
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-500">Signed in as</p>
-                <p className="font-bold text-sm text-white">{profile.username || "Creator Account"}</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-lava/10 border border-lava/25 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-lava" />
             </div>
-          }
-          sidebarFooter={
-            <div className="space-y-2 text-xs text-slate-500">
-              <p className="flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                All data encrypted end-to-end
-              </p>
-              <p className="flex items-center gap-1.5">
-                <Instagram className="w-3.5 h-3.5 text-pink-400 flex-shrink-0" />
-                Professional account required
-              </p>
+            <div className="min-w-0">
+              <p className="font-mono text-[10px] uppercase tracking-wider text-steel">Signed in as</p>
+              <p className="font-display font-bold text-sm text-ink truncate">{profile.username || "Creator Account"}</p>
             </div>
-          }
-        className="shadow-[0_30px_100px_rgba(0,0,0,0.6)]"
+          </div>
+        }
+        sidebarFooter={
+          <div className="space-y-2 text-xs text-slate">
+            <p className="flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-lava shrink-0" />
+              All data encrypted end-to-end
+            </p>
+            <p className="flex items-center gap-1.5">
+              <Instagram className="w-3.5 h-3.5 text-ink shrink-0" />
+              Professional account required
+            </p>
+          </div>
+        }
       >
           {/* Step 1: Personal Details */}
           <Step>
             <div className="space-y-4 text-left py-1">
-              <div className="pb-3 border-b border-white/10">
-                <h3 className="text-base font-bold text-white">Personal & Channel Information</h3>
-                <p className="text-xs text-gray-400">Tell us how you would like to be identified on Mipoe.</p>
+              <div className="pb-3 border-b border-black/10">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-steel block mb-1">
+                  Step 01 // Channel Identity
+                </span>
+                <h3 className="font-display text-lg font-bold text-ink">Personal & Channel Information</h3>
+                <p className="text-xs text-slate">Tell us how you would like to be identified on sellr.</p>
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="nickname" className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-400 flex items-center gap-1.5">
-                  <User className="h-3.5 w-3.5 text-indigo-400" /> Display Name / Nickname
+                <label htmlFor="nickname" className="text-xs font-mono font-semibold uppercase tracking-[0.08em] text-steel flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-lava" /> Display Name / Nickname
                 </label>
                 <Input
                   id="nickname"
@@ -285,14 +294,14 @@ const CompleteProfile = () => {
                   value={profile.nickname || ""}
                   onChange={handleChange}
                   placeholder="e.g., ViralVidsCreator"
-                  className="bg-white/5 border-white/10 text-white rounded-xl placeholder:text-gray-600 focus:border-primary/50 focus:ring-primary/20"
+                  className="bg-black/[0.02] border-black/10 text-ink rounded-xl placeholder:text-steel/60"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="phone" className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-400 flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5 text-indigo-400" /> Phone Number
+                <label htmlFor="phone" className="text-xs font-mono font-semibold uppercase tracking-[0.08em] text-steel flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-lava" /> Phone Number
                 </label>
                 <Input
                   id="phone"
@@ -301,14 +310,14 @@ const CompleteProfile = () => {
                   value={profile.phone || ""}
                   onChange={handleChange}
                   placeholder="e.g., +91 98765 43210"
-                  className="bg-white/5 border-white/10 text-white rounded-xl placeholder:text-gray-600 focus:border-primary/50 focus:ring-primary/20"
+                  className="bg-black/[0.02] border-black/10 text-ink rounded-xl placeholder:text-steel/60"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="bio" className="text-xs font-semibold uppercase tracking-[0.1em] text-gray-400 flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5 text-indigo-400" /> Channel Bio
+                <label htmlFor="bio" className="text-xs font-mono font-semibold uppercase tracking-[0.08em] text-steel flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-lava" /> Channel Bio
                 </label>
                 <Textarea
                   id="bio"
@@ -316,15 +325,16 @@ const CompleteProfile = () => {
                   value={profile.bio || ""}
                   onChange={handleChange}
                   placeholder="Briefly describe your content niche, style, and audience..."
-                  className="bg-white/5 border-white/10 text-white rounded-xl placeholder:text-gray-600 focus:border-primary/50 focus:ring-primary/20 resize-none text-xs"
+                  className="bg-black/[0.02] border-black/10 text-ink rounded-xl placeholder:text-steel/60 resize-none text-xs"
                   rows={3}
                   required
                 />
               </div>
 
-              <div className="flex justify-end pt-3 border-t border-white/10">
+              <div className="flex justify-end pt-3 border-t border-black/10">
                 <Button
                   type="button"
+                  variant="creator"
                   onClick={() => {
                     if (!profile.nickname || !profile.phone || !profile.bio) {
                       toast({
@@ -336,7 +346,7 @@ const CompleteProfile = () => {
                     }
                     setActiveStep(2);
                   }}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-5 rounded-xl flex items-center gap-2 text-xs transition-all"
+                  className="py-2.5 px-5 flex items-center gap-2 text-xs"
                 >
                   Continue to Social Verification
                   <ChevronRight className="w-4 h-4" />
@@ -348,61 +358,66 @@ const CompleteProfile = () => {
           {/* Step 2: Social Media Verification */}
           <Step>
             <div className="space-y-4 text-left py-1">
-              <div className="pb-3 border-b border-white/10">
-                <h3 className="text-base font-bold text-white">Social Channel Connection</h3>
-                <p className="text-xs text-gray-400">Connect your Instagram Professional (Creator/Business) account.</p>
+              <div className="pb-3 border-b border-black/10">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-steel block mb-1">
+                  Step 02 // Social Verification
+                </span>
+                <h3 className="font-display text-lg font-bold text-ink">Social Channel Connection</h3>
+                <p className="text-xs text-slate">Connect your Instagram Professional (Creator/Business) account.</p>
               </div>
 
               {profile.instagram_verified ? (
-                <div className="flex items-center justify-between p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-500/20 text-emerald-300 rounded-xl">
+                <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-500/25 rounded-2xl">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl shrink-0">
                       <Instagram className="h-5 w-5" />
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">Instagram Linked</p>
-                      <p className="text-xs text-emerald-300/80">@{profile.instagram_username || "verified_account"}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-ink">Instagram Linked</p>
+                      <p className="text-xs text-emerald-700 font-mono truncate">@{profile.instagram_username || "verified_account"}</p>
                     </div>
                   </div>
-                  <CheckCircle className="h-5 w-5 text-emerald-400" />
+                  <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
-                  <button
+                  <Button
                     type="button"
+                    variant="ink"
                     onClick={handleConnectInstagram}
                     disabled={authLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 px-4 rounded-2xl transition duration-200 shadow-lg shadow-pink-600/10 active:scale-[0.98] disabled:opacity-50 text-xs"
+                    className="w-full py-3 h-11 text-xs"
                   >
                     {authLoading ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Saving & Redirecting...
                       </>
                     ) : (
                       <>
-                        <Instagram className="h-4 w-4" />
+                        <Instagram className="h-4 w-4 mr-2 text-lava" />
                         Connect Instagram Account
                       </>
                     )}
-                  </button>
-                  <div className="flex items-center justify-center gap-1.5 text-yellow-400 text-[11px] bg-yellow-500/10 p-2.5 border border-yellow-500/20 rounded-xl">
-                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                  </Button>
+                  <div className="flex items-center gap-2 text-amber-800 text-[11px] bg-amber-50 p-3 border border-amber-500/25 rounded-xl">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
                     <span>Onboarding requires an Instagram Creator/Business account to verify clip views.</span>
                   </div>
                 </div>
               )}
 
               {error && (
-                <div className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-start gap-2">
-                  <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div className="text-rose-700 text-xs bg-rose-50 border border-rose-500/25 p-3 rounded-xl flex items-start gap-2">
+                  <XCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
                   <span>{error}</span>
                 </div>
               )}
 
-              <div className="flex justify-end items-center pt-3 border-t border-white/10">
+              <div className="flex justify-end items-center pt-3 border-t border-black/10">
                 <Button
                   type="button"
+                  variant="creator"
                   onClick={() => {
                     if (!profile.instagram_verified) {
                       toast({
@@ -414,7 +429,7 @@ const CompleteProfile = () => {
                     }
                     setActiveStep(3);
                   }}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-5 rounded-xl flex items-center gap-2 text-xs transition-all"
+                  className="py-2.5 px-5 flex items-center gap-2 text-xs"
                 >
                   Continue to Smart Account
                   <ChevronRight className="w-4 h-4" />
@@ -426,27 +441,30 @@ const CompleteProfile = () => {
           {/* Step 3: Smart Account Activation (No Upfront Bank Friction) */}
           <Step>
             <div className="space-y-4 text-left py-1">
-              <div className="pb-3 border-b border-white/10">
-                <h3 className="text-base font-bold text-white">Smart Account Ready</h3>
-                <p className="text-xs text-gray-400">Your decentralized micro-payout wallet on Base L2 is activated and ready for earnings.</p>
+              <div className="pb-3 border-b border-black/10">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-steel block mb-1">
+                  Step 03 // Settlement Rail
+                </span>
+                <h3 className="font-display text-lg font-bold text-ink">Smart Account Ready</h3>
+                <p className="text-xs text-slate">Your instant micro-payout wallet on Base L2 is activated and ready for earnings.</p>
               </div>
 
               {/* Base L2 Smart Wallet Address Card */}
-              <div className="p-4 bg-zinc-900/90 border border-indigo-500/30 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="p-4 bg-black/[0.03] border border-black/10 rounded-2xl space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-bold text-white tracking-wide">Base L2 Smart Account</span>
+                    <div className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                    <span className="text-xs font-bold text-ink tracking-wide">Base L2 Smart Account</span>
                   </div>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-lava/10 text-lava border border-lava/25">
                     ERC-4337
                   </span>
                 </div>
 
                 {walletAddress ? (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-xs">
-                      <code className="text-indigo-300 font-mono text-[11px] select-all break-all">
+                    <div className="flex items-center justify-between gap-2 bg-white border border-black/10 rounded-xl px-3 py-2 text-xs">
+                      <code className="text-ink font-mono text-[11px] select-all break-all min-w-0">
                         {walletAddress}
                       </code>
                       <button
@@ -457,53 +475,53 @@ const CompleteProfile = () => {
                           toast({ title: "Copied!", description: "Smart account address copied to clipboard." });
                           setTimeout(() => setCopiedWallet(false), 2000);
                         }}
-                        className="ml-2 text-gray-400 hover:text-white transition-colors p-1 shrink-0"
+                        className="text-steel hover:text-ink transition-colors duration-150 p-1 shrink-0 cursor-pointer"
                         title="Copy address"
                       >
-                        {copiedWallet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedWallet ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-gray-400 px-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate px-1">
                       <span>Zero-gas sponsored by Paymaster</span>
                       <a
                         href={`https://sepolia.basescan.org/address/${walletAddress}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1 font-medium"
+                        className="text-lava hover:underline inline-flex items-center gap-1 font-medium shrink-0"
                       >
                         BaseScan Explorer <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2.5 py-2 text-xs text-indigo-300">
-                    <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                  <div className="flex items-center gap-2.5 py-2 text-xs text-slate">
+                    <Loader2 className="w-4 h-4 animate-spin text-lava shrink-0" />
                     <span>Provisioning smart contract account on Base Sepolia...</span>
                   </div>
                 )}
               </div>
 
               <div className="space-y-2.5">
-                <div className="p-3.5 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-2xl flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 mt-0.5">
+                <div className="p-3.5 bg-black/[0.02] border border-black/10 rounded-2xl flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-lava/10 text-lava shrink-0 mt-0.5">
                     <CreditCard className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-white">Zero Upfront Friction</h4>
-                    <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                    <h4 className="text-xs font-bold text-ink">Zero Upfront Friction</h4>
+                    <p className="text-[11px] text-slate mt-0.5 leading-relaxed">
                       No bank account or PAN details required today. When your clips earn milestone views, simply enter your UPI ID at withdrawal to receive instant INR payouts.
                     </p>
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 mt-0.5">
+                <div className="p-3.5 bg-black/[0.02] border border-black/10 rounded-2xl flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-500/20 text-emerald-700 shrink-0 mt-0.5">
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-white">Instant Milestone Crediting</h4>
-                    <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                    <h4 className="text-xs font-bold text-ink">Instant Milestone Crediting</h4>
+                    <p className="text-[11px] text-slate mt-0.5 leading-relaxed">
                       Every verified milestone is automatically allocated to your wallet. You retain full control with zero lockup periods.
                     </p>
                   </div>
@@ -513,11 +531,12 @@ const CompleteProfile = () => {
               <form onSubmit={handleSubmit} className="pt-2">
                 <Button
                   type="submit"
-                  className="w-full py-5 rounded-2xl text-white bg-indigo-600 hover:bg-indigo-500 font-bold transition duration-200 flex items-center justify-center gap-2 text-xs shadow-lg shadow-indigo-600/20"
+                  variant="creator"
+                  className="w-full py-3 h-11 flex items-center justify-center gap-2 text-xs"
                   disabled={loading || !profile.instagram_verified}
                 >
                   {loading ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <>
                       Activate Creator Hub & Enter Dashboard <ArrowRight className="h-4 w-4" />
@@ -528,66 +547,73 @@ const CompleteProfile = () => {
             </div>
           </Step>
       </Stepper>
-      {isSandboxOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-[#18181B] border border-white/10 p-6 rounded-3xl max-w-sm w-full space-y-6 shadow-2xl relative">
-              <div className="absolute top-4 right-4 bg-yellow-500/10 text-yellow-400 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-yellow-500/20">
+
+      <Dialog open={isSandboxOpen} onOpenChange={setIsSandboxOpen}>
+        <DialogContent className="bg-white border border-black/10 text-ink sm:max-w-sm rounded-2xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center gap-2 text-amber-700 font-bold text-base">
+                <Lock className="h-4 w-4 shrink-0" />
+                <DialogTitle className="font-display text-lg font-bold text-ink">Simulate Meta OAuth</DialogTitle>
+              </div>
+              <span className="bg-amber-50 text-amber-800 border border-amber-500/25 font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0">
                 Sandbox Mode
-              </div>
+              </span>
+            </div>
+            <DialogDescription className="text-xs text-slate leading-relaxed">
+              Live Meta App config was not detected. Simulate redirects from Meta callback endpoints below.
+            </DialogDescription>
+          </DialogHeader>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-yellow-500 font-bold text-lg">
-                  <Lock className="h-5 w-5" />
-                  <span>Simulate Meta OAuth</span>
-                </div>
-                <p className="text-xs text-gray-400 leading-relaxed">
-                  We detected that live Meta App config is missing. Use this developer interface to simulate redirects from Meta callback endpoints.
-                </p>
-              </div>
+          <div className="space-y-4 pt-1">
+            <div className="space-y-1.5">
+              <label htmlFor="mockUsername" className="text-[10px] font-mono font-bold uppercase tracking-wider text-steel">
+                Instagram Handle
+              </label>
+              <Input
+                id="mockUsername"
+                type="text"
+                value={mockUsername}
+                onChange={(e) => setMockUsername(e.target.value)}
+                placeholder="creatorxyz"
+                className="bg-black/[0.02] border-black/10 text-ink rounded-xl"
+              />
+            </div>
 
-              <div className="space-y-4 pt-2">
-                <div className="space-y-1.5">
-                  <label htmlFor="mockUsername" className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                    Instagram Handle
-                  </label>
-                  <Input
-                    id="mockUsername"
-                    type="text"
-                    value={mockUsername}
-                    onChange={(e) => setMockUsername(e.target.value)}
-                    placeholder="creatorxyz"
-                    className="bg-white/5 border-white/10 text-white rounded-xl placeholder:text-gray-600 focus:border-yellow-500/40 focus:ring-yellow-500/10"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Button
-                    onClick={() => handleSimulateSandbox("success")}
-                    disabled={sandboxLoading}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-xl font-bold flex items-center justify-center gap-2 text-xs"
-                  >
-                    {sandboxLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Simulate Success (Creator Account)"}
-                  </Button>
-                  <Button
-                    onClick={() => handleSimulateSandbox("failure")}
-                    disabled={sandboxLoading}
-                    variant="outline"
-                    className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 py-5 rounded-xl font-bold text-xs"
-                  >
-                    Simulate Failure (Personal Account)
-                  </Button>
-                  <Button
-                    onClick={() => setIsSandboxOpen(false)}
-                    variant="ghost"
-                    className="w-full text-gray-400 hover:text-white text-xs"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                onClick={() => handleSimulateSandbox("success")}
+                disabled={sandboxLoading}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-10 text-xs"
+              >
+                {sandboxLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Simulate Success (Creator Account)"}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => handleSimulateSandbox("failure")}
+                disabled={sandboxLoading}
+                variant="outline"
+                className="w-full border-rose-500/30 text-rose-700 hover:bg-rose-50 h-10 text-xs"
+              >
+                Simulate Failure (Personal Account)
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={() => setIsSandboxOpen(false)}
+              variant="ghost"
+              size="sm"
+              className="w-full text-slate text-xs"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
