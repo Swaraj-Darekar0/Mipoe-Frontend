@@ -37,7 +37,7 @@ const BrandDashboard = () => {
   const cachedCampaigns = getCachedBrandCampaigns();
   const cachedAffiliate = getCachedAffiliateStatus();
 
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() => cachedCampaigns || []);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(() => (Array.isArray(cachedCampaigns) ? cachedCampaigns : []));
   const [loading, setLoading] = useState(() => !cachedCampaigns);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -191,7 +191,7 @@ const BrandDashboard = () => {
             fetchBrandCampaigns(),
             getWalletBalance()
           ]);
-          setCampaigns(campaignData);
+          setCampaigns(Array.isArray(campaignData) ? campaignData : []);
           setWalletBalance(balanceData.balance);
 
           const orderId = searchParams.get("order_id");
@@ -304,7 +304,7 @@ const BrandDashboard = () => {
                   <>
                     {/* Mobile Cards */}
                     <div className="divide-y divide-black/[0.06] sm:hidden">
-                      {campaigns.map(campaign => (
+                      {Array.isArray(campaigns) && campaigns.map(campaign => (
                         <div key={campaign.id} className="p-4 space-y-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
@@ -388,7 +388,7 @@ const BrandDashboard = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-black/[0.06] bg-white">
-                          {campaigns.map(campaign => (
+                          {Array.isArray(campaigns) && campaigns.map(campaign => (
                             <tr key={campaign.id} className="hover:bg-black/[0.02] transition-colors duration-150">
                               <td className="px-6 py-4 font-semibold whitespace-nowrap">
                                 {renderApprovalPill(campaign)}

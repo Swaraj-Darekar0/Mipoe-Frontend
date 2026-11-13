@@ -3,7 +3,7 @@ import CreatorLayout from "@/layouts/CreatorLayout";
 import CampaignCard from "@/components/creator/CampaignCard";
 import QuickStats from "@/components/creator/QuickStats";
 import { Button } from "@/components/ui/button";
-import { fetchCreatorCampaigns, Campaign, getCreatorNotifications, deleteCreatorNotification, Notification as ApiNotification, getWalletBalance, getUserId, getCachedCreatorCampaigns } from "@/lib/api";
+import { fetchCreatorCampaigns, Campaign, getCreatorNotifications, deleteCreatorNotification, Notification as ApiNotification, getWalletBalance, getUserId, getCachedCreatorCampaigns, fetchCreatorProfile } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import Notifications, { DisplayNotification } from "@/components/creator/Notifications";
 import { useToast } from '@/hooks/use-toast';
@@ -14,13 +14,14 @@ const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 
 const CreatorDashboard = () => {
   const cachedCampaigns = getCachedCreatorCampaigns();
-  const [yourCampaigns, setYourCampaigns] = useState<Campaign[]>(() => cachedCampaigns || []);
-  const [loading, setLoading] = useState(() => !cachedCampaigns);
+  const safeCachedCampaigns = Array.isArray(cachedCampaigns) ? cachedCampaigns : null;
+  const [yourCampaigns, setYourCampaigns] = useState<Campaign[]>(() => safeCachedCampaigns || []);
+  const [loading, setLoading] = useState(() => !safeCachedCampaigns);
   const [error, setError] = useState("");
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [activeSubmissions, setActiveSubmissions] = useState<number>(() => {
-    if (!cachedCampaigns) return 0;
-    return cachedCampaigns.reduce((acc, campaign) => {
+    if (!safeCachedCampaigns) return 0;
+    return safeCachedCampaigns.reduce((acc, campaign) => {
       return acc + (campaign.submitted_clips?.length || 0) + (campaign.accepted_clips?.length || 0);
     }, 0);
   });
@@ -70,13 +71,26 @@ const CreatorDashboard = () => {
       navigate('/creator/campaigns', { replace: true });
       return;
     }
-    if (!cachedCampaigns) setLoading(true);
+
+    // Verify creator onboarding completion
+    fetchCreatorProfile()
+      .then((prof) => {
+        if (prof && !prof.profile_completed) {
+          navigate('/creator/complete-profile', { replace: true });
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not verify creator profile status:', err);
+      });
+
+    if (!safeCachedCampaigns) setLoading(true);
     const dataFetches = Promise.all([fetchCreatorCampaigns(), getWalletBalance()])
       .then(([yours, walletRes]) => {
-        setYourCampaigns(yours);
+        const safeYours = Array.isArray(yours) ? yours : [];
+        setYourCampaigns(safeYours);
         setWalletBalance(walletRes.balance);
 
-        const totalActiveSubmissions = yours.reduce((acc, campaign) => {
+        const totalActiveSubmissions = safeYours.reduce((acc, campaign) => {
             return acc + (campaign.submitted_clips?.length || 0) + (campaign.accepted_clips?.length || 0);
         }, 0);
         setActiveSubmissions(totalActiveSubmissions);

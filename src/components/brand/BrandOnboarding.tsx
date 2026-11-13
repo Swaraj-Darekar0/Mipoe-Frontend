@@ -163,9 +163,9 @@ export const BrandOnboarding: React.FC<BrandOnboardingProps> = ({ profile, onPro
         try {
           const { uploadBrandLogo } = await import("@/lib/api");
           const res = await uploadBrandLogo(logoFileToUpload);
-          if (res && res.url) {
-            finalLogoUrl = res.url;
-            setLogoUrl(res.url);
+          if (res && (res.logo_url || (res as any).url)) {
+            finalLogoUrl = res.logo_url || (res as any).url;
+            setLogoUrl(finalLogoUrl);
           }
         } catch (uploadErr: any) {
           console.error("Logo upload failed:", uploadErr);

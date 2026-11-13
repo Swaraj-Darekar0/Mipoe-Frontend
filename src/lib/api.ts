@@ -83,6 +83,11 @@ export async function logout(): Promise<void> {
 }
 
 export function getEndpointTier(url: string): 'static' | 'profile' | 'none' {
+  // If explicitly requested nocache=true, bypass client caching entirely
+  if (url.includes('nocache=true')) {
+    return 'none';
+  }
+
   // TIER 3: ZERO STALE TOLERANCE - Financial, Payout, TDS, Ledger, & Active Auth State
   if (
     url.includes('/wallet-balance') ||
